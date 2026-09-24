@@ -298,8 +298,10 @@
   @keyframes scroll-fade-out {
     to {
       opacity: 0;
-      filter: blur(4px);
-      translate: 0 -24px;
+      filter: blur(2.5px);
+      translate: 0 -16px;
+      /* Hidden once faded, so invisible buttons can't be clicked. */
+      visibility: hidden;
     }
   }
   @keyframes reveal-blur {
@@ -351,7 +353,7 @@
     @media (prefers-reduced-motion: no-preference) {
       animation: scroll-fade-out linear both;
       animation-timeline: scroll(root);
-      animation-range: 0 65vh;
+      animation-range: 0 32vh;
     }
   }
 }

@@ -3,9 +3,9 @@ import { ChevronRightIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { authLinks } from "@/lib/nav";
 import { site } from "@/lib/site";
+import { HeroBackdrop } from "./hero-backdrop";
 import { HeroDemo } from "./hero-demo";
 import { HeroStage } from "./hero-stage";
-import { Streaks } from "./motion/streaks";
 
 // One orchestrated entrance on load (CSS, no JavaScript): each line sharpens
 // in after the one before it.
@@ -13,18 +13,10 @@ const enter = (delay: number) => ({ animationDelay: `${delay}s` });
 
 export function Hero() {
   return (
-    <section className="relative isolate overflow-hidden border-b border-border">
-      {/* Cream wash and drifting light lines behind the demo */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-[26rem] bottom-0 -z-10 bg-linear-to-b from-background via-cream to-cream sm:top-[30rem]"
-      />
-      <Streaks
-        count={48}
-        className="top-[24rem] -z-10 h-72 mask-[linear-gradient(to_bottom,transparent,black_30%,black_60%,transparent)] text-ink/25 sm:top-[28rem]"
-      />
+    <section className="relative isolate overflow-clip border-b border-border">
+      <HeroBackdrop />
 
-      <div className="mx-auto flex max-w-[1440px] scroll-fade-out flex-col items-center px-4 pt-16 text-center sm:px-6 sm:pt-24">
+      <div className="mx-auto flex max-w-[1440px] scroll-fade-out flex-col items-center px-4 pt-16 text-center sm:px-6 sm:pt-24 lg:sticky lg:top-16">
         <Link
           href="/best-subreddits-for-freelancers"
           style={enter(0)}
@@ -79,7 +71,7 @@ export function Hero() {
 
       <figure
         style={enter(0.42)}
-        className="mx-auto mt-14 max-w-[70rem] animate-enter px-3 pb-16 [animation-duration:1.1s] sm:mt-20 sm:px-6 sm:pb-24"
+        className="relative z-10 mx-auto mt-14 max-w-[70rem] animate-enter px-3 pb-16 [animation-duration:1.1s] sm:mt-20 sm:px-6 sm:pb-24"
       >
         <figcaption className="sr-only">
           Preview of Redlance: new hiring posts from Reddit are scored against
