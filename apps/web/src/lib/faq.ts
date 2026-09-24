@@ -14,7 +14,7 @@ export const faq = [
   {
     question: "Which subreddits does Redlance watch?",
     answer:
-      "Redlance watches hiring subreddits such as r/forhire, r/hiring, r/DesignJobs, r/gameDevClassifieds and r/HireaWriter, and you choose which ones matter for your work. It keeps posts tagged [Hiring] and skips [For Hire] posts, where other freelancers advertise themselves, so your feed only shows clients looking to hire.",
+      "When you sign up, Redlance connects you to the hiring subreddits that match your skills, such as r/forhire, r/hiring, r/DesignJobs or r/HireaWriter, and you can add any others. It keeps posts tagged [Hiring] and skips [For Hire] posts, so your feed only shows clients looking to hire.",
   },
   {
     question: "How fast are the alerts?",
@@ -27,9 +27,14 @@ export const faq = [
       "Drafts are kept short, mention the client's specific problem and link one relevant portfolio piece, which is how good human replies read. Redlance learns your tone from replies you have written before, and you can edit every draft before sending, so the final message is always yours.",
   },
   {
+    question: "What do subreddit insights show?",
+    answer:
+      "Insights show, for each subreddit you watch, how many hiring posts appear each week, how many match your skills, the range of posted budgets, and the hours clients post most. They only appear once a subreddit has enough posts to be meaningful, and they are part of the Pro plan.",
+  },
+  {
     question: "How much does Redlance cost?",
     answer:
-      "Redlance has a free plan with delayed alerts, a few drafts a day and a basic reply tracker. Pro adds instant alerts, unlimited drafts, voice learning and follow-up reminders. Prices are in Indian rupees and you can pay with UPI or card. Final Pro pricing will be announced at launch.",
+      "Redlance has a free plan with delayed alerts, a few drafts a day and a basic reply tracker. Pro adds instant alerts, unlimited drafts, voice learning, follow-up drafts and subreddit insights. Prices are in Indian rupees and you can pay with UPI or card. Final Pro pricing will be announced at launch.",
   },
   {
     question: "Is Redlance affiliated with Reddit?",

@@ -31,6 +31,13 @@ Collect (RSS poll every 2–3 min) → Understand (LLM extracts skills, budget, 
 
 Core tables: `profiles`, `job_posts`, `matches`, `replies`, `outcomes`, `client_reports` — fields in `docs/PROJECT.md` §8.
 
+## Product decisions (2026-09-25)
+
+- **Subreddits:** at onboarding Redlance connects the user to the right subreddits for their skills; users can add more but don't have to pick any.
+- **Drafts:** a comment and the **first DM** only. Don't market DM conversation handling, and don't state that we don't handle DMs.
+- **Follow-ups (Pro):** if a reply has no status marked after a few days, remind the user and draft a follow-up.
+- **Subreddit insights (Pro):** per subreddit, hiring posts per week, share matching the user's skills, posted-budget ranges and peak posting hours (IST). Only from RSS-available fields; shown once a subreddit has enough posts (see rule 8).
+
 ## Non-negotiable rules
 
 1. **Never auto-post.** No auto-posting, bulk DMs, or anything that sends from a user's Reddit account without them clicking send. The UI offers an edit box + "Open post" button; the user sends.

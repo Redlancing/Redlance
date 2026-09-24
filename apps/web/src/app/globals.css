@@ -198,6 +198,8 @@
   --animate-travel: travel 5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
   --animate-slide-thumb: slide-thumb 1.6s cubic-bezier(0.2, 0, 0, 1) both;
   --animate-slide-fill: slide-fill 1.6s cubic-bezier(0.2, 0, 0, 1) both;
+  --animate-grow-y: grow-y 1s cubic-bezier(0.2, 0, 0, 1) both;
+  --animate-grow-x: grow-x 1.1s cubic-bezier(0.2, 0, 0, 1) both;
 
   @keyframes streak {
     0% {
@@ -277,6 +279,22 @@
     }
     to {
       left: var(--thumb-to, 62%);
+    }
+  }
+  @keyframes grow-y {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+  @keyframes grow-x {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
     }
   }
   @keyframes slide-fill {

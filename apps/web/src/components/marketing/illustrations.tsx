@@ -147,7 +147,7 @@ export function BubblesIllustration() {
         className="absolute right-0 bottom-0 w-[78%] animate-bob rounded-xl rounded-br-sm border border-border bg-cream p-2.5 shadow-sm"
         style={{ animationDelay: "-2.2s" }}
       >
-        <span className="font-medium">DM</span>
+        <span className="font-medium">First DM</span>
         <p className="mt-0.5 text-muted-foreground">
           Hi, I saw your post about the landing page…
         </p>
@@ -261,9 +261,9 @@ export function FollowUpNudge() {
         <BellIcon className="size-4" />
       </span>
       <div className="flex flex-col gap-0.5">
-        <span className="font-medium">No reply in 3 days</span>
+        <span className="font-medium">No update in 3 days</span>
         <span className="text-muted-foreground">
-          Send a short follow-up to the Shopify client?
+          Your follow-up to the Shopify client is ready to send.
         </span>
       </div>
     </div>

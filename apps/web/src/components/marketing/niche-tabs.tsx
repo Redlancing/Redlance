@@ -117,7 +117,7 @@ export function NicheTabs() {
                 </p>
                 <div className="flex flex-col gap-2">
                   <p className="text-sm text-muted-foreground">
-                    Subreddits we watch for this
+                    Subreddits you get connected to
                   </p>
                   <ul className="flex flex-wrap gap-1.5">
                     {niche.subreddits.map((sub) => (

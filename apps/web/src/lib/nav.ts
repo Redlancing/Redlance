@@ -25,7 +25,7 @@ export const productMenu: { columns: NavGroup[]; side: NavGroup[] } = {
       items: [
         {
           title: "Hiring feed",
-          description: "Every [Hiring] post from the subreddits you pick",
+          description: "Every [Hiring] post from subreddits matched to you",
           href: "/#find",
         },
         {
@@ -45,7 +45,7 @@ export const productMenu: { columns: NavGroup[]; side: NavGroup[] } = {
       items: [
         {
           title: "Drafts in your voice",
-          description: "Short replies that sound like you",
+          description: "A comment and a first DM for every good match",
           href: "/#draft",
         },
         {
@@ -65,11 +65,13 @@ export const productMenu: { columns: NavGroup[]; side: NavGroup[] } = {
       items: [
         {
           title: "Follow-ups",
-          description: "Reminders when a client goes quiet",
+          description: "A nudge and a draft when a reply goes quiet",
+          href: "/#track",
         },
         {
-          title: "Posted budgets",
-          description: "What similar gigs are offering",
+          title: "Subreddit insights",
+          description: "Where the work is, what it pays, when to be online",
+          href: "/#insights",
         },
         {
           title: "Client memory",
@@ -116,6 +118,7 @@ export const footerColumns: NavGroup[] = [
     label: "Product",
     items: [
       { title: "How it works", href: "/#how-it-works" },
+      { title: "Insights", href: "/#insights" },
       { title: "Alerts", href: "/#alerts" },
       { title: "Pricing", href: "/#pricing" },
       { title: "FAQ", href: "/#faq" },

@@ -224,7 +224,7 @@ const drafts = {
     after:
       ". I can send a plan and a timeline today. When do you need it live?",
   },
-  DM: {
+  "First DM": {
     before:
       "Hi, I saw your post about the course landing page. I rebuilt a similar edtech site in Next.js and Tailwind last month (",
     after: "). Happy to share a quick plan. Is the current site on WordPress?",
@@ -233,7 +233,7 @@ const drafts = {
 
 export function DraftMock() {
   const { ref, beat } = useStory(2, { every: 2600, startAfter: 1800 });
-  const tab = beat === 0 ? "Comment" : "DM";
+  const tab = beat === 0 ? "Comment" : "First DM";
 
   return (
     <MotionConfig reducedMotion="user">
@@ -241,7 +241,7 @@ export function DraftMock() {
         <MockCard className="p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex gap-1 rounded-lg bg-muted p-1 text-xs font-medium">
-              {(["Comment", "DM"] as const).map((name) => (
+              {(["Comment", "First DM"] as const).map((name) => (
                 <span
                   key={name}
                   className={cn(

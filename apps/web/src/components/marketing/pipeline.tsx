@@ -35,7 +35,7 @@ const nodes = [
     accent: true,
   },
   { x: 364, y: 196, icon: SendIcon, title: "Alert", sub: "Telegram" },
-  { x: 182, y: 196, icon: PenLineIcon, title: "Draft", sub: "Comment, DM" },
+  { x: 182, y: 196, icon: PenLineIcon, title: "Draft", sub: "Comment, 1st DM" },
   {
     x: 0,
     y: 196,
