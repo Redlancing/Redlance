@@ -208,3 +208,13 @@ All of it is disabled or jumps to the end state under `prefers-reduced-motion`.
 | Step headings | Static; only section headings blur in | Same |
 | Demo cards | Blur in (`blur → 0`, opacity) staggered when in view; play once, never replay; start ~350px into view | Same |
 | Kanban | Card lifts (y −24, scale up, shadow 0 → 0.18), arcs to the next column, drops | Lift (y −14, scale 1.05, −2° tilt) with an orange ring/shadow layer, then drops and "Hired" pops in |
+
+### Dark block: Universal Context cards and Signals (measured 2026-09-25)
+
+| Behaviour | Attio | Redlance |
+|---|---|---|
+| Cards under the arc | 5 static square cells (`lg:aspect-square`), icon top, text bottom (`justify-between`), no hover; stacked and centred on phones | Same, 5 cells ("Better with every edit" added), two-line copy so titles align |
+| Signals layout | Left column fixed height (560px): chip, H2, small outline "See more" at top; list pinned to the bottom | Same, with "See plans" |
+| Items | Titles stay bright; inactive items are buttons with hover underline; active opens description + 2px progress (height/blur/opacity) | Same |
+| Timing | Progress fills in ~5s, then the next item opens; a click jumps and restarts the timer (autoplay continues) | Same; also pauses on hover/keyboard focus and off screen; no autoplay with reduced motion |
+| Right visual | One canvas of white line art that changes scene per item (funnel with streaking particles, radar rings with a descending line, tilted orbits with satellites) | SVG + SMIL line art: radar (orange ping), funnel (one orange match drops out), orbits (orange top match); crossfade with blur; paused off screen |

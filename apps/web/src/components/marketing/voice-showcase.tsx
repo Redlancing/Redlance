@@ -1,6 +1,7 @@
 import {
   AlignLeftIcon,
   Link2Icon,
+  PenLineIcon,
   MessageSquareQuoteIcon,
   TargetIcon,
 } from "lucide-react";
@@ -12,22 +13,27 @@ const points = [
   {
     icon: MessageSquareQuoteIcon,
     title: "Learns your tone.",
-    body: "Paste a few replies you've written and drafts start to sound like them.",
+    body: "Drafts pick it up from replies you've written.",
   },
   {
     icon: TargetIcon,
     title: "Names their problem.",
-    body: "Every draft points at what the client actually asked for.",
+    body: "Every draft points at what the client asked.",
   },
   {
     icon: AlignLeftIcon,
     title: "Short on purpose.",
-    body: "Three or four sentences. Busy clients read short replies.",
+    body: "Three or four sentences. Clients read those.",
   },
   {
     icon: Link2Icon,
     title: "One link, not ten.",
-    body: "The closest piece of your work, instead of your whole portfolio.",
+    body: "Your closest work, not your whole portfolio.",
+  },
+  {
+    icon: PenLineIcon,
+    title: "Better with every edit.",
+    body: "On Pro, your changes teach it how you write.",
   },
 ];
 
@@ -58,22 +64,25 @@ export function VoiceShowcase() {
           </h2>
         </div>
 
-        <ul className="grid border-t border-border sm:grid-cols-2 lg:grid-cols-4">
+        {/* Square cells, icon at the top and text at the bottom, as on Attio */}
+        <ul className="grid grid-cols-1 border-t border-border lg:grid-cols-5">
           {points.map(({ icon: Icon, title, body }) => (
             <li
               key={title}
-              className="flex flex-col gap-10 border-border px-6 py-8 not-last:border-b sm:px-8 sm:odd:border-r lg:not-last:border-r lg:not-last:border-b-0"
+              className="flex flex-col justify-between gap-4 border-border px-6 py-8 not-first:border-t max-lg:items-center max-lg:text-center lg:aspect-square lg:gap-8 lg:px-7 lg:not-first:border-t-0 lg:not-first:border-l 2xl:aspect-[5/4]"
             >
               <Icon
                 aria-hidden="true"
                 className="size-6 text-muted-foreground"
                 strokeWidth={1.5}
               />
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 lg:min-h-[5.25rem]">
                 <p className="text-[17px] font-medium tracking-[-0.01em]">
                   {title}
                 </p>
-                <p className="leading-relaxed text-muted-foreground">{body}</p>
+                <p className="max-w-[18rem] leading-relaxed text-pretty text-muted-foreground">
+                  {body}
+                </p>
               </div>
             </li>
           ))}
