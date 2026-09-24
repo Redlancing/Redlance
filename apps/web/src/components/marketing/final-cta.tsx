@@ -14,8 +14,9 @@ export function FinalCta() {
       <Frame>
         <div className="relative isolate flex flex-col items-center px-4 py-24 text-center sm:py-32">
           <Streaks
-            count={40}
-            className="-z-10 mask-[linear-gradient(to_top,black,transparent_85%)] text-bone/35"
+            travel={520}
+            highlight="rgb(168 158 148 / 0.9)"
+            className="-z-10"
           />
           <h2
             id="final-cta-heading"

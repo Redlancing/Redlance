@@ -46,11 +46,8 @@ export function VoiceShowcase() {
     >
       <Frame>
         <div className="relative isolate flex h-[26rem] flex-col items-center overflow-clip px-4 pt-20 text-center sm:h-[34rem] sm:pt-28">
-          {/* Light streaks drifting down, fading out toward the horizon */}
-          <Streaks
-            count={36}
-            className="-z-20 mask-[linear-gradient(to_bottom,black_10%,transparent_65%)] text-bone/40"
-          />
+          {/* Attio's even line grid with a few faint travelling highlights */}
+          <Streaks travel={560} className="-z-20" />
           <Horizon />
 
           <p className="reveal-blur text-base text-muted-foreground">

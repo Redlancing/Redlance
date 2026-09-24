@@ -208,10 +208,10 @@
     }
     20%,
     80% {
-      opacity: var(--streak-opacity, 0.5);
+      opacity: var(--streak-opacity, 0.2);
     }
     100% {
-      transform: translateY(60%);
+      transform: translateY(var(--streak-travel, 600px));
       opacity: 0;
     }
   }
