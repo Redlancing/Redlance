@@ -188,7 +188,8 @@ export function HowItWorks() {
                 key={step.id}
                 id={step.id}
                 aria-labelledby={`${step.id}-heading`}
-                className="scroll-mt-12 border-b border-border last:border-b-0 lg:scroll-mt-0"
+                tabIndex={-1}
+                className="scroll-mt-28 border-b border-border last:border-b-0 focus:outline-none lg:scroll-mt-16"
               >
                 <div className="px-4 pt-14 pb-10 sm:px-12 sm:pt-20">
                   <TwoToneHeading
@@ -199,9 +200,12 @@ export function HowItWorks() {
                     className="max-w-[34rem]"
                   />
                 </div>
-                <div className="border-y border-border bg-secondary px-3 py-10 sm:px-12 sm:py-14">
+                <InView
+                  amount={0.25}
+                  className="border-y border-border bg-secondary px-3 py-10 sm:px-12 sm:py-14"
+                >
                   {step.mock}
-                </div>
+                </InView>
                 <div className="grid sm:grid-cols-2">
                   {step.cards.map((card) => (
                     <div

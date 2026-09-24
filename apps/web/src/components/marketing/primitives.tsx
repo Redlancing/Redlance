@@ -46,7 +46,10 @@ export function TwoToneHeading({
     <Tag
       id={id}
       className={cn(
-        "reveal-blur font-heading font-medium text-pretty",
+        // Section headings sharpen in as they scroll into view; step headings
+        // stay still, as on Attio.
+        "font-heading font-medium text-pretty",
+        Tag === "h2" && "reveal-blur",
         Tag === "h2"
           ? "text-[1.875rem] leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]"
           : "text-[1.375rem] leading-[1.15] tracking-[-0.015em] sm:text-2xl",

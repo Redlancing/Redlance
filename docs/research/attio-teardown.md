@@ -195,3 +195,16 @@ Measured by recording every element whose inline style changes while scrolling, 
 | **Marquee** | `translate3d` offset tied to scroll | Not needed yet |
 
 All of it is disabled or jumps to the end state under `prefers-reduced-motion`.
+
+### Platform walkthrough interactions (measured 2026-09-25)
+
+| Behaviour | Attio | Redlance |
+|---|---|---|
+| Active indicator | One 2px bar that springs between items (Motion `layoutId`), on the frame's edge | Same, in Flare 500 |
+| Item colours | 18px/500; idle very light grey, hover darker, 320ms ease-out colour change | Same timing; idle kept at 5.2:1 contrast for readability |
+| Active switch | When the next step's top reaches ~mid-viewport | Same (`rootMargin: -45% 0 -50% 0`) |
+| Click | JS eased scroll ~1.2s (fast start, long settle), no `#hash`, lands flush under the header (`scroll-margin-top` = header height) | Same (1.1s, `[0.16, 1, 0.3, 1]`), cancels on wheel/touch/key, focuses the step, plain link without JS |
+| Phone tabs | Cells with 1px dividers (`gap-px` on border colour), active cell shaded, hover lightens | Same |
+| Step headings | Static; only section headings blur in | Same |
+| Demo cards | Blur in (`blur → 0`, opacity) staggered when in view; play once, never replay; start ~350px into view | Same |
+| Kanban | Card lifts (y −24, scale up, shadow 0 → 0.18), arcs to the next column, drops | Lift (y −14, scale 1.05, −2° tilt) with an orange ring/shadow layer, then drops and "Hired" pops in |

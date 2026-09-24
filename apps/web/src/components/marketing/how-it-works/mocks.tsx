@@ -15,19 +15,23 @@ import { useStory } from "./use-story";
 
 const ease: Transition["ease"] = [0.2, 0, 0, 1];
 
+/** A demo card. It blurs in when its step scrolls into view (see <InView>). */
 function MockCard({
   className,
+  delay = 0,
   children,
 }: {
   className?: string;
+  delay?: number;
   children: React.ReactNode;
 }) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-background text-left text-[13px] shadow-[0_24px_48px_-32px_rgb(26_21_18/0.35)]",
+        "animate-enter rounded-xl border border-border bg-background text-left text-[13px] shadow-[0_24px_48px_-32px_rgb(26_21_18/0.35)]",
         className,
       )}
+      style={{ animationDelay: `${delay}s` }}
     >
       {children}
     </div>
@@ -161,7 +165,7 @@ export function MatchMock() {
             is fine.
           </p>
         </MockCard>
-        <MockCard className="flex flex-col p-4">
+        <MockCard className="flex flex-col p-4" delay={0.12}>
           <p className="text-xs text-muted-foreground">What Redlance found</p>
           <dl className="mt-2 flex flex-col">
             {fields.map(([label, value], i) => (
@@ -406,7 +410,10 @@ const trackCards: {
 ];
 
 export function TrackMock() {
-  const { ref, beat } = useStory(2, { every: 1000, startAfter: 1200 });
+  const { ref, beat, reduceMotion } = useStory(2, {
+    every: 1000,
+    startAfter: 1400,
+  });
 
   const placed = trackCards.map((card) => ({
     ...card,
@@ -427,7 +434,8 @@ export function TrackMock() {
             return (
               <div
                 key={column}
-                className="flex min-h-40 flex-col gap-2 rounded-xl bg-background/70 p-2 ring-1 ring-border"
+                className="flex min-h-40 animate-enter flex-col gap-2 rounded-xl bg-background/70 p-2 ring-1 ring-border"
+                style={{ animationDelay: `${columns.indexOf(column) * 0.08}s` }}
               >
                 <div className="flex items-center gap-1.5 px-1 pt-0.5 text-xs font-medium">
                   {column}
@@ -435,27 +443,72 @@ export function TrackMock() {
                     {cards.length}
                   </span>
                 </div>
-                {cards.map((card) => (
-                  <motion.div
-                    key={card.id}
-                    layoutId={`track-${card.id}`}
-                    transition={{ duration: 0.6, ease }}
-                    className="rounded-lg border border-border bg-background p-2.5 text-[12.5px] shadow-xs"
-                  >
-                    <p className="leading-snug font-medium">{card.title}</p>
-                    <div className="mt-1.5 flex items-center justify-between gap-2">
-                      <span className="text-muted-foreground tabular-nums">
-                        {card.budget}
-                      </span>
-                      {good && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-success-soft px-1.5 py-px text-[11px] font-medium text-success">
-                          <CheckIcon className="size-3" />
-                          {column}
-                        </span>
+                {cards.map((card) => {
+                  // The card being dragged: it lifts, travels with a warm
+                  // shadow, then settles, like Attio's kanban drag.
+                  const dragged = !reduceMotion && beat >= 1 && !!card.movesTo;
+                  return (
+                    <motion.div
+                      key={card.id}
+                      layoutId={`track-${card.id}`}
+                      animate={
+                        dragged
+                          ? {
+                              scale: [1, 1.05, 1.05, 1],
+                              rotate: [0, -2, -1, 0],
+                              y: [0, -14, -14, 0],
+                            }
+                          : undefined
+                      }
+                      transition={{
+                        duration: 0.9,
+                        times: [0, 0.2, 0.75, 1],
+                        ease,
+                        layout: { duration: 0.9, ease: [0.45, 0, 0.2, 1] },
+                      }}
+                      className="relative z-10 rounded-lg border border-border bg-background p-2.5 text-[12.5px] shadow-xs"
+                    >
+                      {/* Warm lift shadow while dragged. A separate layer,
+                          because layout animations take over boxShadow. */}
+                      {dragged && (
+                        <motion.span
+                          aria-hidden="true"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: [0, 1, 1, 0] }}
+                          transition={{
+                            duration: 0.9,
+                            times: [0, 0.2, 0.75, 1],
+                          }}
+                          className="pointer-events-none absolute -inset-px rounded-lg shadow-[0_0_0_1px_rgba(255,90,31,0.4),0_18px_36px_-12px_rgba(255,90,31,0.5)]"
+                        />
                       )}
-                    </div>
-                  </motion.div>
-                ))}
+                      <p className="leading-snug font-medium">{card.title}</p>
+                      <div className="mt-1.5 flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground tabular-nums">
+                          {card.budget}
+                        </span>
+                        {good && (
+                          <motion.span
+                            initial={
+                              dragged ? { opacity: 0, scale: 0.6 } : false
+                            }
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{
+                              delay: 0.85,
+                              type: "spring",
+                              stiffness: 500,
+                              damping: 22,
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md bg-success-soft px-1.5 py-px text-[11px] font-medium text-success"
+                          >
+                            <CheckIcon className="size-3" />
+                            {column}
+                          </motion.span>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             );
           })}

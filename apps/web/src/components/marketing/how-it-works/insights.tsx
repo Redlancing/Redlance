@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 // real. The numbers shown are sample data and are labelled as such.
 
 const card =
-  "rounded-xl border border-border bg-background p-4 text-left text-[12px] shadow-[0_24px_48px_-32px_rgb(26_21_18/0.35)]";
+  "animate-enter rounded-xl border border-border bg-background p-4 text-left text-[12px] shadow-[0_24px_48px_-32px_rgb(26_21_18/0.35)]";
 
 /* ------------------------------------------------ Hiring posts per week */
 
@@ -112,7 +112,7 @@ const MAX = 180;
 
 function MonthlyBars() {
   return (
-    <figure className={card}>
+    <figure className={card} style={{ animationDelay: "0.1s" }}>
       <span className="text-[13px] font-semibold">Hiring posts this month</span>
       <div className="mt-2 flex flex-wrap gap-3 text-muted-foreground">
         <span className="flex items-center gap-1.5">
@@ -208,7 +208,10 @@ const focus = [
 
 function FocusCard() {
   return (
-    <figure className={cn(card, "flex h-full flex-col")}>
+    <figure
+      className={cn(card, "flex h-full flex-col")}
+      style={{ animationDelay: "0.2s" }}
+    >
       <span className="text-[13px] font-semibold">
         Where to focus this week
       </span>
