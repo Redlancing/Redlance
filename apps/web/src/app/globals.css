@@ -133,8 +133,8 @@
   --card-foreground: var(--bone);
   --popover: #231d19;
   --popover-foreground: var(--bone);
-  --primary: #3a312b;
-  --primary-foreground: var(--bone);
+  --primary: var(--bone);
+  --primary-foreground: var(--ink);
   --secondary: #2e2621;
   --secondary-foreground: var(--bone);
   --muted: #2e2621;

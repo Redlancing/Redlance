@@ -1,4 +1,5 @@
 import { AnnouncementBar } from "@/components/marketing/announcement-bar";
+import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { announcement } from "@/lib/nav";
 
@@ -20,6 +21,7 @@ export default function MarketingLayout({
       <main id="main" className="flex-1">
         {children}
       </main>
+      <SiteFooter />
     </>
   );
 }

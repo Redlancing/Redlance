@@ -110,3 +110,34 @@ export const authLinks = {
   logIn: { title: "Log in", href: "/login" },
   signUp: { title: "Start free", href: "/signup" },
 };
+
+export const footerColumns: NavGroup[] = [
+  {
+    label: "Product",
+    items: [
+      { title: "How it works", href: "/#how-it-works" },
+      { title: "Alerts", href: "/#alerts" },
+      { title: "Pricing", href: "/#pricing" },
+      { title: "FAQ", href: "/#faq" },
+    ],
+  },
+  { label: "Redlance for", items: productMenu.side[0].items },
+  {
+    label: "Guides",
+    items: [
+      {
+        title: "Best subreddits for freelancers",
+        href: "/best-subreddits-for-freelancers",
+      },
+    ],
+  },
+  {
+    label: "Account",
+    items: [authLinks.logIn, authLinks.signUp],
+  },
+];
+
+export const legalLinks: NavItem[] = [
+  { title: "Privacy", href: "/privacy" },
+  { title: "Terms", href: "/terms" },
+];

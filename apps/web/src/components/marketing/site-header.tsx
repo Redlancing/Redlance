@@ -2,12 +2,17 @@ import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { buttonVariants } from "@/components/ui/button";
 import { authLinks } from "@/lib/nav";
+import { HeaderThemeSync } from "./header-theme-sync";
 import { MainNav } from "./main-nav";
 import { MobileNav } from "./mobile-nav";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md supports-backdrop-filter:bg-background/80">
+    <header
+      id="site-header"
+      className="sticky top-0 z-40 border-b border-border bg-background/90 text-foreground backdrop-blur-md transition-colors duration-300 ease-snappy supports-backdrop-filter:bg-background/80"
+    >
+      <HeaderThemeSync headerId="site-header" />
       <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-6 px-4 sm:px-6">
         <Link
           href="/"

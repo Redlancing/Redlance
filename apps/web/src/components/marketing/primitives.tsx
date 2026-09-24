@@ -20,7 +20,7 @@ export function Frame({
 /** Small orange label that names a section. */
 export function SectionChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex h-6 items-center rounded-lg bg-flare-50 px-1.5 text-sm font-medium text-flare-700">
+    <span className="inline-flex h-6 items-center rounded-lg bg-flare-50 px-1.5 text-sm font-medium text-flare-700 dark:bg-flare-500/15 dark:text-flare-400">
       {children}
     </span>
   );
