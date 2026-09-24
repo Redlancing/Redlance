@@ -1,0 +1,184 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-heading: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-wordmark: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --color-flare-50: var(--flare-50);
+  --color-flare-100: var(--flare-100);
+  --color-flare-400: var(--flare-400);
+  --color-flare-500: var(--flare-500);
+  --color-flare-600: var(--flare-600);
+  --color-flare-700: var(--flare-700);
+  --color-cream: var(--cream);
+  --color-ink: var(--ink);
+  --color-stone: var(--stone);
+  --color-bone: var(--bone);
+  --color-feed: var(--feed);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Brand (see brand/README.md) */
+  --flare-50: #fff5ee;
+  --flare-100: #ffe8d9;
+  --flare-400: #ff7a45; /* orange text on dark */
+  --flare-500: #ff5a1f; /* logo, large shapes — not for text */
+  --flare-600: #d63f0c; /* buttons (white text 4.6:1) */
+  --flare-700: #b8340a; /* orange text and links on light */
+  --cream: #fcf8f4;
+  --ink: #1a1512;
+  --stone: #6b625a;
+  --bone: #f7f2ec;
+  --feed: #cfc8bd;
+
+  /* Status: red flags on posts, and good outcomes (paid, hired, won) */
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --success: #15803d;
+  --success-soft: #f0fdf4;
+
+  --background: #ffffff;
+  --foreground: var(--ink);
+  --card: #ffffff;
+  --card-foreground: var(--ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: #ffffff;
+  --secondary: #f5efe8;
+  --secondary-foreground: var(--ink);
+  --muted: #f5efe8;
+  --muted-foreground: var(--stone);
+  --accent: #f5efe8;
+  --accent-foreground: var(--ink);
+  --destructive: var(--danger);
+  --border: #ece6df;
+  --input: #e2dad1;
+  --ring: var(--flare-500);
+  --chart-1: var(--flare-500);
+  --chart-2: #a89e94;
+  --chart-3: #7d736a;
+  --chart-4: #544b44;
+  --chart-5: #2e2621;
+  --radius: 0.625rem;
+  --sidebar: var(--cream);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--flare-50);
+  --sidebar-accent-foreground: var(--flare-700);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--flare-500);
+}
+
+.dark {
+  --feed: #4a423c;
+  --danger: #f87171;
+  --danger-soft: rgb(248 113 113 / 12%);
+  --success: #4ade80;
+  --success-soft: rgb(74 222 128 / 12%);
+
+  --background: var(--ink);
+  --foreground: var(--bone);
+  --card: #231d19;
+  --card-foreground: var(--bone);
+  --popover: #231d19;
+  --popover-foreground: var(--bone);
+  --primary: #3a312b;
+  --primary-foreground: var(--bone);
+  --secondary: #2e2621;
+  --secondary-foreground: var(--bone);
+  --muted: #2e2621;
+  --muted-foreground: #a89e94;
+  --accent: #2e2621;
+  --accent-foreground: var(--bone);
+  --destructive: var(--danger);
+  --border: rgb(247 242 236 / 10%);
+  --input: rgb(247 242 236 / 15%);
+  --ring: var(--flare-400);
+  --chart-1: var(--flare-400);
+  --chart-2: #a89e94;
+  --chart-3: #7d736a;
+  --chart-4: #544b44;
+  --chart-5: #3a312b;
+  --sidebar: #231d19;
+  --sidebar-foreground: var(--bone);
+  --sidebar-primary: #3a312b;
+  --sidebar-primary-foreground: var(--bone);
+  --sidebar-accent: #2e2621;
+  --sidebar-accent-foreground: var(--flare-400);
+  --sidebar-border: rgb(247 242 236 / 10%);
+  --sidebar-ring: var(--flare-400);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+    /* Keep anchor targets clear of the sticky header. */
+    scroll-padding-top: 5rem;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+  /* Fraunces' soft axis gives the rounded, friendly serif look. */
+  .font-serif {
+    font-variation-settings: "SOFT" 100;
+  }
+}
