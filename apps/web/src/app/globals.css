@@ -182,3 +182,192 @@
     font-variation-settings: "SOFT" 100;
   }
 }
+
+/* ----------------------------------------------------------------- Motion
+   Measured from Attio (docs/research/attio-teardown.md §6). Everything here
+   animates transform, opacity, filter or stroke only, and is switched off by
+   the reduced-motion rule at the end. */
+
+@theme {
+  --animate-streak: streak 7s linear infinite;
+  --animate-radar: radar 3.6s cubic-bezier(0.2, 0, 0, 1) infinite;
+  --animate-bob: bob 4.5s ease-in-out infinite;
+  --animate-draw: draw 1.4s cubic-bezier(0.2, 0, 0, 1) both;
+  --animate-enter: enter 0.9s cubic-bezier(0.2, 0, 0, 1) both;
+  --animate-hue-drift: hue-drift 9s ease-in-out infinite alternate;
+  --animate-travel: travel 5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  --animate-slide-thumb: slide-thumb 1.6s cubic-bezier(0.2, 0, 0, 1) both;
+  --animate-slide-fill: slide-fill 1.6s cubic-bezier(0.2, 0, 0, 1) both;
+
+  @keyframes streak {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    20%,
+    80% {
+      opacity: var(--streak-opacity, 0.5);
+    }
+    100% {
+      transform: translateY(60%);
+      opacity: 0;
+    }
+  }
+  @keyframes radar {
+    0% {
+      transform: scale(0.55);
+      opacity: 0;
+    }
+    25% {
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(1.35);
+      opacity: 0;
+    }
+  }
+  @keyframes bob {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+  @keyframes draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes enter {
+    from {
+      opacity: 0;
+      filter: blur(6px);
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      filter: blur(0);
+      transform: none;
+    }
+  }
+  @keyframes hue-drift {
+    from {
+      filter: hue-rotate(-8deg) saturate(1.05);
+    }
+    to {
+      filter: hue-rotate(10deg) saturate(1.3);
+    }
+  }
+  @keyframes travel {
+    from {
+      offset-distance: 0%;
+    }
+    to {
+      offset-distance: 100%;
+    }
+  }
+  @keyframes slide-thumb {
+    from {
+      left: 8%;
+    }
+    to {
+      left: var(--thumb-to, 62%);
+    }
+  }
+  @keyframes slide-fill {
+    from {
+      width: 8%;
+    }
+    to {
+      width: var(--thumb-to, 62%);
+    }
+  }
+  @keyframes shimmer {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -100% 0;
+    }
+  }
+  @keyframes scroll-fade-out {
+    to {
+      opacity: 0;
+      filter: blur(4px);
+      translate: 0 -24px;
+    }
+  }
+  @keyframes reveal-blur {
+    from {
+      opacity: 0;
+      filter: blur(4px);
+      translate: 0 8px;
+    }
+    to {
+      opacity: 1;
+      filter: blur(0);
+      translate: 0 0;
+    }
+  }
+}
+
+/* "Scoring…" style text with a light sweeping across it. */
+@utility text-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    currentColor 0%,
+    currentColor 38%,
+    var(--color-foreground) 50%,
+    currentColor 62%,
+    currentColor 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 1.8s linear infinite;
+}
+
+/* Headings sharpen into place as they scroll in. CSS scroll-driven animation:
+   no JavaScript, and browsers without support simply show the text. */
+@utility reveal-blur {
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      animation: reveal-blur linear both;
+      animation-timeline: view();
+      animation-range: entry 5% cover 28%;
+    }
+  }
+}
+
+/* The hero copy softly fades and lifts away as the page scrolls. */
+@utility scroll-fade-out {
+  @supports (animation-timeline: scroll()) {
+    @media (prefers-reduced-motion: no-preference) {
+      animation: scroll-fade-out linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 65vh;
+    }
+  }
+}
+
+/* Illustrations wait until they are on screen (see components/marketing/motion). */
+[data-inview="false"] * {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-delay: 0ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

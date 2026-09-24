@@ -225,6 +225,18 @@ export function Alerts() {
             aria-hidden="true"
             className="relative flex min-h-[26rem] items-center justify-center overflow-hidden border-t border-border bg-[radial-gradient(rgb(247_242_236/0.09)_1px,transparent_1px)] [background-size:16px_16px] px-4 py-16 lg:border-t-0"
           >
+            {/* Radar rings pulsing out from behind the visual */}
+            <div className="pointer-events-none absolute top-1/2 left-1/2 size-[34rem] -translate-1/2">
+              <div className="absolute inset-0 rounded-full border border-border" />
+              <div className="absolute inset-[18%] rounded-full border border-border" />
+              {[0, 1.2, 2.4].map((delay) => (
+                <div
+                  key={delay}
+                  className="absolute inset-[10%] animate-radar rounded-full border border-flare-400/30"
+                  style={{ animationDelay: `${delay}s` }}
+                />
+              ))}
+            </div>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={active}

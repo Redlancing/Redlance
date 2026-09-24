@@ -8,7 +8,7 @@ const baseButtonVariants = cva(
     variants: {
       variant: {
         default:
-          "border-primary bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.14)] hover:bg-primary/88",
+          "relative overflow-hidden border-primary bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.14)] before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(120%_100%_at_50%_-20%,rgb(255_255_255/0.28),transparent_65%)] before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100",
         outline:
           "border-input bg-background hover:border-foreground/25 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:

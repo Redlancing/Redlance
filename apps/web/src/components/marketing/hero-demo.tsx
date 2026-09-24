@@ -120,7 +120,7 @@ function ScoreCell({ post, scored }: { post: DemoPost; scored: boolean }) {
   if (!scored) {
     return (
       <span className="inline-flex h-6 items-center text-[13px] text-muted-foreground/80">
-        <span className="animate-pulse">Scoring…</span>
+        <span className="text-shimmer">Scoring…</span>
       </span>
     );
   }

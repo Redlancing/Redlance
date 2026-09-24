@@ -176,3 +176,22 @@ All claims must stay true to CLAUDE.md: never auto-post, "posted budgets" not "m
 3. **Hero H1: "Get hired off Reddit."** with the verbatim one-liner as the subtitle.
 4. **Backgrounds:** white page, cream for the feature walkthrough, ink for dark sections. Applied (`--background` = white).
 5. **v1 scope (recommended, not yet confirmed):** sections 0–8, 13 (niche tabs), 14–17 and the FAQ; add the quote, stats and case studies once they're real.
+
+---
+
+## 6. Motion, measured (2026-09-25)
+
+Measured by recording every element whose inline style changes while scrolling, plus `document.getAnimations()` and hover probes.
+
+| Effect | How Attio does it | Redlance version |
+|---|---|---|
+| **Horizon arc** (dark showcase) | Rim = two layers (blurred glow `blur(10px)` at 45% + sharp `blur(2px)`) under a 1728px body circle; a `clip-path: inset(... calc(X% ...) ...)` wipes the rim in **left → right tied to scroll**, spring-smoothed, finishing as the section reaches the top; slow `hue-rotate`/`saturate` drift | Same structure in Flare orange; `useScroll` + `useSpring` drive the clip and opacity |
+| **Heading reveal** | `filter: blur(2.5px)`, `opacity 0`, `translateY(4px)` → sharp, spring | `BlurReveal` on section headings |
+| **Hero on scroll** | Mock scales 0.96 → 0.95; floating panels around it scale from their own corners (`transform-origin` per corner); hero text fades with blur | Scroll-linked scale + floating alert / red-flag / hired cards |
+| **Light streaks** | 1px vertical lines (`linear-gradient(transparent, colour 50%, transparent)`, 360px tall) animating opacity/position inside masked strips | CSS-only `Streaks` strip, deterministic positions |
+| **Looping details** | `pipeline-radar-ring` pulses, chips `bob`, workflow connectors `border-draw` (`stroke-dashoffset`), skeleton shimmer, "Thinking" gradient sweep via `background-clip: text` | Radar with subreddit chips, drawn pipeline connectors, text shimmer on "Scoring…" |
+| **Graphs** | SVG path (`preserveAspectRatio="none"`) revealed with `infra-reveal-to-right` | Insight chart drawn on view (sample data inside a product mock only) |
+| **Buttons** | Primary gets a radial highlight from the top on hover (`radial-gradient(at 50% -10%, lighter, base)`) | Top-glow overlay on hover |
+| **Marquee** | `translate3d` offset tied to scroll | Not needed yet |
+
+All of it is disabled or jumps to the end state under `prefers-reduced-motion`.

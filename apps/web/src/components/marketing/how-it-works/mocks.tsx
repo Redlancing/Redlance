@@ -201,9 +201,13 @@ export function MatchMock() {
             />
           </div>
           <p className="mt-2 min-h-[2.6em] leading-snug text-muted-foreground">
-            {scored
-              ? "Next.js and Tailwind are your main stack, and you have shipped two edtech sites."
-              : "Scoring against your profile…"}
+            {scored ? (
+              "Next.js and Tailwind are your main stack, and you have shipped two edtech sites."
+            ) : (
+              <span className="text-shimmer">
+                Scoring against your profile…
+              </span>
+            )}
           </p>
         </MockCard>
       </div>

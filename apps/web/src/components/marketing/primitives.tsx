@@ -20,7 +20,7 @@ export function Frame({
 /** Small orange label that names a section. */
 export function SectionChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex h-6 items-center rounded-lg bg-flare-50 px-1.5 text-sm font-medium text-flare-700 dark:bg-flare-500/15 dark:text-flare-400">
+    <span className="inline-flex h-6 reveal-blur items-center rounded-lg bg-flare-50 px-1.5 text-sm font-medium text-flare-700 dark:bg-flare-500/15 dark:text-flare-400">
       {children}
     </span>
   );
@@ -46,7 +46,7 @@ export function TwoToneHeading({
     <Tag
       id={id}
       className={cn(
-        "font-heading font-medium text-pretty",
+        "reveal-blur font-heading font-medium text-pretty",
         Tag === "h2"
           ? "text-[1.875rem] leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]"
           : "text-[1.375rem] leading-[1.15] tracking-[-0.015em] sm:text-2xl",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { authLinks } from "@/lib/nav";
+import { Streaks } from "./motion/streaks";
 import { Frame } from "./primitives";
 
 export function FinalCta() {
@@ -12,13 +13,13 @@ export function FinalCta() {
     >
       <Frame>
         <div className="relative isolate flex flex-col items-center px-4 py-24 text-center sm:py-32">
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 -z-10 bg-[repeating-linear-gradient(90deg,rgb(247_242_236/0.05)_0_1px,transparent_1px_8px)] mask-[linear-gradient(to_top,black,transparent_80%)]"
+          <Streaks
+            count={40}
+            className="-z-10 mask-[linear-gradient(to_top,black,transparent_85%)] text-bone/35"
           />
           <h2
             id="final-cta-heading"
-            className="max-w-[40rem] font-heading text-[2.5rem] leading-none font-medium tracking-[-0.025em] text-balance sm:text-[3.5rem]"
+            className="max-w-[40rem] reveal-blur font-heading text-[2.5rem] leading-none font-medium tracking-[-0.025em] text-balance sm:text-[3.5rem]"
           >
             Your next client is posting right now.
           </h2>

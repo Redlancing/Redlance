@@ -1,3 +1,16 @@
+import {
+  BubblesIllustration,
+  FilterIllustration,
+  FollowUpNudge,
+  InsightsChart,
+  LockedToggle,
+  PortfolioPick,
+  Radar,
+  RulesIllustration,
+  Stopwatch,
+} from "../illustrations";
+import { InView } from "../motion/in-view";
+import { Pipeline } from "../pipeline";
 import { Frame, SectionChip, TwoToneHeading } from "../primitives";
 import {
   DraftMock,
@@ -29,10 +42,12 @@ const steps: Step[] = [
       {
         title: "No [For Hire] noise",
         body: "Other freelancers' ads are skipped. You only see clients who want to hire.",
+        visual: <FilterIllustration />,
       },
       {
         title: "Your subreddits, your niche",
         body: "Pick where to look, from r/forhire to niche boards for editors and designers.",
+        visual: <Radar />,
       },
     ],
   },
@@ -51,6 +66,7 @@ const steps: Step[] = [
       {
         title: "Your rules",
         body: "Set a minimum budget or skip certain kinds of work, and those posts stay out of your way.",
+        visual: <RulesIllustration />,
       },
     ],
   },
@@ -64,10 +80,12 @@ const steps: Step[] = [
       {
         title: "Comment and DM",
         body: "One version for the thread, one for their inbox. Edit either before you send.",
+        visual: <BubblesIllustration />,
       },
       {
         title: "One link, the right one",
         body: "Redlance picks the portfolio piece closest to the job instead of pasting all of them.",
+        visual: <PortfolioPick />,
       },
     ],
   },
@@ -81,10 +99,12 @@ const steps: Step[] = [
       {
         title: "Your account stays yours",
         body: "No auto-posting and no bulk DMs, so your Reddit account isn't put at risk.",
+        visual: <LockedToggle />,
       },
       {
         title: "Two minutes, start to send",
         body: "From alert to reply in about the time it takes to read the post.",
+        visual: <Stopwatch />,
       },
     ],
   },
@@ -98,10 +118,12 @@ const steps: Step[] = [
       {
         title: "Follow-up reminders",
         body: "Coming soon: a nudge when a client goes quiet after your reply.",
+        visual: <FollowUpNudge />,
       },
       {
         title: "Insights once there's enough data",
         body: "Patterns show up after about 20 replies, not before, so they mean something.",
+        visual: <InsightsChart />,
       },
     ],
   },
@@ -115,14 +137,19 @@ export function HowItWorks() {
       className="border-b border-border bg-cream"
     >
       <Frame>
-        <div className="flex flex-col items-start gap-5 px-4 py-20 sm:px-12 sm:py-28 lg:px-16">
-          <SectionChip>How it works</SectionChip>
-          <TwoToneHeading
-            id="how-it-works-heading"
-            lead="Your gig radar never sleeps."
-            rest="It catches hiring posts at 2am, scores each one against your skills, and has a reply ready before you've opened Reddit."
-            className="max-w-[48rem]"
-          />
+        <div className="flex items-center justify-between gap-12 px-4 py-20 sm:px-12 sm:py-28 lg:px-16">
+          <div className="flex flex-col items-start gap-5">
+            <SectionChip>How it works</SectionChip>
+            <TwoToneHeading
+              id="how-it-works-heading"
+              lead="Your gig radar never sleeps."
+              rest="It catches hiring posts at 2am, scores each one against your skills, and has a reply ready before you've opened Reddit."
+              className="max-w-[40rem]"
+            />
+          </div>
+          <InView className="hidden xl:block">
+            <Pipeline />
+          </InView>
         </div>
 
         <div className="border-t border-border lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
@@ -159,7 +186,11 @@ export function HowItWorks() {
                       <p className="max-w-[26rem] leading-relaxed text-muted-foreground">
                         {card.body}
                       </p>
-                      {card.visual && <div className="mt-2">{card.visual}</div>}
+                      {card.visual && (
+                        <InView className="mt-6 flex min-h-40 items-center">
+                          {card.visual}
+                        </InView>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -4,6 +4,8 @@ import {
   MessageSquareQuoteIcon,
   TargetIcon,
 } from "lucide-react";
+import { Horizon } from "./motion/horizon";
+import { Streaks } from "./motion/streaks";
 import { Frame } from "./primitives";
 
 const points = [
@@ -37,28 +39,20 @@ export function VoiceShowcase() {
       className="dark border-b border-border bg-background text-foreground"
     >
       <Frame>
-        <div className="relative isolate flex h-[26rem] flex-col items-center overflow-hidden px-4 pt-20 text-center sm:h-[34rem] sm:pt-28">
-          {/* Fine vertical lines fading down from the top */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 -z-20 bg-[repeating-linear-gradient(90deg,rgb(247_242_236/0.05)_0_1px,transparent_1px_8px)] mask-[linear-gradient(to_bottom,black,transparent_70%)]"
+        <div className="relative isolate flex h-[26rem] flex-col items-center overflow-clip px-4 pt-20 text-center sm:h-[34rem] sm:pt-28">
+          {/* Light streaks drifting down, fading out toward the horizon */}
+          <Streaks
+            count={36}
+            className="-z-20 mask-[linear-gradient(to_bottom,black_10%,transparent_65%)] text-bone/40"
           />
-          {/* Horizon: a gradient rim peeking above a dark body that casts the glow */}
-          <div
-            aria-hidden="true"
-            className="absolute top-[15rem] left-1/2 -z-10 aspect-square w-[200%] -translate-x-1/2 rounded-full bg-[linear-gradient(90deg,transparent_18%,#ff5a1f_36%,#ffd2b8_50%,#ff5a1f_64%,transparent_82%)] sm:top-[19rem] sm:w-[140%]"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute top-[calc(15rem+1.5px)] left-1/2 -z-10 aspect-square w-[200%] -translate-x-1/2 rounded-full bg-background shadow-[0_-24px_120px_-12px_rgb(255_90_31/0.5)] sm:top-[calc(19rem+1.5px)] sm:w-[140%]"
-          />
+          <Horizon />
 
-          <p className="text-base text-muted-foreground">
+          <p className="reveal-blur text-base text-muted-foreground">
             Replies that sound like you
           </p>
           <h2
             id="voice-heading"
-            className="mt-3 font-heading text-[3.25rem] leading-none font-semibold tracking-[-0.03em] sm:text-[6rem]"
+            className="mt-3 reveal-blur font-heading text-[3.25rem] leading-none font-semibold tracking-[-0.03em] sm:text-[6rem]"
           >
             Voice Match
           </h2>
