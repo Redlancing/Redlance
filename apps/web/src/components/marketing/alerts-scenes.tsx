@@ -31,7 +31,7 @@ export function RadarScene({ playing, animate }: SceneProps) {
     <svg
       ref={ref}
       viewBox="-320 -360 640 720"
-      className="size-full"
+      className="size-full p-6"
       fill="none"
     >
       {[55, 115, 175, 235, 295].map((r) => (
@@ -115,88 +115,6 @@ export function RadarScene({ playing, animate }: SceneProps) {
   );
 }
 
-/* Match feed: many posts stream into a funnel, one orange match drops out. */
-const RINGS = 8;
-const rings = Array.from({ length: RINGS }, (_, i) => {
-  const t = i / (RINGS - 1);
-  const rx = 28 + 272 * (1 - t) ** 1.8;
-  return { rx, ry: rx * 0.3, cy: -170 + 270 * t ** 0.6 };
-});
-const spokes = Array.from({ length: 18 }, (_, i) => {
-  const a = (i / 18) * Math.PI * 2;
-  const x0 = 300 * Math.cos(a);
-  const y0 = -170 + 90 * Math.sin(a);
-  const x1 = 28 * Math.cos(a);
-  const y1 = 100 + 8 * Math.sin(a);
-  return `M${x0.toFixed(1)} ${y0.toFixed(1)} Q${(x0 * 0.2).toFixed(1)} ${(y0 + 150).toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
-});
-
-export function FunnelScene({ playing, animate }: SceneProps) {
-  const ref = useSvgPlayback(playing);
-  return (
-    <svg
-      ref={ref}
-      viewBox="-320 -360 640 720"
-      className="size-full"
-      fill="none"
-    >
-      {rings.map((r) => (
-        <ellipse
-          key={r.rx}
-          cx="0"
-          cy={r.cy}
-          rx={r.rx}
-          ry={r.ry}
-          className={line}
-        />
-      ))}
-      {spokes.map((d) => (
-        <path key={d} d={d} className={faint} />
-      ))}
-      <line x1="0" y1="100" x2="0" y2="360" className="stroke-bone/25" />
-      {animate && (
-        <>
-          {[1, 4, 7, 10, 13, 16].map((i, k) => (
-            <circle key={i} r="2.5" className="fill-bone">
-              <animateMotion
-                path={spokes[i]}
-                dur="2.6s"
-                begin={`${-k * 0.45}s`}
-                repeatCount="indefinite"
-              />
-              <animate
-                attributeName="opacity"
-                values="0;1;1;0"
-                keyTimes="0;0.2;0.8;1"
-                dur="2.6s"
-                begin={`${-k * 0.45}s`}
-                repeatCount="indefinite"
-              />
-            </circle>
-          ))}
-          <circle r="5" className="fill-flare-500">
-            <animateMotion
-              path="M0 100 V330"
-              keyPoints="0;0;1"
-              keyTimes="0;0.4;1"
-              calcMode="linear"
-              dur="2.6s"
-              repeatCount="indefinite"
-            />
-            <animate
-              attributeName="opacity"
-              values="0;0;1;1;0"
-              keyTimes="0;0.38;0.45;0.85;1"
-              dur="2.6s"
-              repeatCount="indefinite"
-            />
-          </circle>
-        </>
-      )}
-    </svg>
-  );
-}
-
 /* Daily digest: matches orbit, today's best one glows orange. */
 const orbits = [70, 130, 190, 250, 310];
 const ellipsePath = (rx: number, ry: number) =>
@@ -208,7 +126,7 @@ export function OrbitScene({ playing, animate }: SceneProps) {
     <svg
       ref={ref}
       viewBox="-340 -360 680 720"
-      className="size-full"
+      className="size-full p-6"
       fill="none"
     >
       <g transform="rotate(-14)">

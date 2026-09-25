@@ -12,7 +12,8 @@ import {
 import { ArrowRightIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { FunnelScene, OrbitScene, RadarScene } from "./alerts-scenes";
+import { OrbitScene, RadarScene } from "./alerts-scenes";
+import { FunnelCanvas } from "./funnel-canvas";
 import { Frame, SectionChip, TwoToneHeading } from "./primitives";
 
 const ease: Transition["ease"] = [0.2, 0, 0, 1];
@@ -29,7 +30,7 @@ const channels = [
     id: "feed",
     title: "Your match feed",
     body: "Hundreds of posts go in. Only the ones worth your time come out, with the full post and your drafts beside them.",
-    Scene: FunnelScene,
+    Scene: FunnelCanvas,
   },
   {
     id: "digest",
@@ -73,7 +74,7 @@ export function Alerts() {
     >
       <Frame>
         <div ref={ref} className="grid lg:grid-cols-2">
-          <div className="border-border px-4 py-20 sm:px-12 sm:py-24 lg:border-r lg:px-16 lg:py-28">
+          <div className="border-border px-4 py-20 sm:px-12 sm:py-24 lg:border-r lg:px-16 lg:py-[7.75rem]">
             <div className="flex flex-col lg:h-[35rem]">
               <div className="flex flex-col items-start gap-8">
                 <div className="flex flex-col items-start gap-6">
@@ -203,7 +204,7 @@ export function Alerts() {
                     animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
                     exit={{ opacity: 0, scale: 1.03, filter: "blur(6px)" }}
                     transition={{ duration: reduceMotion ? 0 : 0.7, ease }}
-                    className="absolute inset-0 p-6"
+                    className="absolute inset-0"
                   >
                     <Scene playing={inView} animate={!reduceMotion} />
                   </motion.div>

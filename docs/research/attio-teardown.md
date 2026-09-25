@@ -218,3 +218,16 @@ All of it is disabled or jumps to the end state under `prefers-reduced-motion`.
 | Items | Titles stay bright; inactive items are buttons with hover underline; active opens description + 2px progress (height/blur/opacity) | Same |
 | Timing | Progress fills in ~5s, then the next item opens; a click jumps and restarts the timer (autoplay continues) | Same; also pauses on hover/keyboard focus and off screen; no autoplay with reduced motion |
 | Right visual | One canvas of white line art that changes scene per item (funnel with streaking particles, radar rings with a descending line, tilted orbits with satellites) | SVG + SMIL line art: radar (orange ping), funnel (one orange match drops out), orbits (orange top match); crossfade with blur; paused off screen |
+
+### Signals funnel, reconstructed (2026-09-25)
+
+Attio's funnel is a small 3D canvas renderer (recorded via canvas-call logging, then read from its bundle to get exact parameters). Our `funnel-canvas.tsx` is an independent implementation of the same model:
+
+- **Surface:** radius `3.2·(1−d)^3.2`, height `−7.5·d^2.2` (d = depth 0…1, clamped).
+- **Rings:** 13 at d = −0.2, −0.12, −0.05, 0.04, 0.12, 0.22, 0.33, 0.45, 0.57, 0.68, 0.78, 0.87, 0.94; 96 segments; alpha `0.5·smoothstep(−0.2, 0.28, d)`; colour blends toward the background with depth (`smoothstep(0.15, 0.75, d)`, up to 90%).
+- **Spokes:** 16, sampled with `d = −0.2 + 1.2·(1−(1−t)²)` over 56 steps; alpha `0.42`, fading in with `smoothstep(−0.26, 0, d)`.
+- **Occlusion:** 24 × 48 surface quads filled in the background colour; everything sorted back to front (lines biased 0.6 nearer).
+- **Camera:** elevation 52°, distance 6.6, target y −1.2, focal `0.92·height`, centred; depth fade `0.1 + 0.9·(1 − smoothstep(0.32·dist, dist + 9.3, z))`; pointer tilt ±3.5° (smoothing τ 0.18s, desktop fine pointers only).
+- **Particles:** 12 on spoke angles `(5i mod 16)/16·2π`, depth advancing 0.07/s; 1.6px additive trail over 0.13 depth; head = 5px glow + 2.4px core, shrinking `1−0.5d` and dimming `1−0.9d³`.
+- **Mask:** vertical fade 0→20% and 90→100%.
+- **Palette mapping:** lines `156,147,139` (warm grey, same luminance as Attio's `143,153,168`), trails `255,176,140`, heads white.
