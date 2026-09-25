@@ -233,3 +233,16 @@ Attio's funnel is a small 3D canvas renderer (recorded via canvas-call logging, 
 - **Palette mapping:** lines `156,147,139` (warm grey, same luminance as Attio's `143,153,168`), trails `255,176,140`, heads white.
 
 **Decision (2026-09-25):** Redlance's Alerts panel shows only the funnel for every item; the radar and orbit scenes were removed.
+
+### Curtain quote and scale stats (measured 2026-09-25)
+
+- **Curtain:** the dark block is wrapped in `relative z-10`; the quote section follows with `relative z-0 -mt-[100svh]`, so it sits beneath the block's last screen. Inside: a `h-[250svh]` track, and a `sticky top-(header) h-[calc(100svh-header)]` pane with a 10 px dot grid (1×1 rect at 5.5,5.5) and spacers of `h-25 lg:h-30 xl:h-40` above and below.
+- **Quote:** serif, 48/52 px, −0.72 px tracking, `max-w-[18em]`, centred. Every word is a span that turns from caption grey to ink as you scroll (`transition-colors 500ms ease-out`). About 17 words light up between 10% and 78% of the track's scroll progress. Name and role underneath are 14 px, with `mt-9 lg:mt-13`.
+- **Stats:** the section is `lg:min-h-[760px]`, padded `pt-22 / lg:pt-28 / xl:pt-38`. The heading block is `max-w-[464px]`, then a `flex-[0.7]` spacer, then a 2×2 stats grid (`max-w-[480px] gap-x-12 gap-y-8`), then a `flex-[2.2]` spacer. Each stat has a 2 px accent left rail and a number in 32 px medium tabular. They blur in (1.5 px blur to 0, opacity 0 to 1) over 500 ms ease-out, 80 ms apart.
+- **Curve:** `y = 700·(1 − t^2.4)` in a `0 0 1392 760` box with `preserveAspectRatio="none"` and a non-scaling 2 px stroke. The layers, in order:
+  1. The line texture (an 8 px grid of 1 px lines plus 24 falling highlights) fades in over 1.1 s, after a 0.1 s delay.
+  2. A tinted wash fades in over 0.6 s, after a 1.3 s delay.
+  3. A path filled with the page colour masks everything above the curve.
+  4. A grey stroke.
+  5. The accent stroke is revealed with `clip-path: inset(0 100% 0 0) → inset(0)` over 1.2 s, eased `(0,0,.58,1)`.
+- **Redlance version:** the quote is our own promise, attributed to "The Redlance promise", not a customer. The stats are product facts, not results: < 2 min to reply, feed checks every 2–3 min, 24/7 watching, 0% commission. The curve is decorative and has no axes. Swap in a real beta-user quote and real outcomes once we have them (rule 8).
