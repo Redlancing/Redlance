@@ -12,7 +12,6 @@ import {
 import { ArrowRightIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { OrbitScene, RadarScene } from "./alerts-scenes";
 import { FunnelCanvas } from "./funnel-canvas";
 import { Frame, SectionChip, TwoToneHeading } from "./primitives";
 
@@ -24,27 +23,24 @@ const channels = [
     id: "telegram",
     title: "Telegram alerts",
     body: "A message the moment a post clears your score bar, with the draft one tap away. Instant on Pro, within the hour on Free.",
-    Scene: RadarScene,
   },
   {
     id: "feed",
     title: "Your match feed",
     body: "Hundreds of posts go in. Only the ones worth your time come out, with the full post and your drafts beside them.",
-    Scene: FunnelCanvas,
   },
   {
     id: "digest",
     title: "Daily digest",
     soon: true,
     body: "One email with the day's best matches, for the days you're away from Telegram.",
-    Scene: OrbitScene,
   },
 ] as const;
 
 /**
  * Laid out and paced like Attio's Signals block: headline top-left, the list
  * pinned to the bottom, the active item opening to show its description and
- * a 5s progress bar, and a line-art scene on the right that changes with it.
+ * a 5s progress bar, and the 3D funnel on the right.
  * Clicking an item jumps to it and restarts the timer. Beyond Attio, it
  * pauses on hover or keyboard focus and never autoplays with reduced motion.
  */
@@ -195,22 +191,8 @@ export function Alerts() {
             aria-hidden="true"
             className="relative aspect-[6/7] overflow-hidden border-t border-border lg:aspect-auto lg:border-t-0"
           >
-            <AnimatePresence initial={false}>
-              {channels.map(({ id, Scene }, i) =>
-                i === index ? (
-                  <motion.div
-                    key={id}
-                    initial={{ opacity: 0, scale: 0.96, filter: "blur(6px)" }}
-                    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                    exit={{ opacity: 0, scale: 1.03, filter: "blur(6px)" }}
-                    transition={{ duration: reduceMotion ? 0 : 0.7, ease }}
-                    className="absolute inset-0"
-                  >
-                    <Scene playing={inView} animate={!reduceMotion} />
-                  </motion.div>
-                ) : null,
-              )}
-            </AnimatePresence>
+            {/* One funnel for every item: posts pour in, matches come out. */}
+            <FunnelCanvas playing={inView} animate={!reduceMotion} />
           </div>
         </div>
       </Frame>

@@ -231,3 +231,5 @@ Attio's funnel is a small 3D canvas renderer (recorded via canvas-call logging, 
 - **Particles:** 12 on spoke angles `(5i mod 16)/16·2π`, depth advancing 0.07/s; 1.6px additive trail over 0.13 depth; head = 5px glow + 2.4px core, shrinking `1−0.5d` and dimming `1−0.9d³`.
 - **Mask:** vertical fade 0→20% and 90→100%.
 - **Palette mapping:** lines `156,147,139` (warm grey, same luminance as Attio's `143,153,168`), trails `255,176,140`, heads white.
+
+**Decision (2026-09-25):** Redlance's Alerts panel shows only the funnel for every item; the radar and orbit scenes were removed.
