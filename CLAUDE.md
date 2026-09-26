@@ -2,7 +2,7 @@
 
 Redlance is an AI tool that finds freelance jobs on Reddit, matches them to your skills, and drafts replies in your voice.
 
-Status: pre-MVP — Next.js web app scaffolded, homepage not built yet. The full spec is in `docs/PROJECT.md` (transcribed from `Redlance_Project_Description.pdf`); read the relevant section before designing a feature, schema, or page.
+Status: pre-MVP — homepage built; local backend foundation, login page and a basic dashboard built (see "Where we are" at the end). The full spec is in `docs/PROJECT.md` (transcribed from `Redlance_Project_Description.pdf`); read the relevant section before designing a feature, schema, or page.
 
 ## Repo layout and commands
 
@@ -81,3 +81,106 @@ Decided 2026-09-25; replaces the Free/Pro plans in `docs/PROJECT.md` §9.
 Phase 0 (wks 1–2): Telegram bot, one niche, 10–15 subreddits → Phase 1 (wks 3–8): web app MVP (profile, scoring, drafts, red flags, tracker) → Phase 2 (months 3–4): paid plans with credits, follow-ups, voice learning → Phase 3 (months 4–8): rate insights, client memory, analytics, more sources, licensed Reddit API.
 
 North-star metric: gigs won per active user per month.
+
+## Where we are (2026-09-26)
+
+Handover for the next chat. Update this section as things change.
+
+### Branches
+
+- `feat/homepage`: the marketing homepage. Not merged into `main` yet.
+- `feat/local-foundation`: built on top of `feat/homepage`, 13 commits, 105 tests passing (`npm test`). **Open question:** merge into `feat/homepage`, open a PR, or keep.
+
+### Built on `feat/local-foundation`
+
+- **Local stack:** Postgres (`db`) and Valkey (`cache`) are two Docker containers bound to 127.0.0.1. Next.js runs on the host (`npm run dev`). Tests use the `redlance_test` database and Redis db 15.
+- **`packages/db`:** the `users` table (unique `auth_sub` and `email_normalized`, CHECK constraint on `status`); migrations `0000_enable_vector` and `0001_init`.
+- **`apps/web/src/server/`:**
+  - `env.ts`: zod-validated settings; the server crashes at startup (`instrumentation.ts`) if any are missing or invalid.
+  - `errors.ts`: one error shape, `{ error: { code, message, requestId, details? } }`.
+  - `logger.ts`: pino JSON logs, one line per request with its request ID.
+  - `http.ts`: `clientIp` prefers `CloudFront-Viewer-Address`, otherwise the **last** `X-Forwarded-For` entry.
+  - `db.ts`: one pool per process, kept on `globalThis`; the pool has an `error` handler.
+  - `redis.ts`: ioredis with RESP2, offline queue off, 1 s command timeout, explicit `retryDelay` backoff with jitter, stops retrying on WRONGPASS/NOAUTH, one warning per outage, and `awaitFirstConnection()` for any client. Lint forbids `new Redis()` outside this file.
+- **Rate limits** (`server/rate-limit`, Lua, 1 Redis command each, keys `rl:{u:<id>}:<bucket>` and `q:{u:<id>}:<name>:<yyyymmdd>`):
+  - `api` bucket: 30 burst, 2/s, per user (per IP when signed out).
+  - `health` bucket: 10 burst, one every 5 s.
+  - The bucket **fails open** when Redis is down. Daily quotas (`consumeQuota`) **fail closed** with 503. Quotas are built but not yet used by any feature.
+- **Auth (dev stand-in until Cognito):**
+  - `AUTH_MODE=dev` is only allowed when `APP_ENV=local` **and** `APP_ORIGIN` is localhost.
+  - The session is an HMAC-signed httpOnly cookie `rl_dev_session`. `getSession(request)` serves API routes and `getCurrentUser()` serves pages; both go through `getSessionFromToken()`, which is what Cognito will replace.
+  - Sign-in is an `ON CONFLICT` upsert on `auth_sub`.
+- **API** (`/api/v1`, every route wrapped in `apiRoute()`: session → origin check on mutations → zod input → rate limit):
+  - `/health` is liveness only and never touches Postgres or Redis. `/health?deep=1` checks both.
+  - `/me` returns the signed-in user.
+  - `/dev/session` POST signs in and DELETE signs out; it returns 404 unless `AUTH_MODE=dev`.
+- **UI:**
+  - `/login`: Google button disabled in dev, then email.
+  - `/dashboard`: sidebar with Overview plus "Soon" items, a "Set up your profile" card, zero-state stats, and an empty matches state.
+  - `src/proxy.ts` sends visitors without a session cookie from `/dashboard` to `/login?next=…`; the `(app)/layout.tsx` verifies the session.
+  - `safeNextPath()` only allows same-site paths and validates the normalised result.
+- **Deferred minors** (from the code review):
+  - The rate limit runs after the session, origin and input checks.
+  - `x-request-id` from the client is not validated.
+  - A database outage during the session lookup returns 500 instead of 503, and errors can log email addresses.
+  - `AUTH_MODE=cognito` throws in `getSession` until the login spec lands.
+  - `refillPerSec: 0` isn't guarded.
+  - The layout redirect hardcodes `next=/dashboard`.
+  - The sign-in upsert conflicts only on `auth_sub`; revisit before Cognito.
+
+### Specs and plans (`docs/superpowers/`)
+
+- `specs/2026-09-26-local-dev-foundation-design.md` and `plans/2026-09-26-local-dev-foundation.md`: done.
+- `specs/2026-09-26-cdn-waf-foundation-design.md` (Phases 0–2: CDK, Route 53, ACM, CloudFront, WAF): **partly outdated.** The static-export-to-S3 idea is replaced: CloudFront's origin is the EC2 server, with static assets still cached at the edge. It uses the CloudFront flat-rate **Free plan** (includes WAF + Route 53, 1M requests, 100 GB and 5 WAF rules a month; no VPC origins, so the server is locked to CloudFront by security group + secret header). The user hasn't explicitly confirmed the flat-rate plan.
+
+### Onboarding: agreed design, not built
+
+Steps:
+1. Niche.
+2. Optional imports: resume, GitHub username, portfolio links. They run as background jobs through the worker and show up as suggestions; Gemini Flash costs about 2–5¢ per user. Link fetching must be SSRF-safe (block private IPs, timeouts, size caps).
+3. Skills from our taxonomy (skill IDs with aliases), each marked core or secondary.
+4. At least 1 portfolio piece.
+5. Minimum rate, currency, hourly/fixed, remote, time zone, blocked words.
+6. Auto-picked subreddits.
+7. Alerts: email by default, Telegram optional.
+8. Finish: the trial starts and the user sees first matches from the last ~7 days.
+
+Planned tables: `skills`, `profile_skills`, `custom_skills`, `portfolio_items`, `import_jobs`, `skill_subreddits`, `user_subreddits`, `alert_channels`, `llm_usage`.
+
+**Blocked on:** choosing the launch niche.
+
+### AWS and accounts
+
+- **AWS account "Redlance":** us-east-1, IAM Identity Center (single-region) with an AdministratorAccess permission set, 8-hour sessions.
+- **Credits lost:** enabling Identity Center created an AWS Organization, which **expired the Free Tier credits** ($100, plus the $100 still to earn). A support ticket has been sent asking for them back. Also apply for AWS Activate.
+- **Nothing deployed yet.** Phases 0–2 would cost about $0 a month on the flat-rate plan.
+- **Rule:** check billing and credit side effects before any account-level cloud step.
+- **Domain `redlance.app`:** nameservers still at Name.com's defaults; they move to Route 53 when the hosted zone is created.
+
+### Local environment gotchas
+
+- The Docker CLI is in `~/.docker/bin`. If `docker` isn't found, add it to `PATH` or restart the terminal.
+- Port 3000 is used by another local app (`node server.js`). Next then falls back to 3001, but the origin check needs `APP_ORIGIN` in `apps/web/.env.local` to match the actual port, or POSTs return 403.
+- The laptop runs Node 26; the project pins Node 24 (`.nvmrc`). Install it with `brew install fnm && fnm install 24`.
+- npm 11 blocks package install scripts. esbuild still works because its platform binary installs separately.
+- Ideas for later: add a per-IP pre-limit before the session lookup; decide whether the quota reset stays at UTC midnight.
+
+### Open questions and next steps
+
+1. **Merge `feat/local-foundation`?** And eventually `feat/homepage` into `main`.
+2. **Launch niche** (web dev or video editing): blocks the onboarding spec.
+3. **Onboarding:** spec → plan → build, locally first.
+4. **Then:** the ingestion worker (RSS adapters → `JobPost`), then matching and alerts, then deployment.
+5. **Deployment spec:** EC2 + CloudFront + WAF with CDK. CloudFront must forward `Origin` and `CloudFront-Viewer-Address`. Run `/api/v1/health?deep=1` after every deploy. Check that Upstash supports `TIME` inside Lua.
+6. **Still undecided:**
+   - which features go in which plan, and credit amounts;
+   - the payment provider;
+   - alert channels for US/UK (email + Telegram suggested);
+   - the homepage nav still says "Start free" → `/signup`, which no longer matches the plans.
+
+### Working style that worked
+
+- Explain decisions with trade-offs and a recommendation.
+- Features go spec → plan → test-first build, with one fresh code review of the whole branch at the end.
+- The user is learning system design: explain new components clearly, with code.
+
