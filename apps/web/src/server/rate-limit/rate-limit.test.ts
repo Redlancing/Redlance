@@ -94,6 +94,17 @@ describe("Redis command cost", () => {
   });
 });
 
+describe("right after the client is created", () => {
+  it("waits for the first connection instead of failing the first calls", async () => {
+    const fresh = createRedis(TEST_ENV.REDIS_URL);
+    const freshLimiter = createRateLimiter(fresh, log);
+    const quota = await freshLimiter.consumeQuota("u:fresh", "import", 3);
+    expect(quota.allowed).toBe(true);
+    expect(log.error).not.toHaveBeenCalled();
+    fresh.disconnect();
+  });
+});
+
 describe("when Redis is down", () => {
   const down = createRedis("redis://127.0.0.1:6399", { retryStrategy: () => null });
   const downLimiter = createRateLimiter(down, log);

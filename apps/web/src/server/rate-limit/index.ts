@@ -3,7 +3,7 @@ import type { Redis } from "ioredis";
 import type { Logger } from "pino";
 import { ApiError } from "../errors";
 import { getLogger } from "../logger";
-import { getRedis } from "../redis";
+import { awaitFirstConnection, getRedis } from "../redis";
 import { QUOTA_LUA, TOKEN_BUCKET_LUA } from "./scripts";
 
 export type BucketConfig = { capacity: number; refillPerSec: number };
@@ -39,6 +39,7 @@ export function createRateLimiter(redis: Redis, log: Pick<Logger, "error">) {
     /** Token bucket for every API call. Fails open: a Redis outage must not take the site down. */
     async consume(subject: string, bucket: string, config: BucketConfig): Promise<LimitResult> {
       try {
+        await awaitFirstConnection(redis);
         const [allowed, remaining, retryAfterMs] = await r.rlTakeToken(
           `rl:{${subject}}:${bucket}`,
           config.capacity,
@@ -58,6 +59,7 @@ export function createRateLimiter(redis: Redis, log: Pick<Logger, "error">) {
       const resetAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
       let result: [number, number];
       try {
+        await awaitFirstConnection(redis);
         result = await r.rlQuota(`q:{${subject}}:${name}:${day}`, limit, QUOTA_TTL_SEC);
       } catch (err) {
         log.error({ err, subject, name }, "quota check unavailable; denying request");
