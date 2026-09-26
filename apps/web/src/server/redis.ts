@@ -11,17 +11,39 @@ export const REDIS_OPTIONS: RedisOptions = {
   commandTimeout: 1000,
 };
 
-// Clients that have completed at least one connection. With the offline queue
-// disabled, commands sent before the first connection fail instantly, so callers
-// wait for that first connection (only) via awaitFirstConnection().
-const everReady = new WeakSet<Redis>();
+// With the offline queue disabled, commands sent before a client's first connection
+// fail instantly. Each client gets ONE shared "first attempt" promise that settles on the
+// first ready / error / end (or a timeout); callers wait on it once, and a later outage
+// (or one that started before boot) fails fast instead of adding latency to every call.
+const FIRST_ATTEMPT_TIMEOUT_MS = 2500;
+const firstAttempt = new WeakMap<Redis, Promise<void>>();
+
+function trackFirstAttempt(client: Redis): void {
+  firstAttempt.set(
+    client,
+    new Promise<void>((resolve) => {
+      const settle = () => {
+        clearTimeout(timer);
+        client.off("ready", settle);
+        client.off("error", settle);
+        client.off("end", settle);
+        resolve();
+      };
+      const timer = setTimeout(settle, FIRST_ATTEMPT_TIMEOUT_MS);
+      timer.unref?.();
+      client.once("ready", settle);
+      client.once("error", settle);
+      client.once("end", settle);
+    }),
+  );
+}
 
 export function createRedis(url: string, overrides: RedisOptions = {}): Redis {
   const client = new Redis(url, { ...REDIS_OPTIONS, ...overrides });
-  client.on("ready", () => everReady.add(client));
   client.on("error", () => {
     // Connection errors surface as rejected commands; callers decide fail-open/closed.
   });
+  trackFirstAttempt(client);
   return client;
 }
 
@@ -68,19 +90,12 @@ export async function redisReady(
 }
 
 /**
- * Waits for a new client's first connection (a few ms after boot). Returns at once
- * for a client that has connected before, so a later outage still fails fast.
+ * Waits for a new client's first connection attempt (a few ms after boot) so the first
+ * requests don't fail spuriously. Resolves immediately once that attempt has settled.
  */
-export async function awaitFirstConnection(
-  redis: Redis,
-  timeoutMs = 500,
-): Promise<void> {
-  if (everReady.has(redis)) return;
-  await redisReady(redis, timeoutMs).catch(() => {
-    // Not connected in time: the caller's command fails and its fail-open/closed rule applies.
-  });
+export async function awaitFirstConnection(redis: Redis): Promise<void> {
+  await firstAttempt.get(redis);
 }
-
 export async function closeRedis(): Promise<void> {
   const client = store.__redlanceRedis;
   store.__redlanceRedis = undefined;

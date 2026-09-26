@@ -33,6 +33,7 @@ const deepCheck = apiRoute({
 // Liveness (default) touches nothing: servers probe it every few seconds and
 // Upstash bills per command. ?deep=1 is for deploys and occasional monitoring.
 export async function GET(request: Request): Promise<Response> {
-  if (new URL(request.url).searchParams.get("deep") === "1") return deepCheck(request);
+  if (new URL(request.url).searchParams.get("deep") === "1")
+    return deepCheck(request);
   return json(200, { status: "ok" });
 }

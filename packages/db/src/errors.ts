@@ -2,10 +2,17 @@
 export function pgErrorCode(err: unknown): string | undefined {
   let current: unknown = err;
   for (let depth = 0; depth < 4 && current; depth++) {
-    if (typeof current === "object" && "code" in current && typeof current.code === "string") {
+    if (
+      typeof current === "object" &&
+      "code" in current &&
+      typeof current.code === "string"
+    ) {
       return current.code;
     }
-    current = typeof current === "object" && "cause" in current ? current.cause : undefined;
+    current =
+      typeof current === "object" && "cause" in current
+        ? current.cause
+        : undefined;
   }
   return undefined;
 }

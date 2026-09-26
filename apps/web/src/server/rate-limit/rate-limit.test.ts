@@ -118,6 +118,25 @@ describe("right after the client is created", () => {
   });
 });
 
+describe("when Redis is down at boot with the default reconnect strategy", () => {
+  const dead = createRedis("redis://127.0.0.1:6398");
+  const deadLimiter = createRateLimiter(dead, log);
+  const config = { capacity: 30, refillPerSec: 2 };
+  afterAll(() => dead.disconnect());
+
+  it("waits at most once, then every call fails fast without piling up listeners", async () => {
+    await deadLimiter.consume("u:1", "api", config); // the first attempt may wait
+    const calls = Array.from({ length: 20 }, () =>
+      deadLimiter.consume("u:1", "api", config),
+    );
+    expect(dead.listenerCount("ready")).toBeLessThan(5);
+    const started = Date.now();
+    await Promise.all(calls);
+    for (let i = 0; i < 3; i++) await deadLimiter.consume("u:1", "api", config);
+    expect(Date.now() - started).toBeLessThan(200);
+  });
+});
+
 describe("when Redis is down", () => {
   const down = createRedis("redis://127.0.0.1:6399", {
     retryStrategy: () => null,

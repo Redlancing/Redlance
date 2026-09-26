@@ -5,6 +5,6 @@ export async function register(): Promise<void> {
     const { getEnv } = await import("./server/env");
     getEnv();
     const { awaitFirstConnection, getRedis } = await import("./server/redis");
-    await awaitFirstConnection(getRedis(), 3000);
+    await awaitFirstConnection(getRedis());
   }
 }

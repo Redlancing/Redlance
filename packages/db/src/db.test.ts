@@ -24,7 +24,9 @@ describe("migrations", () => {
   });
 
   it("enables the vector extension", async () => {
-    const result = await db.execute(sql`select extname from pg_extension where extname = 'vector'`);
+    const result = await db.execute(
+      sql`select extname from pg_extension where extname = 'vector'`,
+    );
     expect(result.rows).toHaveLength(1);
   });
 });
@@ -33,7 +35,11 @@ describe("users table", () => {
   it("fills defaults on insert", async () => {
     const [user] = await db
       .insert(users)
-      .values({ authSub: "dev|a@example.com", email: "A@example.com", emailNormalized: "a@example.com" })
+      .values({
+        authSub: "dev|a@example.com",
+        email: "A@example.com",
+        emailNormalized: "a@example.com",
+      })
       .returning();
     expect(user!.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(user!.status).toBe("active");
@@ -42,17 +48,31 @@ describe("users table", () => {
   });
 
   it("rejects a duplicate normalized email with a unique violation", async () => {
-    await db.insert(users).values({ authSub: "dev|a", email: "a@example.com", emailNormalized: "a@example.com" });
+    await db
+      .insert(users)
+      .values({
+        authSub: "dev|a",
+        email: "a@example.com",
+        emailNormalized: "a@example.com",
+      });
     const attempt = db
       .insert(users)
-      .values({ authSub: "dev|b", email: "A@example.com", emailNormalized: "a@example.com" });
-    await expect(attempt).rejects.toSatisfy((err: unknown) => pgErrorCode(err) === "23505");
+      .values({
+        authSub: "dev|b",
+        email: "A@example.com",
+        emailNormalized: "a@example.com",
+      });
+    await expect(attempt).rejects.toSatisfy(
+      (err: unknown) => pgErrorCode(err) === "23505",
+    );
   });
 
   it("rejects an unknown status at the database level", async () => {
     const attempt = db.execute(
       sql`insert into users (auth_sub, email, email_normalized, status) values ('dev|x', 'x@example.com', 'x@example.com', 'deleted')`,
     );
-    await expect(attempt).rejects.toSatisfy((err: unknown) => pgErrorCode(err) === "23514");
+    await expect(attempt).rejects.toSatisfy(
+      (err: unknown) => pgErrorCode(err) === "23514",
+    );
   });
 });

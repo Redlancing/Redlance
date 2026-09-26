@@ -15,7 +15,10 @@ afterAll(closeAll);
 const signInRequest = (email: string) =>
   req("/api/v1/dev/session", {
     method: "POST",
-    headers: { origin: TEST_ENV.APP_ORIGIN, "content-type": "application/json" },
+    headers: {
+      origin: TEST_ENV.APP_ORIGIN,
+      "content-type": "application/json",
+    },
     body: JSON.stringify({ email }),
   });
 
@@ -57,13 +60,20 @@ describe("POST /api/v1/dev/session", () => {
   });
 
   it("handles concurrent POSTs for one email", async () => {
-    const responses = await Promise.all(Array.from({ length: 3 }, () => signIn(signInRequest("dup@example.com"))));
+    const responses = await Promise.all(
+      Array.from({ length: 3 }, () => signIn(signInRequest("dup@example.com"))),
+    );
     expect(responses.map((r) => r.status)).toEqual([200, 200, 200]);
     expect(await getDb().select().from(users)).toHaveLength(1);
   });
 
   it("DELETE clears the cookie", async () => {
-    const res = await signOut(req("/api/v1/dev/session", { method: "DELETE", headers: { origin: TEST_ENV.APP_ORIGIN } }));
+    const res = await signOut(
+      req("/api/v1/dev/session", {
+        method: "DELETE",
+        headers: { origin: TEST_ENV.APP_ORIGIN },
+      }),
+    );
     expect(res.status).toBe(204);
     expect(res.headers.get("set-cookie")).toContain("Max-Age=0");
   });
@@ -75,7 +85,11 @@ describe("GET /api/v1/me", () => {
   });
 
   it("returns the signed-in user", async () => {
-    const res = await me(req("/api/v1/me", { headers: { cookie: await cookieFor("me@example.com") } }));
+    const res = await me(
+      req("/api/v1/me", {
+        headers: { cookie: await cookieFor("me@example.com") },
+      }),
+    );
     expect(res.status).toBe(200);
     expect((await res.json()).user.email).toBe("me@example.com");
   });

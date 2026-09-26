@@ -48,6 +48,15 @@ describe("parseEnv", () => {
     );
   });
 
+  it("refuses the dev session on a non-localhost origin even when APP_ENV=local", () => {
+    expect(() =>
+      parseEnv({ ...valid, APP_ORIGIN: "https://redlance.app" }),
+    ).toThrowError(/localhost/);
+    expect(
+      parseEnv({ ...valid, APP_ORIGIN: "http://127.0.0.1:3100" }).AUTH_MODE,
+    ).toBe("dev");
+  });
+
   it("requires a 32+ character DEV_SESSION_SECRET in dev mode", () => {
     expect(() =>
       parseEnv({ ...valid, DEV_SESSION_SECRET: "short" }),

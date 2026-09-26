@@ -4,7 +4,10 @@ import { proxy } from "./proxy";
 import { SESSION_COOKIE } from "./server/session-cookie";
 
 const request = (path: string, cookie?: string) =>
-  new NextRequest(`http://localhost:3000${path}`, cookie ? { headers: { cookie } } : undefined);
+  new NextRequest(
+    `http://localhost:3000${path}`,
+    cookie ? { headers: { cookie } } : undefined,
+  );
 
 describe("proxy", () => {
   it("sends signed-out visitors of app pages to /login with a next path", () => {

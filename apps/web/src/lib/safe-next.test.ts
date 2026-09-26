@@ -19,6 +19,11 @@ describe("safeNextPath", () => {
     ["/\\evil.example"],
     ["/%5Cevil.example"],
     ["javascript:alert(1)"],
+    ["/.//evil.com"],
+    ["/..//evil.com"],
+    ["/a/..//evil.com"],
+    ["/%2e//evil.com"],
+    ["/%2E%2E//evil.com"],
   ])("falls back to /dashboard for %s", (input) => {
     expect(safeNextPath(input)).toBe("/dashboard");
   });

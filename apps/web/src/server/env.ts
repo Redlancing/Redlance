@@ -1,6 +1,8 @@
 import "server-only";
 import { z } from "zod";
 
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
 const schema = z
   .object({
     APP_ENV: z.enum(["local", "staging", "production"]),
@@ -26,6 +28,16 @@ const schema = z
         code: "custom",
         path: ["AUTH_MODE"],
         message: "AUTH_MODE=dev is only allowed when APP_ENV=local",
+      });
+    }
+    if (
+      value.AUTH_MODE === "dev" &&
+      !LOCAL_HOSTS.has(new URL(value.APP_ORIGIN).hostname)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["AUTH_MODE"],
+        message: "AUTH_MODE=dev is only allowed when APP_ORIGIN is localhost",
       });
     }
     if (value.AUTH_MODE === "dev" && !value.DEV_SESSION_SECRET) {
