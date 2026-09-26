@@ -22,21 +22,27 @@ Collect (RSS poll every 2–3 min) → Understand (LLM extracts skills, budget, 
 ## Planned stack
 
 - **Web:** Next.js (React Native/Expo later)
-- **Backend/DB:** Supabase — Postgres, Auth, Edge Functions, pgvector for matching
-- **Ingestion worker:** Node or Python cron, every 2–3 min
-- **AI:** LLM API for extraction, scoring, drafting, style profiles
+- **Cloud:** all AWS (decided 2026-09-26; replaces the Supabase plan), region us-east-1, infrastructure as code with AWS CDK (TypeScript) in `infra/`.
+- **Request path:** CloudFront (CDN) → WAF (managed rules + per-IP rate limit) → one EC2 server running the app in Docker (decided 2026-09-26 after the AWS Free Tier credits were lost). Add an ALB + ECS Fargate when a second server is needed; the app stays stateless so that's an infrastructure change only. Per-user rate limits run in the app against Redis. No AWS API Gateway until there are several backend services or a public API; routes live under `/api/v1`.
+- **Data:** Postgres 17 + pgvector runs as a Docker container, on the laptop and on the EC2 server (no RDS, to save cost), with a tested daily backup to S3. Redis: a Valkey 8 container locally, **Upstash** in production (no ElastiCache); only `REDIS_URL` differs, and Redis only holds rebuildable data. Frequent health checks must not touch Redis (Upstash bills per command). Redis is used from day one for per-user rate limits (token bucket), daily quotas and hot caches; S3 for uploads and static assets; SQS + a worker service for slow jobs.
+- **Auth:** Cognito (Essentials) with Google + email one-time code, no passwords. Tokens in httpOnly cookies, verified in the app on every request; our `users` table is keyed by the Cognito `sub`.
+- **Workflow:** build and test each feature locally first (Docker: Postgres + Valkey; a dev Cognito pool), then deploy. Specs live in `docs/superpowers/specs/`.
+- **Ingestion worker:** Node service, every 2–3 min (runs on the same server at first)
+- **AI:** Gemini, tiered by task: Flash-Lite for high-volume work (per-post extraction, scoring), Flash for drafts and onboarding imports. Calls go through our own interface so any task can switch model.
 - **Matching:** embeddings shortlist + rule filters, then LLM re-score with reasons
 - **Alerts:** Telegram Bot API (email/push later)
-- **Payments:** Razorpay (UPI, cards), INR subscriptions
+- **Payments:** subscriptions for US, UK and India customers; provider not chosen yet (Razorpay alone doesn't cover US/UK well)
 
 Core tables: `profiles`, `job_posts`, `matches`, `replies`, `outcomes`, `client_reports` — fields in `docs/PROJECT.md` §8.
 
 ## Product decisions (2026-09-25)
 
 - **Subreddits:** at onboarding Redlance connects the user to the right subreddits for their skills; users can add more but don't have to pick any.
+- **Trial:** the 5-day trial starts when onboarding finishes, not at sign-up.
+- **Voice:** no voice step at onboarding. Drafts start in a default short, plain style, and the user's voice is learned from their edits (store every AI draft and sent version from the first draft).
 - **Drafts:** a comment and the **first DM** only. Don't market DM conversation handling, and don't state that we don't handle DMs.
-- **Follow-ups (Pro):** if a reply has no status marked after a few days, remind the user and draft a follow-up.
-- **Subreddit insights (Pro):** per subreddit, hiring posts per week, share matching the user's skills, posted-budget ranges and peak posting hours (IST). Only from RSS-available fields; shown once a subreddit has enough posts (see rule 8).
+- **Follow-ups (paid plans):** if a reply has no status marked after a few days, remind the user and draft a follow-up.
+- **Subreddit insights (paid plans):** per subreddit, hiring posts per week, share matching the user's skills, posted-budget ranges and peak posting hours (in the user's time zone). Only from RSS-available fields; shown once a subreddit has enough posts (see rule 8).
 
 ## Non-negotiable rules
 
@@ -51,19 +57,25 @@ Core tables: `profiles`, `job_posts`, `matches`, `replies`, `outcomes`, `client_
 
 ## Brand, copy and marketing site
 
+- **Domain:** `redlance.app`, registered at Name.com on 2026-09-26 (first year free via the GitHub Student Pack; renews at about ₹2,269/year). DNS is served by Route 53; don't edit DNS at Name.com. USPTO and UK IPO checks for "Redlance" are still pending (a US firm, Redlance Computer Consulting, owns redlance.com).
 - **Trademark:** never put "Reddit" in the product name, domain or logo, and never use Reddit's alien mascot. Use "Reddit" only descriptively in body text ("find freelance jobs on Reddit") and never imply an official connection.
 - **One-liner, word for word everywhere** (homepage, meta description, social bios): "Redlance is an AI tool that finds freelance jobs on Reddit, matches them to your skills, and drafts replies in your voice."
 - **Core promise:** "See the right Reddit gigs first, and reply in under two minutes with a message that sounds like you."
 - **SEO: pages rank, not names.** One page per target search — `/reddit-freelance-jobs`, `/reddit-web-developer-gigs`, `/reddit-video-editing-jobs`, `/best-subreddits-for-freelancers` — plus guides, comparison pages ("Redlance vs Upwork"), and a public feed of latest hiring posts (short snippet + link back only).
 - **AEO:** question headings followed by a 40–60 word direct answer, then detail; FAQ and HowTo structured data.
-- Primary audience: early-career freelancers in India, then niche specialists. Pricing in INR.
+- Markets: US and UK first, India second. Audience: early-career freelancers, then niche specialists.
 
 ## Plans
 
-Free: alerts delayed 30–60 min, a few drafts/day, basic tracker. Pro: instant alerts, unlimited drafts, voice learning, follow-ups, rate insights. Agency (V2): multiple profiles, gig routing, team analytics.
+Decided 2026-09-25; replaces the Free/Pro plans in `docs/PROJECT.md` §9.
+
+- **No free tier.** A 5-day trial, then three paid plans: a standard plan, Max, and Agency.
+- Features are split across the plans (which feature goes in which plan is still open).
+- Drafts (comment + first DM) and follow-ups are limited by **credits** per plan, not unlimited.
+- Agency: multiple profiles, gig routing, team analytics.
 
 ## Roadmap
 
-Phase 0 (wks 1–2): Telegram bot, one niche, 10–15 subreddits → Phase 1 (wks 3–8): web app MVP (profile, scoring, drafts, red flags, tracker) → Phase 2 (months 3–4): Razorpay Pro, follow-ups, voice learning → Phase 3 (months 4–8): rate insights, client memory, analytics, more sources, licensed Reddit API.
+Phase 0 (wks 1–2): Telegram bot, one niche, 10–15 subreddits → Phase 1 (wks 3–8): web app MVP (profile, scoring, drafts, red flags, tracker) → Phase 2 (months 3–4): paid plans with credits, follow-ups, voice learning → Phase 3 (months 4–8): rate insights, client memory, analytics, more sources, licensed Reddit API.
 
 North-star metric: gigs won per active user per month.

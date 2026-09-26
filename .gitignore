@@ -21,3 +21,6 @@ coverage/
 
 # tool output
 .playwright-mcp/
+
+# superpowers plan workspaces (scratch)
+.superpowers/
