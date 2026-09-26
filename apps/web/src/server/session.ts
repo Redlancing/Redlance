@@ -7,10 +7,12 @@ import { normalizeEmail } from "./email";
 import { getEnv } from "./env";
 import { ApiError } from "./errors";
 import { readCookie } from "./http";
+import { SESSION_COOKIE } from "./session-cookie";
 
-export const DEV_SESSION_COOKIE = "rl_dev_session";
+export const DEV_SESSION_COOKIE = SESSION_COOKIE;
 const MAX_AGE_SEC = 60 * 60 * 24 * 30;
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 export type Session = { userId: string; email: string };
 
@@ -28,7 +30,8 @@ export function decodeDevSession(token: string, secret: string): string | null {
   const userId = token.slice(0, dot);
   const given = Buffer.from(token.slice(dot + 1));
   const expected = Buffer.from(sign(userId, secret));
-  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
+  if (given.length !== expected.length || !timingSafeEqual(given, expected))
+    return null;
   return UUID_RE.test(userId) ? userId : null;
 }
 
@@ -45,7 +48,12 @@ export async function signInDevUser(email: string): Promise<Session> {
   const now = new Date();
   const [user] = await getDb()
     .insert(users)
-    .values({ authSub: `dev|${normalized}`, email: email.trim(), emailNormalized: normalized, lastLoginAt: now })
+    .values({
+      authSub: `dev|${normalized}`,
+      email: email.trim(),
+      emailNormalized: normalized,
+      lastLoginAt: now,
+    })
     .onConflictDoUpdate({ target: users.authSub, set: { lastLoginAt: now } })
     .returning({ id: users.id, email: users.email, status: users.status });
   if (!user || user.status !== "active") {
@@ -63,11 +71,20 @@ export function clearDevSessionCookie(): string {
   return `${DEV_SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
 }
 
+/** Session from an API request's cookies. */
 export async function getSession(request: Request): Promise<Session | null> {
+  return getSessionFromToken(readCookie(request, DEV_SESSION_COOKIE));
+}
+
+/** Session from a cookie value; used by server-rendered pages via next/headers. */
+export async function getSessionFromToken(
+  token: string | undefined,
+): Promise<Session | null> {
   if (getEnv().AUTH_MODE === "cognito") {
-    throw new Error("AUTH_MODE=cognito is not implemented yet; it arrives with the login spec.");
+    throw new Error(
+      "AUTH_MODE=cognito is not implemented yet; it arrives with the login spec.",
+    );
   }
-  const token = readCookie(request, DEV_SESSION_COOKIE);
   if (!token) return null;
   const userId = decodeDevSession(token, devSecret());
   if (!userId) return null;

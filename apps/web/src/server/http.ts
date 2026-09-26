@@ -1,6 +1,10 @@
 import "server-only";
 
-export function json(status: number, body: unknown, headers?: HeadersInit): Response {
+export function json(
+  status: number,
+  body: unknown,
+  headers?: HeadersInit,
+): Response {
   return Response.json(body, { status, headers });
 }
 

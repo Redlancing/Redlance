@@ -1,4 +1,12 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { TEST_ENV } from "../../../test/test-env";
 import { ApiError } from "../errors";
 import { createRedis, redisReady } from "../redis";
@@ -63,7 +71,9 @@ describe("daily quota", () => {
 
   it("allows up to the limit per UTC day", async () => {
     for (let i = 0; i < 3; i++) {
-      expect((await limiter.consumeQuota("u:1", "import", 3, now)).allowed).toBe(true);
+      expect(
+        (await limiter.consumeQuota("u:1", "import", 3, now)).allowed,
+      ).toBe(true);
     }
     const denied = await limiter.consumeQuota("u:1", "import", 3, now);
     expect(denied).toMatchObject({ allowed: false, remaining: 0 });
@@ -71,9 +81,12 @@ describe("daily quota", () => {
   });
 
   it("starts fresh on the next day and expires its key", async () => {
-    for (let i = 0; i < 3; i++) await limiter.consumeQuota("u:1", "import", 3, now);
+    for (let i = 0; i < 3; i++)
+      await limiter.consumeQuota("u:1", "import", 3, now);
     const nextDay = new Date("2026-09-27T00:00:01Z");
-    expect((await limiter.consumeQuota("u:1", "import", 3, nextDay)).allowed).toBe(true);
+    expect(
+      (await limiter.consumeQuota("u:1", "import", 3, nextDay)).allowed,
+    ).toBe(true);
     const ttl = await redis.ttl("q:{u:1}:import:20260926");
     expect(ttl).toBeGreaterThan(86_000);
     expect(ttl).toBeLessThanOrEqual(172_800);
@@ -106,19 +119,27 @@ describe("right after the client is created", () => {
 });
 
 describe("when Redis is down", () => {
-  const down = createRedis("redis://127.0.0.1:6399", { retryStrategy: () => null });
+  const down = createRedis("redis://127.0.0.1:6399", {
+    retryStrategy: () => null,
+  });
   const downLimiter = createRateLimiter(down, log);
   afterAll(() => down.disconnect());
 
   it("fails fast: the bucket allows and logs, the quota returns 503", async () => {
     const started = Date.now();
-    const result = await downLimiter.consume("u:1", "api", { capacity: 30, refillPerSec: 2 });
+    const result = await downLimiter.consume("u:1", "api", {
+      capacity: 30,
+      refillPerSec: 2,
+    });
     expect(result.allowed).toBe(true);
     expect(log.error).toHaveBeenCalledTimes(1);
 
     const quota = downLimiter.consumeQuota("u:1", "import", 3);
     await expect(quota).rejects.toBeInstanceOf(ApiError);
-    await expect(quota).rejects.toMatchObject({ code: "UNAVAILABLE", status: 503 });
+    await expect(quota).rejects.toMatchObject({
+      code: "UNAVAILABLE",
+      status: 503,
+    });
     expect(Date.now() - started).toBeLessThan(1000);
   });
 });

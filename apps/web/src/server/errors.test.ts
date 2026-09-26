@@ -20,18 +20,27 @@ describe("ApiError", () => {
 describe("errorResponse", () => {
   it("uses the standard error shape and passes headers through", async () => {
     const res = errorResponse(
-      new ApiError("RATE_LIMITED", "Slow down.", undefined, { "Retry-After": "5" }),
+      new ApiError("RATE_LIMITED", "Slow down.", undefined, {
+        "Retry-After": "5",
+      }),
       "req-1",
     );
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toBe("5");
     expect(await res.json()).toEqual({
-      error: { code: "RATE_LIMITED", message: "Slow down.", requestId: "req-1" },
+      error: {
+        code: "RATE_LIMITED",
+        message: "Slow down.",
+        requestId: "req-1",
+      },
     });
   });
 
   it("includes details when present", async () => {
-    const res = errorResponse(new ApiError("INVALID_INPUT", "Bad.", [{ path: "email" }]), "r");
+    const res = errorResponse(
+      new ApiError("INVALID_INPUT", "Bad.", [{ path: "email" }]),
+      "r",
+    );
     expect((await res.json()).error.details).toEqual([{ path: "email" }]);
   });
 });

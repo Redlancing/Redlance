@@ -13,7 +13,8 @@ const origin = { origin: TEST_ENV.APP_ORIGIN };
 
 const echo = apiRoute({
   input: z.object({ name: z.string().min(1) }),
-  handler: async ({ user, input }) => json(200, { userId: user.userId, name: input.name }),
+  handler: async ({ user, input }) =>
+    json(200, { userId: user.userId, name: input.name }),
 });
 
 const search = apiRoute({
@@ -38,12 +39,22 @@ const notFound = apiRoute({
   },
 });
 
-const post = (cookie: string, body: string, headers: Record<string, string> = origin) =>
-  req("/api/v1/x", { method: "POST", headers: { cookie, "content-type": "application/json", ...headers }, body });
+const post = (
+  cookie: string,
+  body: string,
+  headers: Record<string, string> = origin,
+) =>
+  req("/api/v1/x", {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json", ...headers },
+    body,
+  });
 
 describe("apiRoute", () => {
   it("401s without a session and returns the standard error shape", async () => {
-    const res = await echo(req("/api/v1/x", { method: "POST", headers: origin, body: "{}" }));
+    const res = await echo(
+      req("/api/v1/x", { method: "POST", headers: origin, body: "{}" }),
+    );
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.error.code).toBe("UNAUTHENTICATED");
@@ -51,13 +62,19 @@ describe("apiRoute", () => {
   });
 
   it("403s a POST with a missing origin", async () => {
-    const res = await echo(post(await cookieFor(), JSON.stringify({ name: "a" }), {}));
+    const res = await echo(
+      post(await cookieFor(), JSON.stringify({ name: "a" }), {}),
+    );
     expect(res.status).toBe(403);
     expect((await res.json()).error.code).toBe("BAD_ORIGIN");
   });
 
   it("403s a POST from another origin", async () => {
-    const res = await echo(post(await cookieFor(), JSON.stringify({ name: "a" }), { origin: "https://evil.example" }));
+    const res = await echo(
+      post(await cookieFor(), JSON.stringify({ name: "a" }), {
+        origin: "https://evil.example",
+      }),
+    );
     expect(res.status).toBe(403);
   });
 
@@ -73,14 +90,21 @@ describe("apiRoute", () => {
   });
 
   it("400s schema failures with field details", async () => {
-    const res = await echo(post(await cookieFor(), JSON.stringify({ name: 42 })));
+    const res = await echo(
+      post(await cookieFor(), JSON.stringify({ name: 42 })),
+    );
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error.details[0].path).toBe("name");
   });
 
   it("passes the user and parsed input to the handler and echoes x-request-id", async () => {
-    const res = await echo(post(await cookieFor("a@example.com"), JSON.stringify({ name: "Ada" }), { ...origin, "x-request-id": "abc-123" }));
+    const res = await echo(
+      post(await cookieFor("a@example.com"), JSON.stringify({ name: "Ada" }), {
+        ...origin,
+        "x-request-id": "abc-123",
+      }),
+    );
     expect(res.status).toBe(200);
     expect(res.headers.get("x-request-id")).toBe("abc-123");
     const body = await res.json();
@@ -89,7 +113,9 @@ describe("apiRoute", () => {
   });
 
   it("parses GET input from the query string", async () => {
-    const res = await search(req("/api/v1/x?q=react", { headers: { cookie: await cookieFor() } }));
+    const res = await search(
+      req("/api/v1/x?q=react", { headers: { cookie: await cookieFor() } }),
+    );
     expect(await res.json()).toEqual({ q: "react" });
   });
 
@@ -105,12 +131,16 @@ describe("apiRoute", () => {
   });
 
   it("maps ApiError to its status", async () => {
-    const res = await notFound(req("/api/v1/x", { headers: { cookie: await cookieFor() } }));
+    const res = await notFound(
+      req("/api/v1/x", { headers: { cookie: await cookieFor() } }),
+    );
     expect(res.status).toBe(404);
   });
 
   it("hides unexpected error details behind a 500", async () => {
-    const res = await boom(req("/api/v1/x", { headers: { cookie: await cookieFor() } }));
+    const res = await boom(
+      req("/api/v1/x", { headers: { cookie: await cookieFor() } }),
+    );
     expect(res.status).toBe(500);
     const text = await res.text();
     expect(text).toContain("INTERNAL");

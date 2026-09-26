@@ -30,13 +30,18 @@ const store = globalThis as unknown as { __redlanceRedis?: Redis };
 export function getRedis(): Redis {
   if (!store.__redlanceRedis) {
     const client = createRedis(getEnv().REDIS_URL);
-    client.on("error", (err) => getLogger().warn({ err }, "redis connection error"));
+    client.on("error", (err) =>
+      getLogger().warn({ err }, "redis connection error"),
+    );
     store.__redlanceRedis = client;
   }
   return store.__redlanceRedis;
 }
 
-export async function redisReady(redis: Redis, timeoutMs = 3000): Promise<void> {
+export async function redisReady(
+  redis: Redis,
+  timeoutMs = 3000,
+): Promise<void> {
   if (redis.status === "ready") return;
   if (redis.status === "end") throw new Error("Redis connection has ended");
   await new Promise<void>((resolve, reject) => {
@@ -66,7 +71,10 @@ export async function redisReady(redis: Redis, timeoutMs = 3000): Promise<void> 
  * Waits for a new client's first connection (a few ms after boot). Returns at once
  * for a client that has connected before, so a later outage still fails fast.
  */
-export async function awaitFirstConnection(redis: Redis, timeoutMs = 500): Promise<void> {
+export async function awaitFirstConnection(
+  redis: Redis,
+  timeoutMs = 500,
+): Promise<void> {
   if (everReady.has(redis)) return;
   await redisReady(redis, timeoutMs).catch(() => {
     // Not connected in time: the caller's command fails and its fail-open/closed rule applies.

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { EnvError, parseEnv } from "./env";
 
 const omit = (source: Record<string, string>, ...keys: string[]) =>
-  Object.fromEntries(Object.entries(source).filter(([key]) => !keys.includes(key)));
+  Object.fromEntries(
+    Object.entries(source).filter(([key]) => !keys.includes(key)),
+  );
 
 const valid: Record<string, string> = {
   APP_ENV: "local",
@@ -21,7 +23,12 @@ describe("parseEnv", () => {
   });
 
   it("accepts a TLS Redis URL (Upstash)", () => {
-    expect(parseEnv({ ...valid, REDIS_URL: "rediss://default:pw@host.upstash.io:6379" }).REDIS_URL).toMatch(/^rediss:/);
+    expect(
+      parseEnv({
+        ...valid,
+        REDIS_URL: "rediss://default:pw@host.upstash.io:6379",
+      }).REDIS_URL,
+    ).toMatch(/^rediss:/);
   });
 
   it("lists every missing setting in one error", () => {
@@ -36,20 +43,31 @@ describe("parseEnv", () => {
   });
 
   it("refuses the dev session outside local", () => {
-    expect(() => parseEnv({ ...valid, APP_ENV: "production" })).toThrowError(/AUTH_MODE=dev is only allowed when APP_ENV=local/);
+    expect(() => parseEnv({ ...valid, APP_ENV: "production" })).toThrowError(
+      /AUTH_MODE=dev is only allowed when APP_ENV=local/,
+    );
   });
 
   it("requires a 32+ character DEV_SESSION_SECRET in dev mode", () => {
-    expect(() => parseEnv({ ...valid, DEV_SESSION_SECRET: "short" })).toThrowError(/DEV_SESSION_SECRET/);
-    expect(() => parseEnv(omit(valid, "DEV_SESSION_SECRET"))).toThrowError(/DEV_SESSION_SECRET/);
+    expect(() =>
+      parseEnv({ ...valid, DEV_SESSION_SECRET: "short" }),
+    ).toThrowError(/DEV_SESSION_SECRET/);
+    expect(() => parseEnv(omit(valid, "DEV_SESSION_SECRET"))).toThrowError(
+      /DEV_SESSION_SECRET/,
+    );
   });
 
   it("does not need DEV_SESSION_SECRET in cognito mode", () => {
     const rest = omit(valid, "DEV_SESSION_SECRET");
-    expect(parseEnv({ ...rest, APP_ENV: "production", AUTH_MODE: "cognito" }).AUTH_MODE).toBe("cognito");
+    expect(
+      parseEnv({ ...rest, APP_ENV: "production", AUTH_MODE: "cognito" })
+        .AUTH_MODE,
+    ).toBe("cognito");
   });
 
   it("rejects a non-Postgres DATABASE_URL", () => {
-    expect(() => parseEnv({ ...valid, DATABASE_URL: "mysql://x" })).toThrowError(/DATABASE_URL/);
+    expect(() =>
+      parseEnv({ ...valid, DATABASE_URL: "mysql://x" }),
+    ).toThrowError(/DATABASE_URL/);
   });
 });
