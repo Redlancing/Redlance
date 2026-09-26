@@ -9,11 +9,17 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "npm run dev -w @redlance/web",
+    "dev": "docker compose up -d --wait && npm run dev -w @redlance/web",
     "build": "npm run build -w @redlance/web",
     "start": "npm run start -w @redlance/web",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d --wait && npm run db:migrate",
+    "db:migrate": "npm run db:migrate -w @redlance/db",
+    "db:generate": "npm run db:generate -w @redlance/db",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
