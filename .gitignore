@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# env files (commit .env.example only)
+.env*
+!.env.example
+
+# build output
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+.vercel
+coverage/
+
+# tool output
+.playwright-mcp/
+
+# superpowers plan workspaces (scratch)
+.superpowers/
