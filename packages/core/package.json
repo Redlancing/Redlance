@@ -1,0 +1,22 @@
+{
+  "name": "@redlance/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.2"
+  },
+  "dependencies": {
+    "uuid": "^14.0.2",
+    "zod": "^4.6.5"
+  }
+}
