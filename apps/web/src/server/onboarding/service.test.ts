@@ -248,4 +248,29 @@ describe("finishOnboarding", () => {
       code: "ALREADY_ONBOARDED",
     });
   });
+
+  it.each([1, 2, 3, 4, 5])(
+    "a save racing Finish is refused or lands in the profile (run %i)",
+    async () => {
+      const id = await user();
+      await completeAll(id);
+      const results = await Promise.allSettled([
+        finishOnboarding(id),
+        saveStep(id, "rates", {
+          mode: "complete",
+          data: { ...VALID.rates, minRate: 99 },
+          expectedVersion: 1,
+        }),
+      ]);
+      expect(results[0]!.status).toBe("fulfilled");
+      const save = results[1]!;
+      const [profile] = await getDb()
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, id));
+      if (save.status === "rejected")
+        expect(save.reason).toMatchObject({ code: "ALREADY_ONBOARDED" });
+      else expect(profile!.minRateMinor).toBe(9900);
+    },
+  );
 });

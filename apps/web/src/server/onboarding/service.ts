@@ -27,6 +27,9 @@ import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { ApiError } from "../errors";
 
+type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
+type Executor = ReturnType<typeof getDb> | Tx;
+
 export type StepRow = {
   step: StepId;
   status: StepStatus;
@@ -56,8 +59,8 @@ export type SaveStepResult = {
 
 export async function getOnboardingState(
   userId: string,
+  db: Executor = getDb(),
 ): Promise<OnboardingState> {
-  const db = getDb();
   const [rows, [profile]] = await Promise.all([
     db
       .select({
@@ -96,68 +99,79 @@ export async function saveStep(
   step: StepId,
   input: SaveStepInput,
 ): Promise<SaveStepResult> {
-  const state = await getOnboardingState(userId);
-  if (state.onboardedAt)
-    throw new ApiError("ALREADY_ONBOARDED", "Your profile is already set up.");
-  if (pageIndex(step) > pageIndex(state.resumeAt))
-    throw new ApiError("STEP_ORDER", "Finish the earlier steps first.", {
-      resumeAt: state.resumeAt,
-    });
-  const current = state.steps.find((s) => s.step === step);
-  if (input.mode === "draft" && current?.status === "completed")
-    throw new ApiError(
-      "INVALID_INPUT",
-      "This step is already complete. Use Save changes instead.",
-    );
+  // FOR SHARE conflicts with Finish's FOR UPDATE, so a save either commits before Finish
+  // reads the steps, or waits, sees the profile and is refused. Saves don't block each other.
+  return getDb().transaction(async (tx) => {
+    const [locked] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .for("share");
+    if (!locked) throw new ApiError("UNAUTHENTICATED", "Please sign in.");
+    const state = await getOnboardingState(userId, tx);
+    if (state.onboardedAt)
+      throw new ApiError(
+        "ALREADY_ONBOARDED",
+        "Your profile is already set up.",
+      );
+    if (pageIndex(step) > pageIndex(state.resumeAt))
+      throw new ApiError("STEP_ORDER", "Finish the earlier steps first.", {
+        resumeAt: state.resumeAt,
+      });
+    const current = state.steps.find((s) => s.step === step);
+    if (input.mode === "draft" && current?.status === "completed")
+      throw new ApiError(
+        "INVALID_INPUT",
+        "This step is already complete. Use Save changes instead.",
+      );
 
-  const parsed = STEP_SCHEMAS[step][input.mode].safeParse(input.data);
-  if (!parsed.success)
-    throw new ApiError(
-      "INVALID_INPUT",
-      "Some fields are invalid.",
-      toFieldErrors(parsed.error, "data"),
-    );
+    const parsed = STEP_SCHEMAS[step][input.mode].safeParse(input.data);
+    if (!parsed.success)
+      throw new ApiError(
+        "INVALID_INPUT",
+        "Some fields are invalid.",
+        toFieldErrors(parsed.error, "data"),
+      );
 
-  const status: StepStatus = input.mode === "complete" ? "completed" : "draft";
-  const db = getDb();
-  const rows =
-    input.expectedVersion === 0
-      ? await db
-          .insert(onboardingSteps)
-          .values({ userId, step, status, data: parsed.data })
-          .onConflictDoNothing()
-          .returning({ version: onboardingSteps.version })
-      : await db
-          .update(onboardingSteps)
-          .set({
-            status,
-            data: parsed.data,
-            version: sql`${onboardingSteps.version} + 1`,
-            updatedAt: sql`now()`,
-          })
-          .where(
-            and(
-              eq(onboardingSteps.userId, userId),
-              eq(onboardingSteps.step, step),
-              eq(onboardingSteps.version, input.expectedVersion),
-            ),
-          )
-          .returning({ version: onboardingSteps.version });
+    const status: StepStatus =
+      input.mode === "complete" ? "completed" : "draft";
+    const rows =
+      input.expectedVersion === 0
+        ? await tx
+            .insert(onboardingSteps)
+            .values({ userId, step, status, data: parsed.data })
+            .onConflictDoNothing()
+            .returning({ version: onboardingSteps.version })
+        : await tx
+            .update(onboardingSteps)
+            .set({
+              status,
+              data: parsed.data,
+              version: sql`${onboardingSteps.version} + 1`,
+              updatedAt: sql`now()`,
+            })
+            .where(
+              and(
+                eq(onboardingSteps.userId, userId),
+                eq(onboardingSteps.step, step),
+                eq(onboardingSteps.version, input.expectedVersion),
+              ),
+            )
+            .returning({ version: onboardingSteps.version });
 
-  const saved = rows[0];
-  if (!saved)
-    throw new ApiError(
-      "VERSION_CONFLICT",
-      "This step was saved in another tab. Reload to see the latest version.",
-    );
-  return {
-    status,
-    version: saved.version,
-    next: status === "completed" ? nextPage(step) : step,
-  };
+    const saved = rows[0];
+    if (!saved)
+      throw new ApiError(
+        "VERSION_CONFLICT",
+        "This step was saved in another tab. Reload to see the latest version.",
+      );
+    return {
+      status,
+      version: saved.version,
+      next: status === "completed" ? nextPage(step) : step,
+    };
+  });
 }
-
-type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 
 async function completedSteps(tx: Tx, userId: string) {
   const rows = await tx
@@ -237,16 +251,14 @@ export async function finishOnboarding(
     });
 
     if (skills.skills.length)
-      await tx
-        .insert(profileSkills)
-        .values(
-          skills.skills.map((s) => ({
-            userId,
-            skillId: s.id,
-            level: s.level,
-            source: s.source,
-          })),
-        );
+      await tx.insert(profileSkills).values(
+        skills.skills.map((s) => ({
+          userId,
+          skillId: s.id,
+          level: s.level,
+          source: s.source,
+        })),
+      );
     if (skills.customSkills.length)
       await tx.insert(customSkills).values(
         skills.customSkills.map((s) => ({
