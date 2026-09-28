@@ -4,7 +4,7 @@ import type { Logger } from "pino";
 import type { z } from "zod";
 import { getEnv } from "./env";
 import { ApiError, errorResponse } from "./errors";
-import { clientIp } from "./http";
+import { clientIp, readBody } from "./http";
 import { getLogger } from "./logger";
 import { BUCKETS, type BucketConfig, getRateLimiter } from "./rate-limit";
 import { getSession, type Session } from "./session";
@@ -14,22 +14,48 @@ const QUERY_INPUT = new Set(["GET", "HEAD", "DELETE"]);
 
 type RateLimitOption = false | { bucket: string; config?: BucketConfig };
 
-type HandlerContext<I, A extends boolean> = {
+export const MAX_JSON_BYTES = 256 * 1024;
+
+type RouteParams = Record<string, string | string[] | undefined>;
+/** Next passes `{ params: Promise<…> }` as a route handler's second argument. */
+export type RouteHandlerContext = { params?: Promise<RouteParams> };
+
+type Infer<S, Fallback> = S extends z.ZodType ? z.infer<S> : Fallback;
+
+type HandlerContext<I, P, A extends boolean> = {
   request: Request;
   input: I;
+  params: P;
   user: A extends true ? Session : Session | null;
   log: Logger;
   requestId: string;
 };
 
-type ApiRouteOptions<S extends z.ZodType | undefined, A extends boolean> = {
+type ApiRouteOptions<
+  S extends z.ZodType | undefined,
+  P extends z.ZodType | undefined,
+  A extends boolean,
+> = {
   auth?: A;
   input?: S;
+  /** Validates the dynamic route segments; a mismatch is a 404. */
+  params?: P;
   rateLimit?: RateLimitOption;
   handler: (
-    ctx: HandlerContext<S extends z.ZodType ? z.infer<S> : undefined, A>,
+    ctx: HandlerContext<Infer<S, undefined>, Infer<P, RouteParams>, A>,
   ) => Promise<Response>;
 };
+
+async function parseParams(
+  context: RouteHandlerContext | undefined,
+  schema: z.ZodType | undefined,
+): Promise<unknown> {
+  const raw = (await context?.params) ?? {};
+  if (!schema) return raw;
+  const result = schema.safeParse(raw);
+  if (!result.success) throw new ApiError("NOT_FOUND", "Not found.");
+  return result.data;
+}
 
 function checkOrigin(request: Request): void {
   const origin = request.headers.get("origin");
@@ -47,8 +73,9 @@ async function parseInput(
   if (QUERY_INPUT.has(request.method)) {
     raw = Object.fromEntries(url.searchParams);
   } else {
+    const body = await readBody(request, MAX_JSON_BYTES);
     try {
-      raw = await request.json();
+      raw = JSON.parse(body.toString("utf8"));
     } catch {
       throw new ApiError("INVALID_INPUT", "Request body must be valid JSON.");
     }
@@ -92,14 +119,17 @@ async function enforceRateLimit(
 }
 
 /**
- * Every /api/v1 route goes through this: session → origin → input → rate limit → handler,
+ * Every /api/v1 route goes through this: session → origin → params → input → rate limit → handler,
  * stopping at the first failure, with one log line per request.
  */
 export function apiRoute<
   S extends z.ZodType | undefined = undefined,
+  P extends z.ZodType | undefined = undefined,
   A extends boolean = true,
->(options: ApiRouteOptions<S, A>): (request: Request) => Promise<Response> {
-  return async (request) => {
+>(
+  options: ApiRouteOptions<S, P, A>,
+): (request: Request, context?: RouteHandlerContext) => Promise<Response> {
+  return async (request, context) => {
     const started = performance.now();
     const requestId =
       request.headers.get("x-request-id") ??
@@ -116,6 +146,7 @@ export function apiRoute<
         throw new ApiError("UNAUTHENTICATED", "Please sign in.");
       userId = user?.userId;
       if (MUTATING.has(request.method)) checkOrigin(request);
+      const params = await parseParams(context, options.params);
       const input = options.input
         ? await parseInput(request, url, options.input)
         : undefined;
@@ -123,10 +154,11 @@ export function apiRoute<
       response = await options.handler({
         request,
         input,
+        params,
         user,
         log,
         requestId,
-      } as HandlerContext<S extends z.ZodType ? z.infer<S> : undefined, A>);
+      } as HandlerContext<Infer<S, undefined>, Infer<P, RouteParams>, A>);
     } catch (err) {
       if (!(err instanceof ApiError)) log.error({ err }, "unhandled error");
       response = errorResponse(
