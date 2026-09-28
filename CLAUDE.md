@@ -13,7 +13,7 @@ npm workspaces monorepo (Node ≥ 20.9). Run everything from the repo root.
 - Server-only code lives in `apps/web/src/server/`. Every API route is under `/api/v1` and wraps its handler in `apiRoute()` (session → origin → input → Redis rate limit). Settings come from env vars validated in `src/server/env.ts`; copy `apps/web/.env.example` to `.env.local`.
 - `brand/` — logo files and brand guide (`brand/README.md`). Brand colours are theme tokens in `apps/web/src/app/globals.css` (`flare-50…700`, `cream`, `ink`, `stone`, `bone`, `feed`, `danger`, `success`; shadcn's `primary` = `ink`, so buttons are near-black like Attio's). Fonts: `font-sans`/`font-heading` = Inter, `font-serif` = Fraunces (quotes only), `font-wordmark` = Bricolage Grotesque (logo only). The homepage follows the Attio teardown in `docs/research/attio-teardown.md`; the logo component is `apps/web/src/components/brand/logo.tsx`.
 - Verbatim copy (one-liner, core promise) lives in `apps/web/src/lib/site.ts` — import it, don't retype it.
-- Later: `apps/worker` (ingestion), `packages/*` (shared `JobPost` types etc.).
+- Coming with onboarding: `apps/worker` (background jobs: imports now, RSS ingestion next), `packages/core`, `packages/llm`. Later: shared `JobPost` types.
 
 Commands: `npm run dev` (starts Docker db + cache, then Next) · `npm test` · `npm run db:up|db:down|db:migrate|db:generate|db:reset` · `npm run build` · `npm run lint` · `npm run typecheck` · `npm run format`. Add shadcn components with `npx shadcn@latest add <name> -c apps/web`.
 
@@ -26,10 +26,10 @@ Collect (RSS poll every 2–3 min) → Understand (LLM extracts skills, budget, 
 - **Web:** Next.js (React Native/Expo later)
 - **Cloud:** all AWS (decided 2026-09-26; replaces the Supabase plan), region us-east-1, infrastructure as code with AWS CDK (TypeScript) in `infra/`.
 - **Request path:** CloudFront (CDN) → WAF (managed rules + per-IP rate limit) → one EC2 server running the app in Docker (decided 2026-09-26 after the AWS Free Tier credits were lost). Add an ALB + ECS Fargate when a second server is needed; the app stays stateless so that's an infrastructure change only. Per-user rate limits run in the app against Redis. No AWS API Gateway until there are several backend services or a public API; routes live under `/api/v1`.
-- **Data:** Postgres 17 + pgvector runs as a Docker container, on the laptop and on the EC2 server (no RDS, to save cost), with a tested daily backup to S3. Redis: a Valkey 8 container locally, **Upstash** in production (no ElastiCache); only `REDIS_URL` differs, and Redis only holds rebuildable data. Frequent health checks must not touch Redis (Upstash bills per command). Redis is used from day one for per-user rate limits (token bucket), daily quotas and hot caches; S3 for uploads and static assets; SQS + a worker service for slow jobs.
+- **Data:** Postgres 17 + pgvector runs as a Docker container, on the laptop and on the EC2 server (no RDS, to save cost), with a tested daily backup to S3. Redis: a Valkey 8 container locally, **Upstash** in production (no ElastiCache); only `REDIS_URL` differs, and Redis only holds rebuildable data. Frequent health checks must not touch Redis (Upstash bills per command). Redis is used from day one for per-user rate limits (token bucket), daily quotas and hot caches; S3 for static assets (and uploads if we ever keep files). **No SQS** (decided 2026-09-29): slow jobs go into a Postgres job table, and the worker picks them up. Add SQS only when there are several servers or far more jobs than Postgres can hand out.
 - **Auth:** Cognito (Essentials) with Google + email one-time code, no passwords. Tokens in httpOnly cookies, verified in the app on every request; our `users` table is keyed by the Cognito `sub`.
 - **Workflow:** build and test each feature locally first (Docker: Postgres + Valkey; a dev Cognito pool), then deploy. Specs live in `docs/superpowers/specs/`.
-- **Ingestion worker:** Node service, every 2–3 min (runs on the same server at first)
+- **Worker:** one Node process (`apps/worker`), run as a second Docker container on the same EC2 server as the web app; no separate AWS service for it. It runs RSS ingestion every 2–3 min and the background jobs from the Postgres job table. Web code starts work by adding a job row (or calling an API), not through SQS.
 - **AI:** Gemini, tiered by task: Flash-Lite for high-volume work (per-post extraction, scoring), Flash for drafts and onboarding imports. Calls go through our own interface so any task can switch model.
 - **Matching:** embeddings shortlist + rule filters, then LLM re-score with reasons
 - **Alerts:** Telegram Bot API (email/push later)
@@ -39,8 +39,9 @@ Core tables: `profiles`, `job_posts`, `matches`, `replies`, `outcomes`, `client_
 
 ## Product decisions (2026-09-25)
 
-- **Subreddits:** at onboarding Redlance connects the user to the right subreddits for their skills; users can add more but don't have to pick any.
+- **Subreddits:** there is no subreddit step in onboarding. When onboarding finishes, Redlance connects the user to the right subreddits for their job types; users can add more later from the dashboard but don't have to pick any. Their posts arrive through normal ingestion (the worker, or an API call); nothing extra is queued per user. If the dashboard's subreddits page opens before that data has arrived, it shows a loader. Keep it simple.
 - **Trial:** the 5-day trial starts when onboarding finishes, not at sign-up.
+- **Portfolio:** no portfolio step (decided 2026-09-29). Onboarding asks for an optional GitHub link instead (optional for everyone, on the Import step).
 - **Voice:** no voice step at onboarding. Drafts start in a default short, plain style, and the user's voice is learned from their edits (store every AI draft and sent version from the first draft).
 - **Drafts:** a comment and the **first DM** only. Don't market DM conversation handling, and don't state that we don't handle DMs.
 - **Follow-ups (paid plans):** if a reply has no status marked after a few days, remind the user and draft a follow-up.
@@ -53,7 +54,7 @@ Core tables: `profiles`, `job_posts`, `matches`, `replies`, `outcomes`, `client_
 3. **Store everything from day one.** Every post, its extracted fields, the author username, and every reported outcome. V2 features (rate insights, client memory, analytics) depend on this history.
 4. **RSS limits.** Only title, body, author, link, timestamp are available — no comment counts or author reputation. Don't build features that need those until the licensed-API phase. Poll politely with a clear User-Agent; dedupe (each feed returns only ~25 latest posts).
 5. **Keep [Hiring], drop [For Hire].**
-6. **Drafts must sound human:** short, reference the client's specific problem, link the single most relevant portfolio piece.
+6. **Drafts must sound human:** short, reference the client's specific problem, and link the user's work when they have some to show (their GitHub, or the most relevant repo; there is no portfolio step, decided 2026-09-29).
 7. **Client reports:** show counts, never labels like "scammer"; require several independent reports; reports expire; scope to hiring behaviour on job posts only.
 8. **Insights need data:** don't surface analytics insights under ~20 data points; call budget data "posted budgets", not "market rate".
 
@@ -82,16 +83,17 @@ Phase 0 (wks 1–2): Telegram bot, one niche, 10–15 subreddits → Phase 1 (wk
 
 North-star metric: gigs won per active user per month.
 
-## Where we are (2026-09-26)
+## Where we are (2026-09-29)
 
 Handover for the next chat. Update this section as things change.
 
 ### Branches
 
-- `feat/homepage`: the marketing homepage. Not merged into `main` yet.
-- `feat/local-foundation`: built on top of `feat/homepage`, 13 commits, 105 tests passing (`npm test`). **Open question:** merge into `feat/homepage`, open a PR, or keep.
+- `main`: homepage + local backend foundation, merged through PR #1 on 2026-09-28 (105 tests passing).
+- `feat/homepage`: kept on purpose (the user asked not to delete it); its work is already in `main`.
+- `feat/onboarding`: current work, branched from `main`.
 
-### Built on `feat/local-foundation`
+### Built so far (in `main`)
 
 - **Local stack:** Postgres (`db`) and Valkey (`cache`) are two Docker containers bound to 127.0.0.1. Next.js runs on the host (`npm run dev`). Tests use the `redlance_test` database and Redis db 15.
 - **`packages/db`:** the `users` table (unique `auth_sub` and `email_normalized`, CHECK constraint on `status`); migrations `0000_enable_vector` and `0001_init`.
@@ -133,21 +135,15 @@ Handover for the next chat. Update this section as things change.
 - `specs/2026-09-26-local-dev-foundation-design.md` and `plans/2026-09-26-local-dev-foundation.md`: done.
 - `specs/2026-09-26-cdn-waf-foundation-design.md` (Phases 0–2: CDK, Route 53, ACM, CloudFront, WAF): **partly outdated.** The static-export-to-S3 idea is replaced: CloudFront's origin is the EC2 server, with static assets still cached at the edge. It uses the CloudFront flat-rate **Free plan** (includes WAF + Route 53, 1M requests, 100 GB and 5 WAF rules a month; no VPC origins, so the server is locked to CloudFront by security group + secret header). The user hasn't explicitly confirmed the flat-rate plan.
 
-### Onboarding: agreed design, not built
+### Onboarding: spec written, not built
 
-Steps:
-1. Niche.
-2. Optional imports: resume, GitHub username, portfolio links. They run as background jobs through the worker and show up as suggestions; Gemini Flash costs about 2–5¢ per user. Link fetching must be SSRF-safe (block private IPs, timeouts, size caps).
-3. Skills from our taxonomy (skill IDs with aliases), each marked core or secondary.
-4. At least 1 portfolio piece.
-5. Minimum rate, currency, hourly/fixed, remote, time zone, blocked words.
-6. Auto-picked subreddits.
-7. Alerts: email by default, Telegram optional.
-8. Finish: the trial starts and the user sees first matches from the last ~7 days.
-
-Planned tables: `skills`, `profile_skills`, `custom_skills`, `portfolio_items`, `import_jobs`, `skill_subreddits`, `user_subreddits`, `alert_channels`, `llm_usage`.
-
-**Blocked on:** choosing the launch niche.
+Spec: `docs/superpowers/specs/2026-09-29-onboarding-design.md`, revised 2026-09-29 after checking it against the code. Plan for slice 1 (manual onboarding): `docs/superpowers/plans/2026-09-29-onboarding-slice-1.md`, 13 tasks, waiting for the user's review; slices 2 and 3 get their own plans after slice 1 lands. Key decisions (2026-09-29):
+- **Scope:** all freelance job types found on Reddit (development, design, video, writing, …) with one shared skill taxonomy. This replaces "pick one launch niche".
+- **Steps:** Import (optional GitHub link; resume upload in slice 2) → Basics → Skills → Rates & filters → Review/Finish. No subreddit or alert steps: Finish auto-connects subreddits from the job types and turns on email alerts; editing subreddits and connecting Telegram come later in the dashboard.
+- **Saving:** only on Next (`completed`) or Save draft (`draft`), one `onboarding_steps` row per user per step with a `version` for conflict detection; no autosave. The user lands on the first step that isn't completed.
+- **Imports:** resume (PDF/DOCX → text → Gemini → validated suggestions) and GitHub (public API, no LLM). They run in a new `apps/worker` process that takes jobs from a Postgres `import_jobs` table (`FOR UPDATE SKIP LOCKED` + `LISTEN/NOTIFY`); the browser polls the job every 1.5 s. The resume file is never kept, only its text.
+- **IDs:** UUIDv7 for new tables. New packages: `@redlance/core` (taxonomy, step schemas) and `@redlance/llm`.
+- **Build order:** manual onboarding → worker + resume import → GitHub import.
 
 ### AWS and accounts
 
@@ -167,10 +163,9 @@ Planned tables: `skills`, `profile_skills`, `custom_skills`, `portfolio_items`, 
 
 ### Open questions and next steps
 
-1. **Merge `feat/local-foundation`?** And eventually `feat/homepage` into `main`.
-2. **Launch niche** (web dev or video editing): blocks the onboarding spec.
-3. **Onboarding:** spec → plan → build, locally first.
-4. **Then:** the ingestion worker (RSS adapters → `JobPost`), then matching and alerts, then deployment.
+1. **Onboarding:** user reviews the spec revisions and the slice 1 plan (taxonomy and subreddit seed list especially) → build slice 1 → plan slices 2 and 3.
+2. **Then:** RSS ingestion in the same worker (RSS adapters → `JobPost`), then matching and alerts, then deployment.
+3. **Subreddit list:** the seed list of hiring subreddits per job type needs checking against each subreddit's rules.
 5. **Deployment spec:** EC2 + CloudFront + WAF with CDK. CloudFront must forward `Origin` and `CloudFront-Viewer-Address`. Run `/api/v1/health?deep=1` after every deploy. Check that Upstash supports `TIME` inside Lua.
 6. **Still undecided:**
    - which features go in which plan, and credit amounts;
