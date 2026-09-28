@@ -32,14 +32,21 @@ import { syncReferenceData } from "./reference";
 const url = process.env.TEST_DATABASE_URL!;
 const { db, pool } = createDb(url, { max: 2 });
 
+async function removeFixtures() {
+  await db.delete(skills).where(eq(skills.id, "zz-old"));
+  await db.delete(subreddits).where(eq(subreddits.name, "zz_old"));
+}
+
 beforeAll(async () => {
   await runMigrations(url);
+  await removeFixtures(); // leftovers from an interrupted earlier run
   await syncReferenceData(db);
 });
 beforeEach(async () => {
   await db.execute(sql`truncate table users cascade`);
 });
 afterAll(async () => {
+  await removeFixtures();
   await pool.end();
 });
 
