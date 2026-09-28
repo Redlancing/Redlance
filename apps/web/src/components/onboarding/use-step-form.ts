@@ -116,6 +116,7 @@ export function useStepForm<S extends StepId>(
       removeLocal(key);
       setSaved({ data, version: body.version, status: body.status });
       setValue(data);
+      setRestoreHandled(true); // the earlier local copy is now stale
       return body;
     } catch {
       setNotice({ kind: "error", message: "Can't reach Redlance. Check your connection and try again." });

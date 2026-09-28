@@ -58,11 +58,16 @@ export function FieldGroup({
   children: React.ReactNode;
 }) {
   return (
-    <fieldset className="space-y-2" aria-describedby={error ? errorId(errorKey) : undefined}>
+    <fieldset
+      className="space-y-2 outline-none"
+      aria-invalid={error ? true : undefined}
+      tabIndex={error ? -1 : undefined}
+      aria-describedby={error ? errorId(errorKey) : undefined}
+    >
       <legend className="text-sm font-medium text-foreground">{legend}</legend>
       {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
       {children}
-      {error && <p id={errorId(errorKey)} className="text-sm text-danger">{error}</p>}
+      {error && <p id={errorId(errorKey)} role="alert" className="text-sm text-danger">{error}</p>}
     </fieldset>
   );
 }

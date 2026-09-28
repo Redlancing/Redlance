@@ -1,18 +1,13 @@
 "use client";
 
-import { CATEGORIES, COUNTRY_CODES, EXPERIENCE_LEVELS, LIMITS } from "@redlance/core";
+import { CATEGORIES, EXPERIENCE_LEVELS, LIMITS } from "@redlance/core";
 import { cn } from "cn";
 import { Input } from "@/components/ui/input";
-import { useBrowserTimeZone, useBrowserTimeZones } from "./browser-intl";
+import { useBrowserTimeZone, useBrowserTimeZones, useCountryOptions } from "./browser-intl";
 import { Field, FieldGroup, controlProps } from "./field";
 import { RestoreBanner, StepActions } from "./step-actions";
 import { StepHeader } from "./step-header";
 import { useStepForm, type StepFormInit } from "./use-step-form";
-
-const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
-const COUNTRIES = COUNTRY_CODES.map((code) => ({ code, name: regionNames.of(code) ?? code })).sort(
-  (a, b) => a.name.localeCompare(b.name, "en"),
-);
 
 const LEVEL_TEXT: Record<(typeof EXPERIENCE_LEVELS)[number], [string, string]> = {
   beginner: ["Getting started", "A few projects or none paid yet"],
@@ -26,13 +21,16 @@ export const selectClass =
 export function BasicsStep({ init }: { init: StepFormInit<"basics"> }) {
   const browserZone = useBrowserTimeZone();
   const zones = useBrowserTimeZones();
+  const countries = useCountryOptions();
   const form = useStepForm(init, {
     // The browser's zone is the default until the user picks one.
     prepare: (v) => ({ ...v, timeZone: v.timeZone ?? browserZone }),
   });
   const v = form.value;
   const zone = v.timeZone ?? browserZone ?? "";
-  const zoneOptions = zones ?? (zone ? [zone] : []);
+  // Keep the current zone selectable even when the browser's list lacks it (e.g. "UTC").
+  const zoneOptions = zones ? (zone && !zones.includes(zone) ? [zone, ...zones] : zones) : zone ? [zone] : [];
+  const country = v.country ?? "";
 
   function toggleCategory(id: (typeof CATEGORIES)[number]["id"]) {
     const has = v.categories.includes(id);
@@ -122,7 +120,7 @@ export function BasicsStep({ init }: { init: StepFormInit<"basics"> }) {
               className={selectClass}
             >
               <option value="">Choose…</option>
-              {COUNTRIES.map((c) => (
+              {(countries ?? (country ? [{ code: country, name: country }] : [])).map((c) => (
                 <option key={c.code} value={c.code}>{c.name}</option>
               ))}
             </select>
