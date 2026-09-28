@@ -4,7 +4,9 @@ import { notFound, redirect } from "next/navigation";
 import { BasicsStep } from "@/components/onboarding/basics-step";
 import { ImportStep } from "@/components/onboarding/import-step";
 import { Progress } from "@/components/onboarding/progress";
-import { loadOnboardingPage, stepInit } from "@/server/onboarding/page-data";
+import { RatesStep } from "@/components/onboarding/rates-step";
+import { SkillsStep } from "@/components/onboarding/skills-step";
+import { loadOnboardingPage, savedDraft, stepInit } from "@/server/onboarding/page-data";
 
 export async function generateMetadata(props: PageProps<"/onboarding/[step]">): Promise<Metadata> {
   const { step } = await props.params;
@@ -23,8 +25,12 @@ export default async function OnboardingStepPage(props: PageProps<"/onboarding/[
       <div className="rounded-2xl border border-border bg-background p-5 shadow-xs sm:p-8">
         {step === "import" && <ImportStep key={step} init={stepInit(state, user.userId, "import")} />}
         {step === "basics" && <BasicsStep key={step} init={stepInit(state, user.userId, "basics")} />}
-        {/* Tasks 11–12 add the remaining step forms. */}
-        {step !== "import" && step !== "basics" && <p className="text-sm text-muted-foreground">{PAGE_TITLES[step]} for {user.email}</p>}
+        {step === "skills" && (
+          <SkillsStep key={step} init={stepInit(state, user.userId, "skills")} jobTypes={savedDraft(state, "basics")?.categories ?? []} />
+        )}
+        {step === "rates" && <RatesStep key={step} init={stepInit(state, user.userId, "rates")} />}
+        {/* Task 12 adds the review step. */}
+        {step === "review" && <p className="text-sm text-muted-foreground">{PAGE_TITLES[step]} for {user.email}</p>}
       </div>
     </div>
   );
