@@ -24,7 +24,7 @@
   - A stale `expectedVersion` returns 409 `VERSION_CONFLICT`.
 - Skills are never deleted from `taxonomy.ts`; they are flagged `retired: true`.
 - No autosave to the server. `localStorage` holds unsaved form values only (per-viewer convenience), wrapped in try/catch.
-- Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`; no other attribution lines.
+- Commit messages have **no** Claude co-author trailer or "Generated with Claude Code" line (the user's standing rule for this repo).
 
 ## Review Focus
 
@@ -98,7 +98,7 @@ We're on `feat/onboarding` already.
 
 ```bash
 git add CLAUDE.md docs/superpowers
-git commit -m "Add the onboarding spec, the slice 1 plan and the updated handover" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add the onboarding spec, the slice 1 plan and the updated handover"
 ```
 
 - [ ] **Step 2: Create the package files**
@@ -189,7 +189,7 @@ Expected: PASS.
 
 ```bash
 git add packages/core package.json package-lock.json
-git commit -m "Add @redlance/core with UUIDv7 ids" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add @redlance/core with UUIDv7 ids"
 ```
 
 ---
@@ -730,7 +730,7 @@ Expected: PASS. If the alias-uniqueness test fails, rename or drop the clashing 
 
 ```bash
 git add packages/core
-git commit -m "Add the skill taxonomy, subreddit seed list and country codes to @redlance/core" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add the skill taxonomy, subreddit seed list and country codes to @redlance/core"
 ```
 
 ---
@@ -1207,7 +1207,7 @@ If `z.RefinementCtx` is not exported by this zod version, type the helpers' `ctx
 
 ```bash
 git add packages/core
-git commit -m "Add onboarding step schemas and resumeAt() to @redlance/core" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add onboarding step schemas and resumeAt() to @redlance/core"
 ```
 
 ---
@@ -1655,7 +1655,7 @@ Expected: the existing 100+ web tests still PASS.
 
 ```bash
 git add packages/db apps/web/test/global-setup.ts apps/web/next.config.ts apps/web/package.json package-lock.json
-git commit -m "Add onboarding and profile tables and sync reference data after migrations" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add onboarding and profile tables and sync reference data after migrations"
 ```
 
 ---
@@ -1883,7 +1883,7 @@ Expected: PASS. Next's generated route types check each handler's second argumen
 
 ```bash
 git add apps/web/src/server
-git commit -m "Let apiRoute validate route params and cap JSON bodies at 256 KB" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Let apiRoute validate route params and cap JSON bodies at 256 KB"
 ```
 
 ---
@@ -2165,7 +2165,7 @@ Expected: PASS.
 
 ```bash
 git add apps/web/src/server/onboarding
-git commit -m "Add the onboarding service: state, step saves with order and version checks" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add the onboarding service: state, step saves with order and version checks"
 ```
 
 ---
@@ -2373,7 +2373,7 @@ Expected: PASS.
 
 ```bash
 git add apps/web/src/server/onboarding
-git commit -m "Add Finish: write the profile, auto-connect subreddits, email alerts, start the trial once" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add Finish: write the profile, auto-connect subreddits, email alerts, start the trial once"
 ```
 
 ---
@@ -2537,7 +2537,7 @@ Expected: PASS.
 
 ```bash
 git add apps/web/src/app/api/v1/onboarding apps/web/test apps/web/src/server/onboarding
-git commit -m "Add the onboarding API: state, step saves and finish" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add the onboarding API: state, step saves and finish"
 ```
 
 ---
@@ -2889,7 +2889,7 @@ Check, signed out and then signed in (`/login`, any email):
 
 ```bash
 git add apps/web/src
-git commit -m "Add the onboarding route group: guards, redirects and the progress bar" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add the onboarding route group: guards, redirects and the progress bar"
 ```
 
 ---
@@ -3662,7 +3662,7 @@ In the browser:
 
 ```bash
 git add apps/web
-git commit -m "Add the step form hook with drafts, conflicts and a local safety net; Import and Basics steps" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add the step form hook with drafts, conflicts and a local safety net; Import and Basics steps"
 ```
 
 ---
@@ -3795,7 +3795,7 @@ In the browser, after Basics with "Video":
 
 ```bash
 git add apps/web/src
-git commit -m "Add the Skills and Rates steps" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add the Skills and Rates steps"
 ```
 
 ---
@@ -3893,7 +3893,7 @@ In the browser with a fresh email:
 
 ```bash
 git add apps/web/src
-git commit -m "Add the review page and Finish, and link the dashboard setup card to onboarding" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add the review page and Finish, and link the dashboard setup card to onboarding"
 ```
 
 ---
@@ -3929,7 +3929,7 @@ Run one fresh code review of the whole branch against `main` (the "Review Focus"
 
 ```bash
 git add -A
-git commit -m "Update the handover for onboarding slice 1" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Update the handover for onboarding slice 1"
 ```
 
 Then ask the user before pushing or opening a PR.
