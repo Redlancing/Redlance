@@ -1,8 +1,10 @@
 import { PAGE_TITLES, canOpen, isPageId } from "@redlance/core";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { BasicsStep } from "@/components/onboarding/basics-step";
+import { ImportStep } from "@/components/onboarding/import-step";
 import { Progress } from "@/components/onboarding/progress";
-import { loadOnboardingPage } from "@/server/onboarding/page-data";
+import { loadOnboardingPage, stepInit } from "@/server/onboarding/page-data";
 
 export async function generateMetadata(props: PageProps<"/onboarding/[step]">): Promise<Metadata> {
   const { step } = await props.params;
@@ -19,8 +21,10 @@ export default async function OnboardingStepPage(props: PageProps<"/onboarding/[
     <div className="w-full max-w-2xl">
       <Progress current={step} resumeAt={state.resumeAt} />
       <div className="rounded-2xl border border-border bg-background p-5 shadow-xs sm:p-8">
-        {/* Task 10–12 replace this with the step forms. */}
-        <p className="text-sm text-muted-foreground">{PAGE_TITLES[step]} for {user.email}</p>
+        {step === "import" && <ImportStep key={step} init={stepInit(state, user.userId, "import")} />}
+        {step === "basics" && <BasicsStep key={step} init={stepInit(state, user.userId, "basics")} />}
+        {/* Tasks 11–12 add the remaining step forms. */}
+        {step !== "import" && step !== "basics" && <p className="text-sm text-muted-foreground">{PAGE_TITLES[step]} for {user.email}</p>}
       </div>
     </div>
   );
