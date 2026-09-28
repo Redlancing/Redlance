@@ -14,8 +14,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@redlance/core": "*",
     "drizzle-orm": "^0.45.3",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "uuid": "^14.0.2"
   },
   "devDependencies": {
     "@types/node": "^24",
