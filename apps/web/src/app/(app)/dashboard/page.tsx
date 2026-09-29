@@ -1,7 +1,12 @@
+import { pageIndex } from "@redlance/core";
 import { ArrowRight, Inbox, Send, Trophy } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { buttonVariants } from "@/components/ui/button";
 import { getCurrentUser } from "@/server/current-user";
+import { getOnboardingState } from "@/server/onboarding/service";
+import { trialDaysLeft } from "@/server/onboarding/trial";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -14,6 +19,10 @@ const stats = [
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/dashboard");
+  const state = await getOnboardingState(user.userId);
+  const onboarded = state.onboardedAt !== null;
+  const daysLeft = state.trialEndsAt ? trialDaysLeft(state.trialEndsAt) : 0;
+  const started = state.steps.length > 0;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -23,33 +32,40 @@ export default async function DashboardPage() {
       <p className="mt-1 text-sm text-muted-foreground">
         Signed in as {user.email}
       </p>
+      {onboarded && (
+        <p className="mt-1 text-sm text-muted-foreground">
+          {daysLeft > 0 ? `Your trial: ${daysLeft} ${daysLeft === 1 ? "day" : "days"} left.` : "Your trial has ended."}
+        </p>
+      )}
 
+      {!onboarded && (
       <section
-        aria-labelledby="setup-heading"
-        className="mt-8 overflow-hidden rounded-2xl border border-flare-100 bg-flare-50"
-      >
-        <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2
-              id="setup-heading"
-              className="text-base font-semibold text-foreground"
+          aria-labelledby="setup-heading"
+          className="mt-8 overflow-hidden rounded-2xl border border-flare-100 bg-flare-50"
+        >
+          <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2
+                id="setup-heading"
+                className="text-base font-semibold text-foreground"
+              >
+                Set up your profile
+              </h2>
+              <p className="mt-1 max-w-xl text-sm text-stone">
+                Add your job types and skills so Redlance can match gigs to you.
+                Your 5-day trial starts when you finish.
+              </p>
+            </div>
+            <Link
+              href="/onboarding"
+              className={buttonVariants({ size: "lg" }) + " shrink-0 self-start sm:self-auto"}
             >
-              Set up your profile
-            </h2>
-            <p className="mt-1 max-w-xl text-sm text-stone">
-              Pick your niche, skills and portfolio so Redlance can match gigs
-              to you. Your 5-day trial starts when you finish.
-            </p>
+              {started ? `Continue setup · step ${pageIndex(state.resumeAt) + 1} of 5` : "Start setup"}
+              <ArrowRight aria-hidden="true" />
+            </Link>
           </div>
-          <span
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-lg bg-ink/90 px-3 text-sm font-medium text-white/80 sm:self-auto"
-            aria-disabled="true"
-          >
-            Coming next
-            <ArrowRight className="size-4" aria-hidden="true" />
-          </span>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section
         aria-label="Your numbers"

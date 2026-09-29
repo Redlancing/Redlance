@@ -6,7 +6,8 @@ import { ImportStep } from "@/components/onboarding/import-step";
 import { Progress } from "@/components/onboarding/progress";
 import { RatesStep } from "@/components/onboarding/rates-step";
 import { SkillsStep } from "@/components/onboarding/skills-step";
-import { loadOnboardingPage, savedDraft, stepInit } from "@/server/onboarding/page-data";
+import { ReviewStep } from "@/components/onboarding/review-step";
+import { loadOnboardingPage, reviewData, savedDraft, stepInit } from "@/server/onboarding/page-data";
 
 export async function generateMetadata(props: PageProps<"/onboarding/[step]">): Promise<Metadata> {
   const { step } = await props.params;
@@ -19,6 +20,9 @@ export default async function OnboardingStepPage(props: PageProps<"/onboarding/[
   const { user, state } = await loadOnboardingPage(`/onboarding/${step}`);
   if (!canOpen(step, state.resumeAt)) redirect(`/onboarding/${state.resumeAt}`);
 
+  const review = step === "review" ? reviewData(state) : null;
+  if (review && !review.ok) redirect(`/onboarding/${review.step}`);
+
   return (
     <div className="w-full max-w-2xl">
       <Progress current={step} resumeAt={state.resumeAt} />
@@ -29,8 +33,7 @@ export default async function OnboardingStepPage(props: PageProps<"/onboarding/[
           <SkillsStep key={step} init={stepInit(state, user.userId, "skills")} jobTypes={savedDraft(state, "basics")?.categories ?? []} />
         )}
         {step === "rates" && <RatesStep key={step} init={stepInit(state, user.userId, "rates")} />}
-        {/* Task 12 adds the review step. */}
-        {step === "review" && <p className="text-sm text-muted-foreground">{PAGE_TITLES[step]} for {user.email}</p>}
+        {review?.ok && <ReviewStep data={review.data} email={user.email} />}
       </div>
     </div>
   );

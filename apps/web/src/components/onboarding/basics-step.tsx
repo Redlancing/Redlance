@@ -9,7 +9,7 @@ import { RestoreBanner, StepActions } from "./step-actions";
 import { StepHeader } from "./step-header";
 import { useStepForm, type StepFormInit } from "./use-step-form";
 
-const LEVEL_TEXT: Record<(typeof EXPERIENCE_LEVELS)[number], [string, string]> = {
+export const LEVEL_TEXT: Record<(typeof EXPERIENCE_LEVELS)[number], [string, string]> = {
   beginner: ["Getting started", "A few projects or none paid yet"],
   intermediate: ["Some paid work", "Regular clients or a year or two in"],
   experienced: ["Experienced", "Several years of client work"],
