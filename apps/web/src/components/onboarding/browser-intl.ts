@@ -11,8 +11,10 @@ const getZones = () => (zones ??= Intl.supportedValuesOf("timeZone"));
 const getZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 const none = () => null;
 
-export const useBrowserTimeZones = () => useSyncExternalStore(noopSubscribe, getZones, none);
-export const useBrowserTimeZone = () => useSyncExternalStore(noopSubscribe, getZone, none);
+export const useBrowserTimeZones = () =>
+  useSyncExternalStore(noopSubscribe, getZones, none);
+export const useBrowserTimeZone = () =>
+  useSyncExternalStore(noopSubscribe, getZone, none);
 
 export type CountryOption = { code: string; name: string };
 
@@ -28,6 +30,10 @@ export function buildCountryOptions(
 
 let countries: CountryOption[] | undefined;
 const getCountries = () =>
-  (countries ??= buildCountryOptions(COUNTRY_CODES, new Intl.DisplayNames(["en"], { type: "region" })));
+  (countries ??= buildCountryOptions(
+    COUNTRY_CODES,
+    new Intl.DisplayNames(["en"], { type: "region" }),
+  ));
 
-export const useCountryOptions = () => useSyncExternalStore(noopSubscribe, getCountries, none);
+export const useCountryOptions = () =>
+  useSyncExternalStore(noopSubscribe, getCountries, none);

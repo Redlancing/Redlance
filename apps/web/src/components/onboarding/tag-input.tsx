@@ -56,7 +56,11 @@ export function TagInput({
           if (e.key === "Enter") {
             e.preventDefault();
             commit();
-          } else if (e.key === "Backspace" && text === "" && values.length > 0) {
+          } else if (
+            e.key === "Backspace" &&
+            text === "" &&
+            values.length > 0
+          ) {
             onChange(values.slice(0, -1));
           }
         }}
@@ -66,7 +70,10 @@ export function TagInput({
       {values.length > 0 && (
         <ul className="flex flex-wrap gap-2">
           {values.map((word) => (
-            <li key={word} className="flex items-center gap-1 rounded-full border border-border bg-bone py-1 pr-1 pl-3 text-sm">
+            <li
+              key={word}
+              className="flex items-center gap-1 rounded-full border border-border bg-bone py-1 pr-1 pl-3 text-sm"
+            >
               {word}
               <button
                 type="button"

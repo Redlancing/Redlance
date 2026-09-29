@@ -8,7 +8,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
+export default function OnboardingLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex min-h-svh flex-1 flex-col bg-cream">
       <header className="flex items-center justify-between px-4 py-4 sm:px-10 sm:py-5">
@@ -21,7 +25,10 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
         </Link>
         <SignOutButton />
       </header>
-      <main id="main" className="flex flex-1 justify-center px-4 pt-2 pb-16 sm:pt-6">
+      <main
+        id="main"
+        className="flex flex-1 justify-center px-4 pt-2 pb-16 sm:pt-6"
+      >
         {children}
       </main>
     </div>

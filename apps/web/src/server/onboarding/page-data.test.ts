@@ -3,18 +3,43 @@ import { VALID } from "../../../test/onboarding-fixtures";
 import { reviewData, stepInit } from "./page-data";
 import type { OnboardingState } from "./service";
 
-const row = (step: string, data: unknown, status: "draft" | "completed" = "completed", version = 1) => ({
-  step, status, data, version, updatedAt: new Date(),
-}) as OnboardingState["steps"][number];
+const row = (
+  step: string,
+  data: unknown,
+  status: "draft" | "completed" = "completed",
+  version = 1,
+) =>
+  ({
+    step,
+    status,
+    data,
+    version,
+    updatedAt: new Date(),
+  }) as OnboardingState["steps"][number];
 
-const state = (steps: OnboardingState["steps"], resumeAt: OnboardingState["resumeAt"] = "import"): OnboardingState => ({
-  steps, resumeAt, onboardedAt: null, trialEndsAt: null,
+const state = (
+  steps: OnboardingState["steps"],
+  resumeAt: OnboardingState["resumeAt"] = "import",
+): OnboardingState => ({
+  steps,
+  resumeAt,
+  onboardedAt: null,
+  trialEndsAt: null,
 });
 
 describe("stepInit", () => {
   it("returns the saved data, status and version", () => {
-    const init = stepInit(state([row("basics", VALID.basics, "draft", 3)]), "u1", "basics");
-    expect(init).toMatchObject({ userId: "u1", step: "basics", status: "draft", version: 3 });
+    const init = stepInit(
+      state([row("basics", VALID.basics, "draft", 3)]),
+      "u1",
+      "basics",
+    );
+    expect(init).toMatchObject({
+      userId: "u1",
+      step: "basics",
+      status: "draft",
+      version: 3,
+    });
     expect(init.data.displayName).toBe("Asha");
   });
 
@@ -25,7 +50,11 @@ describe("stepInit", () => {
   });
 
   it("falls back to an empty draft (keeping the version) when saved data no longer parses", () => {
-    const init = stepInit(state([row("basics", { displayName: 42 }, "draft", 2)]), "u1", "basics");
+    const init = stepInit(
+      state([row("basics", { displayName: 42 }, "draft", 2)]),
+      "u1",
+      "basics",
+    );
     expect(init.data.displayName).toBe("");
     expect(init.version).toBe(2);
   });
@@ -33,7 +62,9 @@ describe("stepInit", () => {
 
 describe("reviewData", () => {
   it("parses every step with its complete schema", () => {
-    const steps = (["import", "basics", "skills", "rates"] as const).map((s) => row(s, VALID[s]));
+    const steps = (["import", "basics", "skills", "rates"] as const).map((s) =>
+      row(s, VALID[s]),
+    );
     const result = reviewData(state(steps, "review"));
     expect(result.ok && result.data.rates.minRate).toBe(25);
   });
@@ -42,6 +73,9 @@ describe("reviewData", () => {
     const steps = (["import", "basics", "skills", "rates"] as const).map((s) =>
       row(s, s === "skills" ? { skills: [] } : VALID[s]),
     );
-    expect(reviewData(state(steps, "review"))).toEqual({ ok: false, step: "skills" });
+    expect(reviewData(state(steps, "review"))).toEqual({
+      ok: false,
+      step: "skills",
+    });
   });
 });

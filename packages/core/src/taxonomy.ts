@@ -1,20 +1,59 @@
 export const CATEGORIES = [
-  { id: "development", name: "Development", hint: "Websites, apps, bots, automation" },
-  { id: "games", name: "Game development", hint: "Unity, Unreal, Godot, Roblox, mods" },
+  {
+    id: "development",
+    name: "Development",
+    hint: "Websites, apps, bots, automation",
+  },
+  {
+    id: "games",
+    name: "Game development",
+    hint: "Unity, Unreal, Godot, Roblox, mods",
+  },
   { id: "design", name: "Design", hint: "Logos, brand, UI/UX, print" },
-  { id: "art", name: "Art & illustration", hint: "Commissions, characters, comics, emotes" },
-  { id: "3d", name: "3D & animation", hint: "Modeling, rigging, rendering, CAD" },
+  {
+    id: "art",
+    name: "Art & illustration",
+    hint: "Commissions, characters, comics, emotes",
+  },
+  {
+    id: "3d",
+    name: "3D & animation",
+    hint: "Modeling, rigging, rendering, CAD",
+  },
   { id: "video", name: "Video", hint: "Editing, motion graphics, thumbnails" },
-  { id: "photo", name: "Photo editing", hint: "Retouching, restoration, compositing" },
-  { id: "audio", name: "Audio & voice", hint: "Voice-over, music, mixing, podcasts" },
-  { id: "writing", name: "Writing & translation", hint: "Copy, articles, editing, translation" },
+  {
+    id: "photo",
+    name: "Photo editing",
+    hint: "Retouching, restoration, compositing",
+  },
+  {
+    id: "audio",
+    name: "Audio & voice",
+    hint: "Voice-over, music, mixing, podcasts",
+  },
+  {
+    id: "writing",
+    name: "Writing & translation",
+    hint: "Copy, articles, editing, translation",
+  },
   { id: "marketing", name: "Marketing", hint: "SEO, social media, ads, email" },
-  { id: "data", name: "Data & AI", hint: "Analysis, spreadsheets, scraping, ML" },
-  { id: "admin", name: "Admin & support", hint: "Virtual assistance, data entry, research" },
+  {
+    id: "data",
+    name: "Data & AI",
+    hint: "Analysis, spreadsheets, scraping, ML",
+  },
+  {
+    id: "admin",
+    name: "Admin & support",
+    hint: "Virtual assistance, data entry, research",
+  },
 ] as const;
 
 export type CategoryId = (typeof CATEGORIES)[number]["id"];
-export const CATEGORY_IDS = CATEGORIES.map((c) => c.id) as [CategoryId, ...CategoryId[]];
+export const CATEGORY_IDS = CATEGORIES.map((c) => c.id) as [
+  CategoryId,
+  ...CategoryId[],
+];
 
 export type Skill = {
   id: string;
@@ -50,87 +89,260 @@ function group(category: CategoryId, defs: Def[]): Skill[] {
 // Order inside a group = "popular first" for skillsForCategories().
 export const SKILLS: readonly Skill[] = [
   ...group("development", [
-    ["javascript", "JavaScript", ["js", "es6"], { languages: ["JavaScript"], topics: ["javascript"] }],
-    ["typescript", "TypeScript", ["ts"], { languages: ["TypeScript"], topics: ["typescript"] }],
-    ["react", "React", ["react.js", "reactjs"], { topics: ["react", "reactjs"] }],
+    [
+      "javascript",
+      "JavaScript",
+      ["js", "es6"],
+      { languages: ["JavaScript"], topics: ["javascript"] },
+    ],
+    [
+      "typescript",
+      "TypeScript",
+      ["ts"],
+      { languages: ["TypeScript"], topics: ["typescript"] },
+    ],
+    [
+      "react",
+      "React",
+      ["react.js", "reactjs"],
+      { topics: ["react", "reactjs"] },
+    ],
     ["nextjs", "Next.js", ["nextjs", "next js"], { topics: ["nextjs"] }],
-    ["nodejs", "Node.js", ["node", "express", "nestjs"], { topics: ["nodejs", "express", "nestjs"] }],
+    [
+      "nodejs",
+      "Node.js",
+      ["node", "express", "nestjs"],
+      { topics: ["nodejs", "express", "nestjs"] },
+    ],
     ["python", "Python", ["py"], { languages: ["Python"], topics: ["python"] }],
-    ["html-css", "HTML & CSS", ["html", "css", "html5", "css3"], { languages: ["HTML", "CSS", "SCSS"] }],
-    ["wordpress", "WordPress", ["wp", "woocommerce"], { topics: ["wordpress", "woocommerce"] }],
-    ["shopify", "Shopify", ["liquid"], { languages: ["Liquid"], topics: ["shopify"] }],
+    [
+      "html-css",
+      "HTML & CSS",
+      ["html", "css", "html5", "css3"],
+      { languages: ["HTML", "CSS", "SCSS"] },
+    ],
+    [
+      "wordpress",
+      "WordPress",
+      ["wp", "woocommerce"],
+      { topics: ["wordpress", "woocommerce"] },
+    ],
+    [
+      "shopify",
+      "Shopify",
+      ["liquid"],
+      { languages: ["Liquid"], topics: ["shopify"] },
+    ],
     ["php", "PHP", [], { languages: ["PHP"] }],
     ["laravel", "Laravel", [], { topics: ["laravel"] }],
     ["django", "Django", [], { topics: ["django"] }],
     ["fastapi", "FastAPI", ["flask"], { topics: ["fastapi", "flask"] }],
-    ["vue", "Vue", ["vue.js", "vuejs", "nuxt"], { languages: ["Vue"], topics: ["vue", "vuejs", "nuxt"] }],
+    [
+      "vue",
+      "Vue",
+      ["vue.js", "vuejs", "nuxt"],
+      { languages: ["Vue"], topics: ["vue", "vuejs", "nuxt"] },
+    ],
     ["angular", "Angular", [], { topics: ["angular"] }],
-    ["svelte", "Svelte", ["sveltekit"], { languages: ["Svelte"], topics: ["svelte", "sveltekit"] }],
+    [
+      "svelte",
+      "Svelte",
+      ["sveltekit"],
+      { languages: ["Svelte"], topics: ["svelte", "sveltekit"] },
+    ],
     ["tailwind", "Tailwind CSS", ["tailwindcss"], { topics: ["tailwindcss"] }],
     ["react-native", "React Native", [], { topics: ["react-native"] }],
     ["flutter", "Flutter", [], { languages: ["Dart"], topics: ["flutter"] }],
-    ["ios", "iOS development", ["swiftui", "ios app", "swift"], { languages: ["Swift", "Objective-C"], topics: ["ios", "swiftui"] }],
-    ["android", "Android development", ["android app", "jetpack compose", "kotlin"], { languages: ["Kotlin"], topics: ["android"] }],
+    [
+      "ios",
+      "iOS development",
+      ["swiftui", "ios app", "swift"],
+      { languages: ["Swift", "Objective-C"], topics: ["ios", "swiftui"] },
+    ],
+    [
+      "android",
+      "Android development",
+      ["android app", "jetpack compose", "kotlin"],
+      { languages: ["Kotlin"], topics: ["android"] },
+    ],
     ["java", "Java", [], { languages: ["Java"] }],
-    ["spring", "Spring Boot", ["spring"], { topics: ["spring-boot", "spring"] }],
-    ["csharp", "C#", ["c sharp", ".net", "dotnet", "asp.net"], { languages: ["C#"], topics: ["dotnet", "csharp"] }],
+    [
+      "spring",
+      "Spring Boot",
+      ["spring"],
+      { topics: ["spring-boot", "spring"] },
+    ],
+    [
+      "csharp",
+      "C#",
+      ["c sharp", ".net", "dotnet", "asp.net"],
+      { languages: ["C#"], topics: ["dotnet", "csharp"] },
+    ],
     ["cpp", "C / C++", ["c++", "cplusplus", "c"], { languages: ["C++", "C"] }],
     ["go", "Go", ["golang"], { languages: ["Go"], topics: ["golang"] }],
     ["rust", "Rust", [], { languages: ["Rust"] }],
-    ["ruby", "Ruby on Rails", ["rails", "ror", "ruby"], { languages: ["Ruby"], topics: ["rails", "ruby-on-rails"] }],
+    [
+      "ruby",
+      "Ruby on Rails",
+      ["rails", "ror", "ruby"],
+      { languages: ["Ruby"], topics: ["rails", "ruby-on-rails"] },
+    ],
     ["webflow", "Webflow", []],
     ["wix-squarespace", "Wix / Squarespace", ["wix", "squarespace"]],
-    ["no-code", "No-code tools", ["zapier", "make.com", "bubble", "airtable", "n8n"]],
-    ["postgresql", "PostgreSQL", ["postgres"], { topics: ["postgresql", "postgres"] }],
+    [
+      "no-code",
+      "No-code tools",
+      ["zapier", "make.com", "bubble", "airtable", "n8n"],
+    ],
+    [
+      "postgresql",
+      "PostgreSQL",
+      ["postgres"],
+      { topics: ["postgresql", "postgres"] },
+    ],
     ["mysql", "MySQL", [], { topics: ["mysql"] }],
     ["mongodb", "MongoDB", ["mongo"], { topics: ["mongodb"] }],
     ["firebase", "Firebase", [], { topics: ["firebase"] }],
     ["supabase", "Supabase", [], { topics: ["supabase"] }],
     ["graphql", "GraphQL", [], { topics: ["graphql"] }],
-    ["rest-api", "APIs & integrations", ["api", "apis", "rest api", "api integration"], { topics: ["rest-api", "api"] }],
-    ["payments", "Payments integration", ["stripe", "paypal"], { topics: ["stripe"] }],
+    [
+      "rest-api",
+      "APIs & integrations",
+      ["api", "apis", "rest api", "api integration"],
+      { topics: ["rest-api", "api"] },
+    ],
+    [
+      "payments",
+      "Payments integration",
+      ["stripe", "paypal"],
+      { topics: ["stripe"] },
+    ],
     ["aws", "AWS", ["amazon web services"], { topics: ["aws"] }],
     ["gcp", "Google Cloud", ["gcp"], { topics: ["gcp", "google-cloud"] }],
     ["azure", "Azure", [], { topics: ["azure"] }],
     ["docker", "Docker", [], { languages: ["Dockerfile"], topics: ["docker"] }],
     ["kubernetes", "Kubernetes", ["k8s"], { topics: ["kubernetes"] }],
-    ["devops", "DevOps & CI/CD", ["ci/cd", "github actions", "terraform"], { languages: ["HCL"], topics: ["devops", "terraform"] }],
-    ["linux", "Linux & servers", ["sysadmin", "bash", "vps"], { languages: ["Shell"] }],
-    ["automation", "Scripting & automation", ["automation", "scripting"], { topics: ["automation"] }],
-    ["bots", "Discord & Telegram bots", ["discord bot", "telegram bot", "chatbot"], { topics: ["discord-bot", "telegram-bot"] }],
-    ["browser-extensions", "Browser extensions", ["chrome extension"], { topics: ["chrome-extension"] }],
-    ["desktop-apps", "Desktop apps", ["electron", "tauri"], { topics: ["electron", "tauri"] }],
-    ["blockchain", "Blockchain & smart contracts", ["solidity", "web3", "smart contracts"], { languages: ["Solidity"], topics: ["web3", "solidity", "ethereum"] }],
-    ["qa-testing", "QA & testing", ["testing", "playwright", "cypress", "selenium testing"], { topics: ["testing", "playwright", "cypress"] }],
+    [
+      "devops",
+      "DevOps & CI/CD",
+      ["ci/cd", "github actions", "terraform"],
+      { languages: ["HCL"], topics: ["devops", "terraform"] },
+    ],
+    [
+      "linux",
+      "Linux & servers",
+      ["sysadmin", "bash", "vps"],
+      { languages: ["Shell"] },
+    ],
+    [
+      "automation",
+      "Scripting & automation",
+      ["automation", "scripting"],
+      { topics: ["automation"] },
+    ],
+    [
+      "bots",
+      "Discord & Telegram bots",
+      ["discord bot", "telegram bot", "chatbot"],
+      { topics: ["discord-bot", "telegram-bot"] },
+    ],
+    [
+      "browser-extensions",
+      "Browser extensions",
+      ["chrome extension"],
+      { topics: ["chrome-extension"] },
+    ],
+    [
+      "desktop-apps",
+      "Desktop apps",
+      ["electron", "tauri"],
+      { topics: ["electron", "tauri"] },
+    ],
+    [
+      "blockchain",
+      "Blockchain & smart contracts",
+      ["solidity", "web3", "smart contracts"],
+      { languages: ["Solidity"], topics: ["web3", "solidity", "ethereum"] },
+    ],
+    [
+      "qa-testing",
+      "QA & testing",
+      ["testing", "playwright", "cypress", "selenium testing"],
+      { topics: ["testing", "playwright", "cypress"] },
+    ],
   ]),
   ...group("games", [
-    ["unity", "Unity", ["unity3d"], { languages: ["ShaderLab"], topics: ["unity", "unity3d"] }],
-    ["unreal", "Unreal Engine", ["ue5", "ue4", "blueprints"], { topics: ["unreal-engine"] }],
+    [
+      "unity",
+      "Unity",
+      ["unity3d"],
+      { languages: ["ShaderLab"], topics: ["unity", "unity3d"] },
+    ],
+    [
+      "unreal",
+      "Unreal Engine",
+      ["ue5", "ue4", "blueprints"],
+      { topics: ["unreal-engine"] },
+    ],
     ["godot", "Godot", [], { languages: ["GDScript"], topics: ["godot"] }],
-    ["roblox", "Roblox", ["luau", "roblox studio"], { languages: ["Luau"], topics: ["roblox"] }],
+    [
+      "roblox",
+      "Roblox",
+      ["luau", "roblox studio"],
+      { languages: ["Luau"], topics: ["roblox"] },
+    ],
     ["game-design", "Game design", ["level design"]],
     ["game-art", "Game art & assets", ["game assets", "2d assets"]],
     ["pixel-art", "Pixel art", ["sprites"]],
-    ["minecraft", "Minecraft plugins & mods", ["spigot", "minecraft mods"], { topics: ["minecraft", "spigot"] }],
+    [
+      "minecraft",
+      "Minecraft plugins & mods",
+      ["spigot", "minecraft mods"],
+      { topics: ["minecraft", "spigot"] },
+    ],
     ["fivem", "FiveM & GTA mods", ["gta mods"], { topics: ["fivem"] }],
     ["gamemaker", "GameMaker", [], { languages: ["Game Maker Language"] }],
     ["lua", "Lua scripting", [], { languages: ["Lua"] }],
   ]),
   ...group("design", [
     ["logo-design", "Logo design", ["logo", "logos"]],
-    ["brand-identity", "Brand identity", ["branding", "brand design", "style guide"]],
+    [
+      "brand-identity",
+      "Brand identity",
+      ["branding", "brand design", "style guide"],
+    ],
     ["graphic-design", "Graphic design", ["graphics"]],
     ["ui-design", "UI design", ["user interface", "web design", "app design"]],
-    ["ux-design", "UX design", ["ux", "user research", "wireframing", "prototyping"]],
+    [
+      "ux-design",
+      "UX design",
+      ["ux", "user research", "wireframing", "prototyping"],
+    ],
     ["figma", "Figma", []],
     ["illustrator", "Adobe Illustrator", ["illustrator"]],
     ["indesign", "Adobe InDesign", ["indesign"]],
     ["canva", "Canva", []],
-    ["social-media-graphics", "Social media graphics", ["instagram posts", "banners"]],
-    ["print-design", "Print design", ["flyers", "posters", "brochures", "business cards"]],
+    [
+      "social-media-graphics",
+      "Social media graphics",
+      ["instagram posts", "banners"],
+    ],
+    [
+      "print-design",
+      "Print design",
+      ["flyers", "posters", "brochures", "business cards"],
+    ],
     ["packaging-design", "Packaging design", ["packaging", "label design"]],
-    ["presentation-design", "Presentation design", ["pitch deck", "powerpoint", "slides", "keynote"]],
-    ["merch-design", "T-shirt & merch design", ["t-shirt design", "apparel design", "merch"]],
+    [
+      "presentation-design",
+      "Presentation design",
+      ["pitch deck", "powerpoint", "slides", "keynote"],
+    ],
+    [
+      "merch-design",
+      "T-shirt & merch design",
+      ["t-shirt design", "apparel design", "merch"],
+    ],
     ["book-cover-design", "Book cover design", ["book cover"]],
     ["infographics", "Infographics", []],
   ]),
@@ -146,7 +358,11 @@ export const SKILLS: readonly Skill[] = [
     ["emotes", "Emotes & badges", ["twitch emotes", "discord emotes"]],
     ["childrens-books", "Children's book illustration", ["kids book"]],
     ["tattoo-design", "Tattoo design", ["tattoo"]],
-    ["traditional-art", "Traditional art", ["painting", "drawing", "watercolor"]],
+    [
+      "traditional-art",
+      "Traditional art",
+      ["painting", "drawing", "watercolor"],
+    ],
     ["procreate", "Procreate", []],
   ]),
   ...group("3d", [
@@ -155,7 +371,11 @@ export const SKILLS: readonly Skill[] = [
     ["3d-animation", "3D animation", []],
     ["rigging", "Rigging", []],
     ["texturing", "Texturing", ["substance painter", "pbr"]],
-    ["product-rendering", "Product rendering", ["3d render", "rendering", "keyshot"]],
+    [
+      "product-rendering",
+      "Product rendering",
+      ["3d render", "rendering", "keyshot"],
+    ],
     ["archviz", "Architectural visualization", ["sketchup", "3ds max"]],
     ["cad", "CAD", ["autocad", "solidworks", "fusion 360"]],
     ["3d-printing", "3D printing models", ["stl", "3d print"]],
@@ -186,9 +406,17 @@ export const SKILLS: readonly Skill[] = [
     ["photo-retouching", "Photo retouching", ["retouching", "skin retouch"]],
     ["photo-restoration", "Photo restoration", ["restoration", "colorization"]],
     ["photo-manipulation", "Photo manipulation", ["photoshop edits"]],
-    ["background-removal", "Background removal", ["remove background", "cutout"]],
+    [
+      "background-removal",
+      "Background removal",
+      ["remove background", "cutout"],
+    ],
     ["product-photo-editing", "Product photo editing", ["ecommerce photos"]],
-    ["real-estate-photo-editing", "Real estate photo editing", ["virtual staging", "hdr"]],
+    [
+      "real-estate-photo-editing",
+      "Real estate photo editing",
+      ["virtual staging", "hdr"],
+    ],
     ["lightroom", "Lightroom", []],
     ["photography", "Photography", ["photographer", "photoshoot"]],
   ]),
@@ -206,12 +434,24 @@ export const SKILLS: readonly Skill[] = [
   ]),
   ...group("writing", [
     ["copywriting", "Copywriting", ["copy", "sales copy"]],
-    ["content-writing", "Content writing", ["blog posts", "articles", "blogging"]],
+    [
+      "content-writing",
+      "Content writing",
+      ["blog posts", "articles", "blogging"],
+    ],
     ["seo-writing", "SEO writing", ["seo content"]],
     ["ghostwriting", "Ghostwriting", ["ghostwriter"]],
-    ["editing-proofreading", "Editing & proofreading", ["proofreading", "copyediting", "line editing"]],
+    [
+      "editing-proofreading",
+      "Editing & proofreading",
+      ["proofreading", "copyediting", "line editing"],
+    ],
     ["technical-writing", "Technical writing", ["documentation", "docs"]],
-    ["scriptwriting", "Scriptwriting", ["scripts", "youtube scripts", "screenwriting"]],
+    [
+      "scriptwriting",
+      "Scriptwriting",
+      ["scripts", "youtube scripts", "screenwriting"],
+    ],
     ["creative-writing", "Creative writing", ["fiction", "short stories"]],
     ["resume-writing", "Resume writing", ["cv writing", "cover letters"]],
     ["grant-writing", "Grant writing", ["grants", "proposals"]],
@@ -223,40 +463,108 @@ export const SKILLS: readonly Skill[] = [
   ]),
   ...group("marketing", [
     ["seo", "SEO", ["search engine optimization"]],
-    ["social-media-management", "Social media management", ["smm", "social media manager", "community management"]],
+    [
+      "social-media-management",
+      "Social media management",
+      ["smm", "social media manager", "community management"],
+    ],
     ["paid-ads", "Paid ads", ["ppc", "google ads", "facebook ads", "meta ads"]],
-    ["email-marketing", "Email marketing", ["klaviyo", "mailchimp", "newsletters"]],
+    [
+      "email-marketing",
+      "Email marketing",
+      ["klaviyo", "mailchimp", "newsletters"],
+    ],
     ["ugc", "UGC content", ["ugc creator", "user-generated content"]],
     ["content-marketing", "Content marketing", []],
     ["marketing-strategy", "Marketing strategy", ["growth", "go-to-market"]],
-    ["lead-generation", "Lead generation", ["leads", "cold outreach", "cold email"]],
-    ["analytics-tracking", "Analytics & tracking", ["google analytics", "ga4", "tag manager"]],
-    ["marketplace-listings", "Amazon & Etsy listings", ["amazon fba", "etsy seo", "listings"]],
+    [
+      "lead-generation",
+      "Lead generation",
+      ["leads", "cold outreach", "cold email"],
+    ],
+    [
+      "analytics-tracking",
+      "Analytics & tracking",
+      ["google analytics", "ga4", "tag manager"],
+    ],
+    [
+      "marketplace-listings",
+      "Amazon & Etsy listings",
+      ["amazon fba", "etsy seo", "listings"],
+    ],
     ["influencer-marketing", "Influencer marketing", []],
     ["pr-outreach", "PR & outreach", ["public relations", "press release"]],
   ]),
   ...group("data", [
     ["data-analysis", "Data analysis", ["analytics", "data analyst"]],
-    ["excel", "Excel & Google Sheets", ["spreadsheets", "google sheets", "vba"], { languages: ["VBA"] }],
+    [
+      "excel",
+      "Excel & Google Sheets",
+      ["spreadsheets", "google sheets", "vba"],
+      { languages: ["VBA"] },
+    ],
     ["sql", "SQL", [], { languages: ["TSQL", "PLpgSQL", "PLSQL"] }],
     ["dashboards", "Power BI & Tableau", ["power bi", "tableau", "dashboards"]],
-    ["web-scraping", "Web scraping", ["scraper", "scraping", "crawler"], { topics: ["web-scraping", "scraper", "puppeteer"] }],
-    ["llm-apps", "AI & LLM apps", ["chatgpt", "openai", "gpt", "ai agents", "rag", "langchain"], { topics: ["llm", "openai", "langchain", "rag"] }],
-    ["machine-learning", "Machine learning", ["ml", "deep learning", "pytorch", "tensorflow"], { languages: ["Jupyter Notebook"], topics: ["machine-learning", "deep-learning", "pytorch", "tensorflow"] }],
-    ["computer-vision", "Computer vision", ["opencv", "image recognition"], { topics: ["computer-vision", "opencv"] }],
-    ["data-engineering", "Data engineering", ["etl", "airflow", "data pipelines"]],
+    [
+      "web-scraping",
+      "Web scraping",
+      ["scraper", "scraping", "crawler"],
+      { topics: ["web-scraping", "scraper", "puppeteer"] },
+    ],
+    [
+      "llm-apps",
+      "AI & LLM apps",
+      ["chatgpt", "openai", "gpt", "ai agents", "rag", "langchain"],
+      { topics: ["llm", "openai", "langchain", "rag"] },
+    ],
+    [
+      "machine-learning",
+      "Machine learning",
+      ["ml", "deep learning", "pytorch", "tensorflow"],
+      {
+        languages: ["Jupyter Notebook"],
+        topics: ["machine-learning", "deep-learning", "pytorch", "tensorflow"],
+      },
+    ],
+    [
+      "computer-vision",
+      "Computer vision",
+      ["opencv", "image recognition"],
+      { topics: ["computer-vision", "opencv"] },
+    ],
+    [
+      "data-engineering",
+      "Data engineering",
+      ["etl", "airflow", "data pipelines"],
+    ],
     ["statistics", "Statistics", ["spss", "stata", "r"], { languages: ["R"] }],
   ]),
   ...group("admin", [
     ["virtual-assistant", "Virtual assistance", ["va", "virtual assistant"]],
     ["data-entry", "Data entry", []],
-    ["customer-support", "Customer support", ["customer service", "support agent"]],
+    [
+      "customer-support",
+      "Customer support",
+      ["customer service", "support agent"],
+    ],
     ["research", "Online research", ["research", "lead research"]],
-    ["project-management", "Project management", ["pm", "notion", "asana", "trello"]],
+    [
+      "project-management",
+      "Project management",
+      ["pm", "notion", "asana", "trello"],
+    ],
     ["bookkeeping", "Bookkeeping", ["quickbooks", "xero", "accounting"]],
     ["appointment-setting", "Appointment setting", ["cold calling", "sdr"]],
-    ["store-management", "E-commerce store management", ["store management", "product listing"]],
-    ["community-moderation", "Community moderation", ["discord moderator", "moderation"]],
+    [
+      "store-management",
+      "E-commerce store management",
+      ["store management", "product listing"],
+    ],
+    [
+      "community-moderation",
+      "Community moderation",
+      ["discord moderator", "moderation"],
+    ],
   ]),
 ];
 
@@ -270,7 +578,9 @@ export function normalizeSkillName(value: string): string {
 
 const BY_LABEL: ReadonlyMap<string, Skill> = new Map(
   SKILLS.flatMap((s) =>
-    [s.id, s.name, ...s.aliases].map((label) => [normalizeSkillName(label), s] as const),
+    [s.id, s.name, ...s.aliases].map(
+      (label) => [normalizeSkillName(label), s] as const,
+    ),
   ),
 );
 
@@ -299,7 +609,10 @@ export function searchSkills(
           ? 2
           : -1;
     if (rank < 0) continue;
-    scored.push({ skill, score: rank * 2 + (preferred.has(skill.category) ? 0 : 1) });
+    scored.push({
+      skill,
+      score: rank * 2 + (preferred.has(skill.category) ? 0 : 1),
+    });
   }
   return scored
     .sort((a, b) => a.score - b.score)
@@ -312,5 +625,7 @@ export function skillsForCategories(
   categories: readonly string[],
   limit: number,
 ): Skill[] {
-  return SKILLS.filter((s) => !s.retired && categories.includes(s.category)).slice(0, limit);
+  return SKILLS.filter(
+    (s) => !s.retired && categories.includes(s.category),
+  ).slice(0, limit);
 }

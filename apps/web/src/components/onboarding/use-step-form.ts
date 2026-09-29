@@ -23,9 +23,12 @@ import type { StepFormInit } from "./step-form-types";
 
 export type { StepFormInit } from "./step-form-types";
 
-type Notice = { kind: "saved" } | { kind: "conflict" } | { kind: "error"; message: string };
+type Notice =
+  { kind: "saved" } | { kind: "conflict" } | { kind: "error"; message: string };
 type SaveResult = { status: StepStatus; version: number; next: PageId };
-type ErrorBody = { error?: { code?: string; message?: string; details?: unknown } };
+type ErrorBody = {
+  error?: { code?: string; message?: string; details?: unknown };
+};
 
 // The local copy as it was when the form mounted; this tab's own later writes don't count.
 // Module-level so the render stays pure (useSyncExternalStore calls this during render).
@@ -50,14 +53,22 @@ export function useStepForm<S extends StepId>(
   const router = useRouter();
   const key = localCopyKey(init.userId, init.step);
   const [value, setValue] = useState(init.data);
-  const [saved, setSaved] = useState({ data: init.data, version: init.version, status: init.status });
+  const [saved, setSaved] = useState({
+    data: init.data,
+    version: init.version,
+    status: init.status,
+  });
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [pending, setPending] = useState<"draft" | "complete" | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [restoreHandled, setRestoreHandled] = useState(false);
 
   const dirty = !sameJson(value, saved.data);
-  const localRaw = useSyncExternalStore(noopSubscribe, mountSnapshot(key), serverSnapshot);
+  const localRaw = useSyncExternalStore(
+    noopSubscribe,
+    mountSnapshot(key),
+    serverSnapshot,
+  );
   const restorable = restoreHandled ? null : parseLocalCopy(localRaw, init);
 
   useEffect(() => () => void firstRead.delete(key), [key]);
@@ -79,14 +90,21 @@ export function useStepForm<S extends StepId>(
   function handleError(body: ErrorBody) {
     const code = body.error?.code;
     if (code === "VERSION_CONFLICT") setNotice({ kind: "conflict" });
-    else if (code === "STEP_ORDER" || code === "ALREADY_ONBOARDED") router.refresh();
+    else if (code === "STEP_ORDER" || code === "ALREADY_ONBOARDED")
+      router.refresh();
     else if (code === "INVALID_INPUT" && Array.isArray(body.error?.details)) {
       setErrors(
-        (body.error.details as FieldError[]).map((e) => ({ ...e, path: e.path.replace(/^data\.?/, "") })),
+        (body.error.details as FieldError[]).map((e) => ({
+          ...e,
+          path: e.path.replace(/^data\.?/, ""),
+        })),
       );
       focusFirstInvalid();
     } else
-      setNotice({ kind: "error", message: body.error?.message ?? "Couldn't save. Please try again." });
+      setNotice({
+        kind: "error",
+        message: body.error?.message ?? "Couldn't save. Please try again.",
+      });
   }
 
   async function save(mode: "draft" | "complete"): Promise<SaveResult | null> {
@@ -105,9 +123,14 @@ export function useStepForm<S extends StepId>(
       const res = await fetch(`/api/v1/onboarding/steps/${init.step}`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mode, data: checked.data, expectedVersion: saved.version }),
+        body: JSON.stringify({
+          mode,
+          data: checked.data,
+          expectedVersion: saved.version,
+        }),
       });
-      const body = (await res.json().catch(() => ({}))) as SaveResult & ErrorBody;
+      const body = (await res.json().catch(() => ({}))) as SaveResult &
+        ErrorBody;
       if (!res.ok) {
         handleError(body);
         return null;
@@ -119,7 +142,10 @@ export function useStepForm<S extends StepId>(
       setRestoreHandled(true); // the earlier local copy is now stale
       return body;
     } catch {
-      setNotice({ kind: "error", message: "Can't reach Redlance. Check your connection and try again." });
+      setNotice({
+        kind: "error",
+        message: "Can't reach Redlance. Check your connection and try again.",
+      });
       return null;
     } finally {
       setPending(null);
@@ -133,7 +159,8 @@ export function useStepForm<S extends StepId>(
     resumeAt: init.resumeAt,
     value,
     setValue,
-    update: (patch: Partial<StepDraft<S>>) => setValue((v) => ({ ...v, ...patch }) as StepDraft<S>),
+    update: (patch: Partial<StepDraft<S>>) =>
+      setValue((v) => ({ ...v, ...patch }) as StepDraft<S>),
     errorFor: (path: string) => errors.find((e) => e.path === path)?.message,
     pending,
     notice,
@@ -169,4 +196,7 @@ export function useStepForm<S extends StepId>(
  * What the shared pieces (StepActions, RestoreBanner) need from any step's form. The value
  * accessors are left out on purpose: they are typed per step and would not be assignable here.
  */
-export type StepForm = Omit<ReturnType<typeof useStepForm>, "value" | "setValue" | "update">;
+export type StepForm = Omit<
+  ReturnType<typeof useStepForm>,
+  "value" | "setValue" | "update"
+>;

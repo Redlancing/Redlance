@@ -1,8 +1,20 @@
-import { PAGE_IDS, PAGE_TITLES, canOpen, pageIndex, type PageId } from "@redlance/core";
+import {
+  PAGE_IDS,
+  PAGE_TITLES,
+  canOpen,
+  pageIndex,
+  type PageId,
+} from "@redlance/core";
 import { cn } from "cn";
 import Link from "next/link";
 
-export function Progress({ current, resumeAt }: { current: PageId; resumeAt: PageId }) {
+export function Progress({
+  current,
+  resumeAt,
+}: {
+  current: PageId;
+  resumeAt: PageId;
+}) {
   const index = pageIndex(current);
   return (
     <nav aria-label="Setup progress" className="mb-6">
@@ -15,20 +27,33 @@ export function Progress({ current, resumeAt }: { current: PageId; resumeAt: Pag
           const bar = (
             <span
               aria-hidden="true"
-              className={cn("block h-1.5 rounded-full", i <= index ? "bg-ink" : "bg-feed")}
+              className={cn(
+                "block h-1.5 rounded-full",
+                i <= index ? "bg-ink" : "bg-feed",
+              )}
             />
           );
-          const label = <span className="mt-2 hidden text-xs text-muted-foreground sm:block">{PAGE_TITLES[page]}</span>;
+          const label = (
+            <span className="mt-2 hidden text-xs text-muted-foreground sm:block">
+              {PAGE_TITLES[page]}
+            </span>
+          );
           return (
             <li key={page} className="flex-1">
               {page !== current && canOpen(page, resumeAt) ? (
-                <Link href={`/onboarding/${page}`} className="block rounded py-2 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
+                <Link
+                  href={`/onboarding/${page}`}
+                  className="block rounded py-2 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                >
                   {bar}
                   {label}
                   <span className="sr-only sm:hidden">{PAGE_TITLES[page]}</span>
                 </Link>
               ) : (
-                <span className="block py-2" aria-current={page === current ? "step" : undefined}>
+                <span
+                  className="block py-2"
+                  aria-current={page === current ? "step" : undefined}
+                >
                   {bar}
                   {label}
                   <span className="sr-only sm:hidden">{PAGE_TITLES[page]}</span>

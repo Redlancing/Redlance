@@ -53,7 +53,11 @@ afterAll(async () => {
 async function newUser() {
   const [u] = await db
     .insert(users)
-    .values({ authSub: `dev|${Math.random()}`, email: "a@example.com", emailNormalized: `${Math.random()}@example.com` })
+    .values({
+      authSub: `dev|${Math.random()}`,
+      email: "a@example.com",
+      emailNormalized: `${Math.random()}@example.com`,
+    })
     .returning();
   return u!.id;
 }
@@ -75,10 +79,14 @@ describe("onboarding_steps", () => {
   it("rejects unknown steps and statuses", async () => {
     const userId = await newUser();
     await expect(
-      db.execute(sql`insert into onboarding_steps (user_id, step, status, data) values (${userId}, 'voice', 'draft', '{}')`),
+      db.execute(
+        sql`insert into onboarding_steps (user_id, step, status, data) values (${userId}, 'voice', 'draft', '{}')`,
+      ),
     ).rejects.toSatisfy(code("23514"));
     await expect(
-      db.execute(sql`insert into onboarding_steps (user_id, step, status, data) values (${userId}, 'basics', 'done', '{}')`),
+      db.execute(
+        sql`insert into onboarding_steps (user_id, step, status, data) values (${userId}, 'basics', 'done', '{}')`,
+      ),
     ).rejects.toSatisfy(code("23514"));
   });
 
@@ -86,13 +94,20 @@ describe("onboarding_steps", () => {
     const userId = await newUser();
     const big = { blob: "x".repeat(70_000) };
     await expect(
-      db.insert(onboardingSteps).values({ userId, step: "basics", status: "draft", data: big }),
+      db
+        .insert(onboardingSteps)
+        .values({ userId, step: "basics", status: "draft", data: big }),
     ).rejects.toSatisfy(code("23514"));
   });
 
   it("is deleted with its user", async () => {
     const userId = await newUser();
-    await db.insert(onboardingSteps).values({ userId, step: "import", status: "completed", data: { githubUsername: null } });
+    await db.insert(onboardingSteps).values({
+      userId,
+      step: "import",
+      status: "completed",
+      data: { githubUsername: null },
+    });
     await db.delete(users).where(eq(users.id, userId));
     expect(await db.select().from(onboardingSteps)).toHaveLength(0);
   });
@@ -105,21 +120,37 @@ describe("skills reference data", () => {
   });
 
   it("sync is idempotent and never deletes: it retires and deactivates instead", async () => {
-    await db.insert(skills).values({ id: "zz-old", name: "Old", category: "development" }).onConflictDoNothing();
-    await db.insert(subreddits).values({ name: "zz_old", categories: [] }).onConflictDoNothing();
+    await db
+      .insert(skills)
+      .values({ id: "zz-old", name: "Old", category: "development" })
+      .onConflictDoNothing();
+    await db
+      .insert(subreddits)
+      .values({ name: "zz_old", categories: [] })
+      .onConflictDoNothing();
     await syncReferenceData(db);
     await syncReferenceData(db);
     const [old] = await db.select().from(skills).where(eq(skills.id, "zz-old"));
     expect(old!.retired).toBe(true);
-    const [oldSub] = await db.select().from(subreddits).where(eq(subreddits.name, "zz_old"));
+    const [oldSub] = await db
+      .select()
+      .from(subreddits)
+      .where(eq(subreddits.name, "zz_old"));
     expect(oldSub!.active).toBe(false);
-    expect(await db.$count(skills, eq(skills.retired, false))).toBe(SKILLS.filter((s) => !s.retired).length);
+    expect(await db.$count(skills, eq(skills.retired, false))).toBe(
+      SKILLS.filter((s) => !s.retired).length,
+    );
   });
 
   it("profile_skills only accepts known skill ids", async () => {
     const userId = await newUser();
     await expect(
-      db.insert(profileSkills).values({ userId, skillId: "not-a-skill", level: "core", source: "manual" }),
+      db.insert(profileSkills).values({
+        userId,
+        skillId: "not-a-skill",
+        level: "core",
+        source: "manual",
+      }),
     ).rejects.toSatisfy(code("23503"));
   });
 
@@ -127,11 +158,23 @@ describe("skills reference data", () => {
     const userId = await newUser();
     const [row] = await db
       .insert(customSkills)
-      .values({ userId, name: "Three.js", nameNormalized: "three.js", level: "secondary", source: "manual" })
+      .values({
+        userId,
+        name: "Three.js",
+        nameNormalized: "three.js",
+        level: "secondary",
+        source: "manual",
+      })
       .returning();
     expect(row!.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7/);
     await expect(
-      db.insert(customSkills).values({ userId, name: "three.js", nameNormalized: "three.js", level: "core", source: "manual" }),
+      db.insert(customSkills).values({
+        userId,
+        name: "three.js",
+        nameNormalized: "three.js",
+        level: "core",
+        source: "manual",
+      }),
     ).rejects.toSatisfy(code("23505"));
   });
 });

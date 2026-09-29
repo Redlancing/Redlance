@@ -7,14 +7,27 @@ import { Progress } from "@/components/onboarding/progress";
 import { RatesStep } from "@/components/onboarding/rates-step";
 import { SkillsStep } from "@/components/onboarding/skills-step";
 import { ReviewStep } from "@/components/onboarding/review-step";
-import { loadOnboardingPage, reviewData, savedDraft, stepInit } from "@/server/onboarding/page-data";
+import {
+  loadOnboardingPage,
+  reviewData,
+  savedDraft,
+  stepInit,
+} from "@/server/onboarding/page-data";
 
-export async function generateMetadata(props: PageProps<"/onboarding/[step]">): Promise<Metadata> {
+export async function generateMetadata(
+  props: PageProps<"/onboarding/[step]">,
+): Promise<Metadata> {
   const { step } = await props.params;
-  return { title: isPageId(step) ? `${PAGE_TITLES[step]} · Set up your profile` : "Set up your profile" };
+  return {
+    title: isPageId(step)
+      ? `${PAGE_TITLES[step]} · Set up your profile`
+      : "Set up your profile",
+  };
 }
 
-export default async function OnboardingStepPage(props: PageProps<"/onboarding/[step]">) {
+export default async function OnboardingStepPage(
+  props: PageProps<"/onboarding/[step]">,
+) {
   const { step } = await props.params;
   if (!isPageId(step)) notFound();
   const { user, state } = await loadOnboardingPage(`/onboarding/${step}`);
@@ -27,12 +40,28 @@ export default async function OnboardingStepPage(props: PageProps<"/onboarding/[
     <div className="w-full max-w-2xl">
       <Progress current={step} resumeAt={state.resumeAt} />
       <div className="rounded-2xl border border-border bg-background p-5 shadow-xs sm:p-8">
-        {step === "import" && <ImportStep key={step} init={stepInit(state, user.userId, "import")} />}
-        {step === "basics" && <BasicsStep key={step} init={stepInit(state, user.userId, "basics")} />}
-        {step === "skills" && (
-          <SkillsStep key={step} init={stepInit(state, user.userId, "skills")} jobTypes={savedDraft(state, "basics")?.categories ?? []} />
+        {step === "import" && (
+          <ImportStep
+            key={step}
+            init={stepInit(state, user.userId, "import")}
+          />
         )}
-        {step === "rates" && <RatesStep key={step} init={stepInit(state, user.userId, "rates")} />}
+        {step === "basics" && (
+          <BasicsStep
+            key={step}
+            init={stepInit(state, user.userId, "basics")}
+          />
+        )}
+        {step === "skills" && (
+          <SkillsStep
+            key={step}
+            init={stepInit(state, user.userId, "skills")}
+            jobTypes={savedDraft(state, "basics")?.categories ?? []}
+          />
+        )}
+        {step === "rates" && (
+          <RatesStep key={step} init={stepInit(state, user.userId, "rates")} />
+        )}
         {review?.ok && <ReviewStep data={review.data} email={user.email} />}
       </div>
     </div>

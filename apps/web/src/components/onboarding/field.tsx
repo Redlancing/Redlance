@@ -31,13 +31,19 @@ export function Field({
     <div className="space-y-1.5">
       <Label htmlFor={id}>
         {label}
-        {optional && <span className="font-normal text-muted-foreground"> (optional)</span>}
+        {optional && (
+          <span className="font-normal text-muted-foreground"> (optional)</span>
+        )}
       </Label>
       {children}
       {error ? (
-        <p id={errorId(id)} className="text-sm text-danger">{error}</p>
+        <p id={errorId(id)} className="text-sm text-danger">
+          {error}
+        </p>
       ) : hint ? (
-        <p id={hintId(id)} className="text-xs text-muted-foreground">{hint}</p>
+        <p id={hintId(id)} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
       ) : null}
     </div>
   );
@@ -65,9 +71,15 @@ export function FieldGroup({
       aria-describedby={error ? errorId(errorKey) : undefined}
     >
       <legend className="text-sm font-medium text-foreground">{legend}</legend>
-      {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {hint && !error && (
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      )}
       {children}
-      {error && <p id={errorId(errorKey)} role="alert" className="text-sm text-danger">{error}</p>}
+      {error && (
+        <p id={errorId(errorKey)} role="alert" className="text-sm text-danger">
+          {error}
+        </p>
+      )}
     </fieldset>
   );
 }

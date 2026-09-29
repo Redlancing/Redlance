@@ -22,13 +22,19 @@ export async function loadOnboardingPage(path: string) {
   return { user, state };
 }
 
-export function savedDraft<S extends StepId>(state: OnboardingState, step: S): StepDraft<S> | null {
+export function savedDraft<S extends StepId>(
+  state: OnboardingState,
+  step: S,
+): StepDraft<S> | null {
   const row = state.steps.find((r) => r.step === step);
   const parsed = row ? STEP_SCHEMAS[step].draft.safeParse(row.data) : undefined;
   return parsed?.success ? (parsed.data as StepDraft<S>) : null;
 }
 
-function defaultsFor<S extends StepId>(step: S, state: OnboardingState): StepDraft<S> {
+function defaultsFor<S extends StepId>(
+  step: S,
+  state: OnboardingState,
+): StepDraft<S> {
   const empty = emptyDraft(step);
   if (step === "rates")
     return {
@@ -49,7 +55,9 @@ export function stepInit<S extends StepId>(
     step,
     status: row?.status ?? null,
     version: row?.version ?? 0,
-    data: row ? (savedDraft(state, step) ?? emptyDraft(step)) : defaultsFor(step, state),
+    data: row
+      ? (savedDraft(state, step) ?? emptyDraft(step))
+      : defaultsFor(step, state),
     resumeAt: state.resumeAt,
   };
 }
@@ -62,7 +70,10 @@ export function reviewData(
   const out: Partial<Record<StepId, unknown>> = {};
   for (const step of STEP_IDS) {
     const row = state.steps.find((r) => r.step === step);
-    const parsed = row?.status === "completed" ? STEP_SCHEMAS[step].complete.safeParse(row.data) : undefined;
+    const parsed =
+      row?.status === "completed"
+        ? STEP_SCHEMAS[step].complete.safeParse(row.data)
+        : undefined;
     if (!parsed?.success) return { ok: false, step };
     out[step] = parsed.data;
   }

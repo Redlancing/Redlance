@@ -29,7 +29,10 @@ describe("taxonomy integrity", () => {
       for (const label of [s.id, s.name, ...s.aliases]) {
         const key = normalizeSkillName(label);
         const owner = seen.get(key);
-        expect(owner === undefined || owner === s.id, `${key}: ${owner} vs ${s.id}`).toBe(true);
+        expect(
+          owner === undefined || owner === s.id,
+          `${key}: ${owner} vs ${s.id}`,
+        ).toBe(true);
         seen.set(key, s.id);
       }
     }
@@ -51,14 +54,18 @@ describe("findSkill / searchSkills", () => {
   });
 
   it("ranks exact, then prefix, then substring matches, preferring the user's job types", () => {
-    const results = searchSkills("edit", { categories: ["video"] }).map((s) => s.id);
+    const results = searchSkills("edit", { categories: ["video"] }).map(
+      (s) => s.id,
+    );
     expect(results[0]).toBe("video-editing");
     expect(results).toContain("editing-proofreading");
   });
 
   it("returns nothing for an empty query and skips retired skills", () => {
     expect(searchSkills("   ")).toEqual([]);
-    expect(searchSkills("a", { limit: 500 }).every((s) => !s.retired)).toBe(true);
+    expect(searchSkills("a", { limit: 500 }).every((s) => !s.retired)).toBe(
+      true,
+    );
   });
 
   it("lists popular skills for chosen job types", () => {

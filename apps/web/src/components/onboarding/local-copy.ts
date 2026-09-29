@@ -1,8 +1,10 @@
 import { STEP_SCHEMAS, type StepDraft, type StepId } from "@redlance/core";
 
-export const localCopyKey = (userId: string, step: StepId) => `rl:onb:${userId}:${step}`;
+export const localCopyKey = (userId: string, step: StepId) =>
+  `rl:onb:${userId}:${step}`;
 
-export const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+export const sameJson = (a: unknown, b: unknown) =>
+  JSON.stringify(a) === JSON.stringify(b);
 
 /**
  * A copy of unsaved form values kept in this browser. Offered back only when it was made from

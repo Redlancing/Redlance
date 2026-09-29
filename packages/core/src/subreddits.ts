@@ -27,6 +27,8 @@ export const SUBREDDITS: readonly SeedSubreddit[] = [
 
 export function subredditsFor(categories: readonly string[]): string[] {
   return SUBREDDITS.filter(
-    (s) => s.categories.length === 0 || s.categories.some((c) => categories.includes(c)),
+    (s) =>
+      s.categories.length === 0 ||
+      s.categories.some((c) => categories.includes(c)),
   ).map((s) => s.name);
 }

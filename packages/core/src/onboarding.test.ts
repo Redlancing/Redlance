@@ -48,14 +48,18 @@ describe("resumeAt / page helpers", () => {
 
 describe("basics", () => {
   it("accepts a complete step and trims text", () => {
-    const parsed = STEP_SCHEMAS.basics.complete.parse({ ...basics, displayName: "  Asha " });
+    const parsed = STEP_SCHEMAS.basics.complete.parse({
+      ...basics,
+      displayName: "  Asha ",
+    });
     expect(parsed.displayName).toBe("Asha");
   });
 
   it("lets a draft be empty, but not over the limits", () => {
     expect(STEP_SCHEMAS.basics.draft.parse({})).toEqual(emptyDraft("basics"));
     expect(
-      STEP_SCHEMAS.basics.draft.safeParse({ displayName: "x".repeat(61) }).success,
+      STEP_SCHEMAS.basics.draft.safeParse({ displayName: "x".repeat(61) })
+        .success,
     ).toBe(false);
   });
 
@@ -64,7 +68,13 @@ describe("basics", () => {
     expect(result.success).toBe(false);
     const paths = toFieldErrors(result.error!).map((e) => e.path);
     expect(paths).toEqual(
-      expect.arrayContaining(["displayName", "categories", "experienceLevel", "country", "timeZone"]),
+      expect.arrayContaining([
+        "displayName",
+        "categories",
+        "experienceLevel",
+        "country",
+        "timeZone",
+      ]),
     );
   });
 
@@ -74,7 +84,9 @@ describe("basics", () => {
     expect(bad({ extra: 1 })).toBe(false);
     expect(bad({ categories: ["knitting"] })).toBe(false);
     expect(bad({ categories: ["video", "video"] })).toBe(false);
-    expect(bad({ categories: ["video", "design", "art", "audio"] })).toBe(false);
+    expect(bad({ categories: ["video", "design", "art", "audio"] })).toBe(
+      false,
+    );
     expect(bad({ country: "XX" })).toBe(false);
     expect(bad({ timeZone: "Mars/Olympus" })).toBe(false);
   });
@@ -96,17 +108,35 @@ describe("skills", () => {
   });
 
   it("defaults source to manual", () => {
-    const parsed = STEP_SCHEMAS.skills.complete.parse({ skills: [skill("react")] });
+    const parsed = STEP_SCHEMAS.skills.complete.parse({
+      skills: [skill("react")],
+    });
     expect(parsed.skills[0]!.source).toBe("manual");
   });
 
   it("caps core at 8 and total at 30, refuses unknown ids and duplicates, even in drafts", () => {
-    const ids = ["react", "nextjs", "nodejs", "python", "django", "vue", "svelte", "php", "laravel"];
+    const ids = [
+      "react",
+      "nextjs",
+      "nodejs",
+      "python",
+      "django",
+      "vue",
+      "svelte",
+      "php",
+      "laravel",
+    ];
     const tooManyCore = { skills: ids.map((id) => skill(id)) };
-    expect(STEP_SCHEMAS.skills.draft.safeParse(tooManyCore).success).toBe(false);
-    expect(STEP_SCHEMAS.skills.draft.safeParse({ skills: [skill("nope")] }).success).toBe(false);
+    expect(STEP_SCHEMAS.skills.draft.safeParse(tooManyCore).success).toBe(
+      false,
+    );
     expect(
-      STEP_SCHEMAS.skills.draft.safeParse({ skills: [skill("react"), skill("react")] }).success,
+      STEP_SCHEMAS.skills.draft.safeParse({ skills: [skill("nope")] }).success,
+    ).toBe(false);
+    expect(
+      STEP_SCHEMAS.skills.draft.safeParse({
+        skills: [skill("react"), skill("react")],
+      }).success,
     ).toBe(false);
     expect(
       STEP_SCHEMAS.skills.draft.safeParse({
@@ -118,7 +148,10 @@ describe("skills", () => {
     ).toBe(false);
     const thirtyOne = {
       skills: [skill("react")],
-      customSkills: Array.from({ length: 30 }, (_, i) => ({ name: `Tool ${i}`, level: "secondary" })),
+      customSkills: Array.from({ length: 30 }, (_, i) => ({
+        name: `Tool ${i}`,
+        level: "secondary",
+      })),
     };
     expect(STEP_SCHEMAS.skills.draft.safeParse(thirtyOne).success).toBe(false);
   });
@@ -129,7 +162,11 @@ describe("GitHub link", () => {
     expect(parseGithubUsername("octocat")).toBe("octocat");
     expect(parseGithubUsername(" @octocat ")).toBe("octocat");
     expect(parseGithubUsername("github.com/octocat")).toBe("octocat");
-    expect(parseGithubUsername("https://www.github.com/octo-cat/some-repo?tab=repositories")).toBe("octo-cat");
+    expect(
+      parseGithubUsername(
+        "https://www.github.com/octo-cat/some-repo?tab=repositories",
+      ),
+    ).toBe("octo-cat");
     expect(parseGithubUsername("   ")).toBeNull();
   });
 
@@ -143,14 +180,21 @@ describe("GitHub link", () => {
 });
 
 describe("rates", () => {
-  const rates = { minRate: 25, currency: "USD", rateType: "hourly", remoteOnly: true, blockedWords: ["unpaid"] };
+  const rates = {
+    minRate: 25,
+    currency: "USD",
+    rateType: "hourly",
+    remoteOnly: true,
+    blockedWords: ["unpaid"],
+  };
 
   it("accepts a complete step", () => {
     expect(STEP_SCHEMAS.rates.complete.parse(rates)).toEqual(rates);
   });
 
   it("allows 0 (any budget) but refuses negatives, >100000, 3 decimals, NaN", () => {
-    const ok = (minRate: unknown) => STEP_SCHEMAS.rates.complete.safeParse({ ...rates, minRate }).success;
+    const ok = (minRate: unknown) =>
+      STEP_SCHEMAS.rates.complete.safeParse({ ...rates, minRate }).success;
     expect(ok(0)).toBe(true);
     expect(ok(12.5)).toBe(true);
     expect(ok(-1)).toBe(false);
@@ -170,10 +214,23 @@ describe("rates", () => {
 
 describe("import", () => {
   it("stores an optional GitHub username, and only a bare username", () => {
-    expect(STEP_SCHEMAS.import.complete.parse({})).toEqual({ githubUsername: null });
-    expect(STEP_SCHEMAS.import.complete.parse({ githubUsername: "octocat" })).toEqual({ githubUsername: "octocat" });
-    expect(STEP_SCHEMAS.import.complete.safeParse({ githubUsername: "github.com/octocat" }).success).toBe(false);
-    expect(STEP_SCHEMAS.import.complete.safeParse({ githubUsername: null, file: "x" }).success).toBe(false);
+    expect(STEP_SCHEMAS.import.complete.parse({})).toEqual({
+      githubUsername: null,
+    });
+    expect(
+      STEP_SCHEMAS.import.complete.parse({ githubUsername: "octocat" }),
+    ).toEqual({ githubUsername: "octocat" });
+    expect(
+      STEP_SCHEMAS.import.complete.safeParse({
+        githubUsername: "github.com/octocat",
+      }).success,
+    ).toBe(false);
+    expect(
+      STEP_SCHEMAS.import.complete.safeParse({
+        githubUsername: null,
+        file: "x",
+      }).success,
+    ).toBe(false);
   });
 });
 

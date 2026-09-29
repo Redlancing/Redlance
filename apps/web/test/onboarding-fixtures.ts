@@ -9,8 +9,17 @@ export const VALID = {
     timeZone: "Asia/Kolkata",
   },
   skills: {
-    skills: [{ id: "video-editing", level: "core" }, { id: "premiere-pro", level: "secondary" }],
+    skills: [
+      { id: "video-editing", level: "core" },
+      { id: "premiere-pro", level: "secondary" },
+    ],
     customSkills: [{ name: "Descript", level: "secondary" }],
   },
-  rates: { minRate: 25, currency: "USD", rateType: "hourly", remoteOnly: true, blockedWords: ["unpaid"] },
+  rates: {
+    minRate: 25,
+    currency: "USD",
+    rateType: "hourly",
+    remoteOnly: true,
+    blockedWords: ["unpaid"],
+  },
 } as const;

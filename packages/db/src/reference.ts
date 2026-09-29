@@ -11,7 +11,9 @@ import { skills, subreddits } from "./schema";
 export async function syncReferenceData(db: Database): Promise<void> {
   await db.transaction(async (tx) => {
     // Two processes starting at once (web tests + db tests) must not interleave.
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('redlance:reference-data'))`);
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext('redlance:reference-data'))`,
+    );
 
     await tx
       .insert(skills)
@@ -36,11 +38,22 @@ export async function syncReferenceData(db: Database): Promise<void> {
     await tx
       .update(skills)
       .set({ retired: true })
-      .where(notInArray(skills.id, SKILLS.map((s) => s.id)));
+      .where(
+        notInArray(
+          skills.id,
+          SKILLS.map((s) => s.id),
+        ),
+      );
 
     await tx
       .insert(subreddits)
-      .values(SUBREDDITS.map((s) => ({ name: s.name, categories: [...s.categories], active: true })))
+      .values(
+        SUBREDDITS.map((s) => ({
+          name: s.name,
+          categories: [...s.categories],
+          active: true,
+        })),
+      )
       .onConflictDoUpdate({
         target: subreddits.name,
         set: { categories: sql`excluded.categories`, active: sql`true` },
@@ -48,6 +61,11 @@ export async function syncReferenceData(db: Database): Promise<void> {
     await tx
       .update(subreddits)
       .set({ active: false })
-      .where(notInArray(subreddits.name, SUBREDDITS.map((s) => s.name)));
+      .where(
+        notInArray(
+          subreddits.name,
+          SUBREDDITS.map((s) => s.name),
+        ),
+      );
   });
 }

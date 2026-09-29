@@ -18,7 +18,9 @@ const EUROZONE = new Set(
   "AT BE CY DE EE ES FI FR GR HR IE IT LT LU LV MT NL PT SI SK".split(" "),
 );
 
-export function defaultCurrency(country: string | null): "USD" | "GBP" | "EUR" | "INR" {
+export function defaultCurrency(
+  country: string | null,
+): "USD" | "GBP" | "EUR" | "INR" {
   if (country === "IN") return "INR";
   if (country === "GB") return "GBP";
   if (country && EUROZONE.has(country)) return "EUR";

@@ -6,7 +6,12 @@ export function addTag(
 ): { values: string[]; added: boolean } {
   const word = raw.trim();
   const dup = values.some((v) => v.toLowerCase() === word.toLowerCase());
-  if (!word || word.length > limits.maxLength || dup || values.length >= limits.max)
+  if (
+    !word ||
+    word.length > limits.maxLength ||
+    dup ||
+    values.length >= limits.max
+  )
     return { values: [...values], added: false };
   return { values: [...values, word], added: true };
 }

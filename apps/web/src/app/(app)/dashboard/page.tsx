@@ -34,12 +34,14 @@ export default async function DashboardPage() {
       </p>
       {onboarded && (
         <p className="mt-1 text-sm text-muted-foreground">
-          {daysLeft > 0 ? `Your trial: ${daysLeft} ${daysLeft === 1 ? "day" : "days"} left.` : "Your trial has ended."}
+          {daysLeft > 0
+            ? `Your trial: ${daysLeft} ${daysLeft === 1 ? "day" : "days"} left.`
+            : "Your trial has ended."}
         </p>
       )}
 
       {!onboarded && (
-      <section
+        <section
           aria-labelledby="setup-heading"
           className="mt-8 overflow-hidden rounded-2xl border border-flare-100 bg-flare-50"
         >
@@ -58,9 +60,14 @@ export default async function DashboardPage() {
             </div>
             <Link
               href="/onboarding"
-              className={buttonVariants({ size: "lg" }) + " shrink-0 self-start sm:self-auto"}
+              className={
+                buttonVariants({ size: "lg" }) +
+                " shrink-0 self-start sm:self-auto"
+              }
             >
-              {started ? `Continue setup · step ${pageIndex(state.resumeAt) + 1} of 5` : "Start setup"}
+              {started
+                ? `Continue setup · step ${pageIndex(state.resumeAt) + 1} of 5`
+                : "Start setup"}
               <ArrowRight aria-hidden="true" />
             </Link>
           </div>
