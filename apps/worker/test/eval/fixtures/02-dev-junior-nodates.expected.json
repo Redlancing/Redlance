@@ -1,0 +1,4 @@
+{ "categories": ["development"], "experienceLevel": "beginner",
+  "mustSkills": ["html-css", "javascript", "python"],
+  "maySkills": ["bots", "rest-api"],
+  "mustNotSkills": ["kubernetes", "aws", "unity"] }

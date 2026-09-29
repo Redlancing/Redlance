@@ -1,0 +1,17 @@
+KAI NAKASHIMA - Game Developer
+kai.n@example.com | Osaka, Japan
+
+Profile
+Gameplay programmer with 4 years of experience shipping small PC and mobile games in Unity. I also write Lua scripts for Roblox experiences and do basic game design documents.
+
+Work
+Indie Gameplay Programmer, Paperkite Games, 2022 - 2026
+  Shipped 3 mobile titles built in Unity and C#. Wrote the enemy AI, save system and in-app purchase flow.
+Freelance Roblox Scripter, 2021 - 2022
+  Built obstacle-course games and leaderboards in Luau for small studios.
+
+Skills
+Unity, C#, Luau / Roblox Studio, Game design, Godot (hobby), Git
+
+Education
+Diploma in Game Programming, 2021

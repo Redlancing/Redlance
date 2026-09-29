@@ -34,6 +34,23 @@ describe("skillShortlist", () => {
   });
 });
 
+describe("shortlist boundaries", () => {
+  const ids = (t: string) => skillShortlist(t, splitSections(t));
+  it("C# does not imply C/C++", () => {
+    const r = ids("Skills\nC#, .NET, Objective-C");
+    expect(r).toContain("csharp");
+    expect(r).not.toContain("cpp");
+  });
+  it("business phrases do not match", () => {
+    const r = ids("Skills\nC-suite, go-to-market, R&D");
+    for (const id of ["cpp", "go", "statistics"]) expect(r).not.toContain(id);
+  });
+  it("C, C++, R in a skills section still match", () => {
+    const r = ids("Skills\nC, C++, R");
+    expect(r).toContain("cpp");
+  });
+});
+
 describe("githubFromText", () => {
   it("skips reserved pages and returns the next valid profile", () => {
     const t = "see github.com/settings and https://github.com/octocat/repo";
@@ -41,5 +58,10 @@ describe("githubFromText", () => {
   });
   it("returns null when none", () => {
     expect(githubFromText("no links")).toBeNull();
+  });
+  it("trims trailing punctuation and needs a left boundary", () => {
+    expect(githubFromText("code: github.com/octocat.")).toBe("octocat");
+    expect(githubFromText("evilgithub.com/foo")).toBeNull();
+    expect(githubFromText("x.github.com/foo")).toBeNull();
   });
 });

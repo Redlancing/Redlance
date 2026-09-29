@@ -26,4 +26,12 @@ describe("yearsOfExperience", () => {
     expect(yearsOfExperience("2030 - 2031", NOW)).toBeNull();
     expect(yearsOfExperience("2022 - 2020", NOW)).toBeNull();
   });
+  it("ignores phone numbers, office hours and education lines", () => {
+    expect(yearsOfExperience("Call +65 1234-5678", NOW)).toBeNull();
+    expect(yearsOfExperience("Hours 0900-1700", NOW)).toBeNull();
+    expect(yearsOfExperience("B.Tech 2018 – 2022", NOW)).toBeNull();
+    expect(
+      yearsOfExperience("University of X 2015 - 2019\nAcme 2020 - 2021", NOW),
+    ).toBe(2);
+  });
 });

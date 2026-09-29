@@ -1,0 +1,16 @@
+Tom Ellery
+tom.ellery@example.com
+
+About me
+Recent bootcamp graduate learning to build websites. I am looking for small paid projects to build my portfolio.
+
+Projects
+- Recipe finder: a small site made with HTML, CSS and JavaScript that calls a public API.
+- Discord dice bot written in Python with discord.py.
+- Personal portfolio site hosted on GitHub Pages.
+
+Tech stack
+HTML, CSS, JavaScript, Python, Git
+
+Certificates
+Full-Stack Web Bootcamp (completed)

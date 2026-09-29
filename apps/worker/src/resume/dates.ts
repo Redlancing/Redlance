@@ -22,6 +22,9 @@ function monthIndex(name: string | undefined, num: string | undefined) {
 }
 
 /** Total months of work in the "Experience" text, from date ranges, rounded down to 0.5 years. */
+const EDUCATION_LINE =
+  /\b(degree|b\.?\s?tech|b\.?\s?sc|bachelor|master|mba|university|college|school|diploma)/i;
+
 export function yearsOfExperience(
   experience: string,
   now: Date = new Date(),
@@ -30,8 +33,17 @@ export function yearsOfExperience(
   const intervals: [number, number][] = [];
   let any = false;
 
-  for (const m of experience.matchAll(RANGE)) {
+  const minYear = 1950;
+  const maxYear = now.getUTCFullYear() + 1;
+  const okYear = (y: string) => Number(y) >= minYear && Number(y) <= maxYear;
+  const usable = experience
+    .split("\n")
+    .filter((l) => !EDUCATION_LINE.test(l))
+    .join("\n");
+
+  for (const m of usable.matchAll(RANGE)) {
     const [, sName, sNum, sYear, eName, eNum, eYear, word] = m;
+    if (!okYear(sYear!) || (!word && !okYear(eYear!))) continue;
     const sMonth = monthIndex(sName, sNum);
     const start = Number(sYear) * 12 + (sMonth !== null && sMonth >= 0 ? sMonth : 0);
     let end: number;

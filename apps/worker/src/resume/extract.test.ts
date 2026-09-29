@@ -2,7 +2,7 @@ import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { makeDocx, makePdf } from "../../test/fixtures";
 import { ResumeError } from "./errors";
-import { MAX_PDF_PAGES, checkDocxZip, extractText } from "./extract";
+import { MAX_PDF_PAGES, checkDocxZip, extractText, extractTextInline } from "./extract";
 
 const code = async (p: Promise<unknown> | (() => void)) => {
   try {
@@ -63,5 +63,38 @@ describe("extractText", () => {
     const junk = new Uint8Array(500).map((_, i) => (i * 37) % 251);
     expect(await code(extractText(junk, "pdf"))).toBe("UNSUPPORTED_FILE");
     expect(await code(extractText(junk, "docx"))).toBe("UNSUPPORTED_FILE");
+  });
+
+  it("rejects a zip whose declared sizes lie (real inflate is counted)", () => {
+    const zip = zipSync({
+      "word/document.xml": new Uint8Array(11 * 1024 * 1024),
+    });
+    const v = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+    let patched = 0;
+    for (let i = 0; i + 30 < zip.length; i++) {
+      if (v.getUint32(i, true) === 0x04034b50) {
+        v.setUint32(i + 22, 100, true);
+        patched++;
+      } else if (v.getUint32(i, true) === 0x02014b50) {
+        v.setUint32(i + 24, 100, true);
+        patched++;
+      }
+    }
+    expect(patched).toBe(2);
+    expect(zip.length).toBeLessThan(100_000);
+    expect(() => checkDocxZip(zip)).toThrow(ResumeError);
+  });
+
+  it("runs the worker-thread path and inline path to the same result", async () => {
+    const pdf = makePdf(["Thread test line"]);
+    expect(await extractText(pdf, "pdf")).toContain("Thread test line");
+    expect(await extractTextInline(pdf, "pdf")).toContain("Thread test line");
+    expect(pdf.length).toBeGreaterThan(0); // caller's buffer not detached
+  });
+
+  it("maps a worker that cannot finish in time to UNSUPPORTED_FILE", async () => {
+    expect(
+      await code(extractText(makePdf(["x"]), "pdf", { timeoutMs: 1 })),
+    ).toBe("UNSUPPORTED_FILE");
   });
 });

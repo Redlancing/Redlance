@@ -1,75 +1,48 @@
-import { unzipSync } from "fflate";
-import mammoth from "mammoth";
-import { getDocumentProxy } from "unpdf";
+import { Worker } from "node:worker_threads";
 import { ResumeError } from "./errors";
 
-export const MAX_PDF_PAGES = 10;
-const MAX_ZIP_TOTAL = 20 * 1024 * 1024;
-const MAX_ZIP_ENTRY = 10 * 1024 * 1024;
-const MAX_ZIP_ENTRIES = 1000;
+export { MAX_PDF_PAGES, checkDocxZip, extractTextInline } from "./extract-inline";
 
-const unsupported = (message: string) =>
-  new ResumeError("UNSUPPORTED_FILE", message);
+const WORKER_TIMEOUT_MS = 20_000;
 
-/** Reads the zip directory only (the filter returns false, so nothing is decompressed). */
-export function checkDocxZip(bytes: Uint8Array): void {
-  let total = 0;
-  let count = 0;
-  let hasDocument = false;
-  let tooBig = false;
-  try {
-    unzipSync(bytes, {
-      filter(file) {
-        count += 1;
-        total += file.originalSize;
-        if (file.originalSize > MAX_ZIP_ENTRY) tooBig = true;
-        if (file.name === "word/document.xml") hasDocument = true;
-        return false;
-      },
-    });
-  } catch {
-    throw unsupported("Not a zip file.");
-  }
-  if (tooBig || total > MAX_ZIP_TOTAL || count > MAX_ZIP_ENTRIES)
-    throw unsupported("The document is too large inside.");
-  if (!hasDocument) throw unsupported("Not a Word document.");
-}
+type Reply =
+  | { ok: true; text: string }
+  | { ok: false; code: "NO_TEXT" | "UNSUPPORTED_FILE" };
 
-async function pdfText(bytes: Uint8Array): Promise<string> {
-  // pdf.js takes ownership of the buffer, so give it a copy.
-  const pdf = await getDocumentProxy(new Uint8Array(bytes));
-  try {
-    const pages = Math.min(pdf.numPages, MAX_PDF_PAGES);
-    const out: string[] = [];
-    for (let i = 1; i <= pages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      let line = "";
-      for (const item of content.items) {
-        if (!("str" in item)) continue;
-        line += item.str + (item.hasEOL ? "\n" : "");
-      }
-      out.push(line);
-    }
-    return out.join("\n");
-  } finally {
-    await pdf.loadingTask.destroy();
-  }
-}
-
-export async function extractText(
+/**
+ * Parses in a worker thread with memory limits and a hard timer, so a pathological file can
+ * neither exhaust the worker process's memory nor block its event loop. Any failure of the
+ * thread (crash, out of memory, timeout) becomes UNSUPPORTED_FILE.
+ */
+export function extractText(
   bytes: Uint8Array,
   type: "pdf" | "docx",
+  opts: { timeoutMs?: number } = {},
 ): Promise<string> {
-  try {
-    if (type === "pdf") return await pdfText(bytes);
-    checkDocxZip(bytes);
-    const { value } = await mammoth.extractRawText({
-      buffer: Buffer.from(bytes),
+  return new Promise((resolve, reject) => {
+    const copy = new Uint8Array(bytes); // transferring must not detach the caller's buffer
+    let done = false;
+    const worker = new Worker(new URL("./extract-worker.ts", import.meta.url), {
+      // The process runs under tsx; make sure the thread can load TypeScript too.
+      execArgv: ["--import", "tsx"],
+      workerData: { bytes: copy, type },
+      transferList: [copy.buffer],
+      resourceLimits: { maxOldGenerationSizeMb: 256, maxYoungGenerationSizeMb: 64 },
     });
-    return value;
-  } catch (e) {
-    if (e instanceof ResumeError) throw e;
-    throw unsupported("The file could not be read.");
-  }
+    const finish = (fn: () => void) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      void worker.terminate();
+      fn();
+    };
+    const fail = (code: "NO_TEXT" | "UNSUPPORTED_FILE" = "UNSUPPORTED_FILE") =>
+      finish(() => reject(new ResumeError(code, "The file could not be read.")));
+    const timer = setTimeout(() => fail(), opts.timeoutMs ?? WORKER_TIMEOUT_MS);
+    worker.once("message", (m: Reply) =>
+      m.ok ? finish(() => resolve(m.text)) : fail(m.code),
+    );
+    worker.once("error", () => fail());
+    worker.once("exit", () => fail());
+  });
 }

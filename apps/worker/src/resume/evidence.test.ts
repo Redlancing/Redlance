@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasEvidence } from "./evidence";
+import { hasEvidence, hasSkillEvidence } from "./evidence";
 
 describe("hasEvidence", () => {
   const text = "Built   dashboards\nwith React and Node.";
@@ -10,5 +10,16 @@ describe("hasEvidence", () => {
     expect(hasEvidence(text, undefined)).toBe(false);
     expect(hasEvidence(text, "Re")).toBe(false);
     expect(hasEvidence(text, "Vue and Svelte")).toBe(false);
+  });
+  it("rejects filler quotes", () => {
+    expect(hasEvidence("this and that", "and")).toBe(false);
+    expect(hasEvidence("I use React", "React")).toBe(false);
+    expect(hasEvidence("I use React", "use React")).toBe(true);
+  });
+  it("skill evidence must mention a label", () => {
+    const t = "Built dashboards with React and Node";
+    expect(hasSkillEvidence(t, "dashboards with React", ["React"])).toBe(true);
+    expect(hasSkillEvidence(t, "Built dashboards with", ["React"])).toBe(false);
+    expect(hasSkillEvidence(t, "Built dashboards", ["c"])).toBe(false);
   });
 });

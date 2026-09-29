@@ -24,3 +24,4 @@ coverage/
 
 # superpowers plan workspaces (scratch)
 .superpowers/
+apps/worker/test/eval/private/

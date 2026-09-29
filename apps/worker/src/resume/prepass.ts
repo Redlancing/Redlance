@@ -9,8 +9,10 @@ import type { ResumeSections } from "./sections";
 export const MAX_SHORTLIST = 60;
 
 export function githubFromText(text: string): string | null {
-  for (const m of text.matchAll(/github\.com\/[^\s"'<>()\[\],;]+/gi)) {
-    const check = checkGithubInput(m[0]);
+  for (const m of text.matchAll(
+    /(?<![a-z0-9.-])github\.com\/[^\s"'<>()\[\],;]+/gi,
+  )) {
+    const check = checkGithubInput(m[0].replace(/[.,:;!?|]+$/, ""));
     if (check.ok && check.username) return check.username;
   }
   return null;
@@ -20,8 +22,20 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 type Matcher = { skill: Skill; label: string; re: RegExp; short: boolean };
 
+/**
+ * Whole-word match. Before: not a letter/digit/&/-. After: not a letter/digit/+/# and not "-letter"
+ * ("C-suite", "go-to-market"); labels of 2 chars or fewer also refuse a following "&" ("R&D").
+ */
 const wordRe = (label: string) =>
-  new RegExp(`(?<![a-z0-9])${escapeRe(label)}(?![a-z0-9])`, "u");
+  new RegExp(
+    `(?<![a-z0-9&\\-])${escapeRe(label)}(?![a-z0-9+#]|-[a-z]${label.length <= 2 ? "|&" : ""})`,
+    "u",
+  );
+
+/** True if `label` (already normalised) occurs as a whole word/phrase in `text`. */
+export function containsLabel(text: string, label: string): boolean {
+  return wordRe(label).test(text.normalize("NFKC").toLowerCase());
+}
 
 const BY_SKILL = new Map<Skill, Matcher[]>(
   SKILLS.filter((s) => !s.retired).map((skill) => [

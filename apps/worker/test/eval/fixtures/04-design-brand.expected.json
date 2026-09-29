@@ -1,0 +1,4 @@
+{ "categories": ["design"], "experienceLevel": "experienced",
+  "mustSkills": ["logo-design", "brand-identity", "illustrator", "indesign", "figma", "packaging-design", "print-design"],
+  "maySkills": ["graphic-design", "canva", "social-media-graphics", "photoshop"],
+  "mustNotSkills": ["react", "video-editing", "python"] }

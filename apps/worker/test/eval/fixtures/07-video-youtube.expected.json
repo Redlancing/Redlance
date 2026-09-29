@@ -1,0 +1,4 @@
+{ "categories": ["video"], "experienceLevel": "intermediate",
+  "mustSkills": ["youtube-editing", "video-editing", "premiere-pro", "after-effects", "capcut", "short-form-video", "thumbnails"],
+  "maySkills": ["davinci-resolve", "color-grading", "motion-graphics", "subtitles", "photoshop"],
+  "mustNotSkills": ["react", "logo-design", "blender"] }

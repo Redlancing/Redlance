@@ -4,7 +4,7 @@ import { mergeResumeSteps } from "./merge";
 import { splitSections } from "./sections";
 
 const text =
-  "Jane Doe\nSkills\nPython, Figma\nExperience\nBuilt dashboards with React and Node for Acme.";
+  "Jane Doe\nSkills\nPython, Figma\nExperience\nBuilt dashboards with React and Node for Acme tooling.";
 const sections = splitSections(text);
 
 const ctx = (over: Partial<Parameters<typeof mergeResumeSteps>[1]> = {}) => ({
@@ -36,6 +36,13 @@ describe("mergeResumeSteps", () => {
     );
     expect(r.skills).toEqual([{ id: "react", level: "core" }]);
   });
+  it("drops evidence that is real text but does not mention the skill", () => {
+    const r = mergeResumeSteps(
+      { skills: skillsOut([sk("rust", "core", "Built dashboards with")]) },
+      ctx(),
+    );
+    expect(r.skills).toEqual([]);
+  });
   it("keeps a shortlisted skill listed in the skills section without evidence", () => {
     const r = mergeResumeSteps({ skills: skillsOut([sk("python")]) }, ctx());
     expect(r.skills.map((s) => s.id)).toEqual(["python"]);
@@ -51,7 +58,7 @@ describe("mergeResumeSteps", () => {
   it("keeps a real custom skill with evidence, drops one without", () => {
     const r = mergeResumeSteps(
       { skills: skillsOut([], [
-        { name: "Acme tooling", level: "secondary", evidence: "for Acme" },
+        { name: "Acme tooling", level: "secondary", evidence: "for Acme tooling" },
         { name: "Zzz", level: "secondary", evidence: "not in text at all" },
       ]) },
       ctx(),

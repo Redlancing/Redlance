@@ -9,7 +9,7 @@ import {
   type ResumeStepName,
   type Suggestions,
 } from "@redlance/core";
-import { hasEvidence } from "./evidence";
+import { hasEvidence, hasSkillEvidence } from "./evidence";
 import { skillLabelOccurs } from "./prepass";
 import type { ResumeSections } from "./sections";
 import type { BasicsOutput, JobTypesOutput, SkillsOutput } from "./step-types";
@@ -75,14 +75,15 @@ export function mergeResumeSteps(
     const known = SKILL_BY_ID.get(sk.id);
     if (!known || known.retired) continue;
     if (
-      hasEvidence(ctx.text, sk.evidence) ||
+      hasSkillEvidence(ctx.text, sk.evidence, [known.name, ...known.aliases]) ||
       (shortlist.has(sk.id) && skillLabelOccurs(known, ctx.sections.skills))
     )
       add(sk.id, sk.level);
   }
   for (const c of steps.skills?.customSkills ?? []) {
-    if (!hasEvidence(ctx.text, c.evidence)) continue;
     const known = findSkill(c.name);
+    const labels = known ? [known.name, ...known.aliases, c.name] : [c.name];
+    if (!hasSkillEvidence(ctx.text, c.evidence, labels)) continue;
     if (known) {
       if (!known.retired) add(known.id, c.level);
       continue;
