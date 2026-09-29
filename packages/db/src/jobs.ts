@@ -62,32 +62,49 @@ export async function claimNextImportJob(
   return job ?? null;
 }
 
+// Writes below are fenced on the claim that owns the job (status running + attempts = the
+// value returned when it was claimed), so a worker that lost its claim can't touch the row.
+const owned = (id: string, claimAttempts: number) =>
+  and(
+    eq(importJobs.id, id),
+    eq(importJobs.status, "running"),
+    eq(importJobs.attempts, claimAttempts),
+  );
+
 export async function setImportStage(
   db: Database,
   id: string,
+  claimAttempts: number,
   stage: ImportStage,
 ): Promise<void> {
-  await db.update(importJobs).set({ stage }).where(eq(importJobs.id, id));
+  await db.update(importJobs).set({ stage }).where(owned(id, claimAttempts));
 }
 
-export async function clearImportFile(db: Database, id: string): Promise<void> {
+/** Drops the uploaded file and keeps the extracted text, so a retry can resume from the text. */
+export async function clearImportFile(
+  db: Database,
+  id: string,
+  claimAttempts: number,
+  sourceText: string,
+): Promise<void> {
   await db
     .update(importJobs)
-    .set({ fileBytes: null })
-    .where(eq(importJobs.id, id));
+    .set({ fileBytes: null, sourceText })
+    .where(owned(id, claimAttempts));
 }
 
 export async function completeImportJob(
   db: Database,
   id: string,
+  claimAttempts: number,
   done: {
     result: unknown;
     sourceText?: string;
     contentHash?: string;
     pipelineVersion?: string;
   },
-): Promise<void> {
-  await db
+): Promise<boolean> {
+  const rows = await db
     .update(importJobs)
     .set({
       status: "done",
@@ -100,15 +117,18 @@ export async function completeImportJob(
       errorCode: null,
       finishedAt: sql`now()`,
     })
-    .where(eq(importJobs.id, id));
+    .where(owned(id, claimAttempts))
+    .returning({ id: importJobs.id });
+  return rows.length > 0;
 }
 
 /** Retryable failures go back in the queue with exponential backoff (5 s, 10 s, ... with jitter). */
 export async function failImportJob(
   db: Database,
   id: string,
+  claimAttempts: number,
   fail: { errorCode: string; retryable: boolean },
-): Promise<"requeued" | "failed"> {
+): Promise<"requeued" | "failed" | "lost"> {
   const res = await db.execute<{ status: string }>(sql`
     update import_jobs set
       status = case when ${fail.retryable} and attempts < ${MAX_JOB_ATTEMPTS} then 'queued' else 'failed' end,
@@ -120,9 +140,10 @@ export async function failImportJob(
       error_code = case when ${fail.retryable} and attempts < ${MAX_JOB_ATTEMPTS} then error_code else ${fail.errorCode} end,
       file_bytes = case when ${fail.retryable} and attempts < ${MAX_JOB_ATTEMPTS} then file_bytes else null end,
       finished_at = case when ${fail.retryable} and attempts < ${MAX_JOB_ATTEMPTS} then null else now() end
-    where id = ${id}
+    where id = ${id} and status = 'running' and attempts = ${claimAttempts}
     returning status`);
   const status = res.rows[0]?.status;
+  if (!status) return "lost";
   return status === "queued" ? "requeued" : "failed";
 }
 

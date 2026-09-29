@@ -130,11 +130,25 @@ describe("setImportStage and clearImportFile", () => {
   it("updates the stage and clears the file", async () => {
     const u = await newUser();
     const id = await enqueue(u.id);
-    await setImportStage(db, id, "reading");
-    await clearImportFile(db, id);
+    await claimNextImportJob(db);
+    await setImportStage(db, id, 1, "reading");
+    await clearImportFile(db, id, 1, "cv text");
     const r = await row(id);
     expect(r.stage).toBe("reading");
     expect(r.fileBytes).toBeNull();
+    expect(r.sourceText).toBe("cv text");
+  });
+
+  it("ignores writes from a worker that does not own the claim", async () => {
+    const u = await newUser();
+    const id = await enqueue(u.id);
+    await claimNextImportJob(db);
+    await setImportStage(db, id, 2, "reading");
+    await clearImportFile(db, id, 2, "x");
+    const r = await row(id);
+    expect(r.stage).toBe("queued");
+    expect(r.fileBytes).not.toBeNull();
+    expect(r.sourceText).toBeNull();
   });
 });
 
@@ -143,15 +157,16 @@ describe("failImportJob", () => {
     const u = await newUser();
     const id = await enqueue(u.id);
     await claimNextImportJob(db);
-    expect(await failImportJob(db, id, { errorCode: "X", retryable: true })).toBe(
-      "requeued",
-    );
+    expect(
+      await failImportJob(db, id, 1, { errorCode: "X", retryable: true }),
+    ).toBe("requeued");
     const r = await row(id);
     expect(r.status).toBe("queued");
     expect(r.stage).toBe("queued");
     expect(r.lockedAt).toBeNull();
     expect(r.fileBytes).not.toBeNull();
     expect(r.runAfter.getTime()).toBeGreaterThanOrEqual(Date.now() + 3_500);
+    expect(r.runAfter.getTime()).toBeLessThan(Date.now() + 6_500);
   });
 
   it("fails for good once attempts are used up", async () => {
@@ -160,9 +175,12 @@ describe("failImportJob", () => {
     await db.execute(
       sql`update import_jobs set status = 'running', attempts = ${MAX_JOB_ATTEMPTS} where id = ${id}`,
     );
-    expect(await failImportJob(db, id, { errorCode: "X", retryable: true })).toBe(
-      "failed",
-    );
+    expect(
+      await failImportJob(db, id, MAX_JOB_ATTEMPTS, {
+        errorCode: "X",
+        retryable: true,
+      }),
+    ).toBe("failed");
     const r = await row(id);
     expect(r.status).toBe("failed");
     expect(r.stage).toBe("failed");
@@ -176,11 +194,56 @@ describe("failImportJob", () => {
     const id = await enqueue(u.id);
     await claimNextImportJob(db);
     expect(
-      await failImportJob(db, id, { errorCode: "NO_TEXT", retryable: false }),
+      await failImportJob(db, id, 1, {
+        errorCode: "NO_TEXT",
+        retryable: false,
+      }),
     ).toBe("failed");
     const r = await row(id);
     expect(r.status).toBe("failed");
     expect(r.fileBytes).toBeNull();
+  });
+});
+
+describe("fencing", () => {
+  it("rejects late writes from a worker whose claim was swept", async () => {
+    const u = await newUser();
+    const id = await enqueue(u.id);
+    await claimNextImportJob(db); // attempts 1
+    await db.execute(
+      sql`update import_jobs set locked_at = now() - interval '3 minutes' where id = ${id}`,
+    );
+    expect(await requeueStaleImportJobs(db)).toBe(1);
+    const second = await claimNextImportJob(db);
+    expect(second?.attempts).toBe(2);
+    const before = await row(id);
+    expect(
+      await failImportJob(db, id, 1, { errorCode: "X", retryable: true }),
+    ).toBe("lost");
+    expect(await completeImportJob(db, id, 1, { result: { late: true } })).toBe(
+      false,
+    );
+    expect(await row(id)).toEqual(before);
+    expect(await completeImportJob(db, id, 2, { result: { ok: true } })).toBe(
+      true,
+    );
+    expect((await row(id)).result).toEqual({ ok: true });
+  });
+
+  it("keeps extracted text across a retryable failure", async () => {
+    const u = await newUser();
+    const id = await enqueue(u.id);
+    await claimNextImportJob(db);
+    await clearImportFile(db, id, 1, "cv text");
+    expect(
+      await failImportJob(db, id, 1, { errorCode: "LLM", retryable: true }),
+    ).toBe("requeued");
+    await db.execute(
+      sql`update import_jobs set run_after = now() where id = ${id}`,
+    );
+    const again = await claimNextImportJob(db);
+    expect(again?.fileBytes).toBeNull();
+    expect(again?.sourceText).toBe("cv text");
   });
 });
 
@@ -189,7 +252,7 @@ describe("completeImportJob", () => {
     const u = await newUser();
     const id = await enqueue(u.id);
     await claimNextImportJob(db);
-    await completeImportJob(db, id, {
+    await completeImportJob(db, id, 1, {
       result: { skills: ["a"] },
       sourceText: "text",
       contentHash: "h",
@@ -224,6 +287,8 @@ describe("requeueStaleImportJobs", () => {
     const ra = await row(a);
     expect(ra.status).toBe("queued");
     expect(ra.lockedAt).toBeNull();
+    expect(ra.stage).toBe("queued");
+    expect(ra.fileBytes).not.toBeNull();
     const rb = await row(b);
     expect(rb.status).toBe("failed");
     expect(rb.errorCode).toBe("TIMEOUT");
@@ -238,7 +303,7 @@ describe("findCachedResumeResult", () => {
     const id = await enqueue(u.id);
     await claimNextImportJob(db);
     expect(await findCachedResumeResult(db, "h", "v1")).toBeNull();
-    await completeImportJob(db, id, {
+    await completeImportJob(db, id, 1, {
       result: { ok: 1 },
       contentHash: "h",
       pipelineVersion: "v1",
