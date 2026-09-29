@@ -35,6 +35,8 @@ export default async function OnboardingStepPage(
 
   const review = step === "review" ? reviewData(state) : null;
   if (review && !review.ok) redirect(`/onboarding/${review.step}`);
+  // Keyed by the saved version: when a refresh brings a newer save, the form remounts from it.
+  const formKey = `${step}:${state.steps.find((r) => r.step === step)?.version ?? 0}`;
 
   return (
     <div className="w-full max-w-2xl">
@@ -42,25 +44,28 @@ export default async function OnboardingStepPage(
       <div className="rounded-2xl border border-border bg-background p-5 shadow-xs sm:p-8">
         {step === "import" && (
           <ImportStep
-            key={step}
+            key={formKey}
             init={stepInit(state, user.userId, "import")}
           />
         )}
         {step === "basics" && (
           <BasicsStep
-            key={step}
+            key={formKey}
             init={stepInit(state, user.userId, "basics")}
           />
         )}
         {step === "skills" && (
           <SkillsStep
-            key={step}
+            key={formKey}
             init={stepInit(state, user.userId, "skills")}
             jobTypes={savedDraft(state, "basics")?.categories ?? []}
           />
         )}
         {step === "rates" && (
-          <RatesStep key={step} init={stepInit(state, user.userId, "rates")} />
+          <RatesStep
+            key={formKey}
+            init={stepInit(state, user.userId, "rates")}
+          />
         )}
         {review?.ok && <ReviewStep data={review.data} email={user.email} />}
       </div>

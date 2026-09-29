@@ -59,7 +59,14 @@ export function StepActions({
     <>
       <div aria-live="polite" className="mt-6 min-h-5 text-sm">
         {form.notice?.kind === "saved" && (
-          <p className="text-success">Draft saved.</p>
+          <p className="text-success">
+            {form.notice.changes ? "Changes saved." : "Draft saved."}
+          </p>
+        )}
+        {form.notice?.kind === "invalid" && (
+          <p role="alert" className="text-danger">
+            Some fields need attention.
+          </p>
         )}
         {form.notice?.kind === "error" && (
           <p role="alert" className="text-danger">
@@ -74,9 +81,9 @@ export function StepActions({
               className="underline"
               onClick={() => window.location.reload()}
             >
-              Reload to see the latest version
-            </button>
-            .
+              Reload to get the latest version
+            </button>{" "}
+            — your edits here will be offered back.
           </p>
         )}
       </div>
