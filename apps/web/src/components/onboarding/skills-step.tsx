@@ -15,6 +15,7 @@ import { Plus, X } from "lucide-react";
 import { useId, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { FieldGroup, controlProps } from "./field";
+import { enterAction } from "./skill-search";
 import { nextSkillLevel, type SkillLevel } from "./skill-levels";
 import { RestoreBanner, StepActions } from "./step-actions";
 import { StepHeader } from "./step-header";
@@ -129,8 +130,9 @@ export function SkillsStep({ init, jobTypes }: { init: StepFormInit<"skills">; j
             onKeyDown={(e) => {
               if (e.key !== "Enter") return;
               e.preventDefault();
-              if (results[0]) addSkill(results[0].id);
-              else addCustom();
+              const action = enterAction(query, { results, chosen, canAddCustom });
+              if (action.type === "skill") addSkill(action.id);
+              else if (action.type === "custom") addCustom();
             }}
             className="h-11 text-base md:text-sm"
           />
