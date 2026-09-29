@@ -5,11 +5,11 @@ import {
   type LlmClient,
 } from "@redlance/llm";
 import type { WorkerEnv } from "./env";
+import { fakeResumeResponder } from "./fake-llm";
 
 export function createLlmFromEnv(env: WorkerEnv): LlmClient {
   if (env.LLM_MODE === "fake") {
-    // Placeholder responder; the resume pipeline swaps in its own.
-    return createClient(createFakeTransport(() => ({})));
+    return createClient(createFakeTransport(fakeResumeResponder));
   }
   return createClient(
     createVertexTransport({
