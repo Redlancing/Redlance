@@ -58,3 +58,38 @@ describe("parseWorkerEnv", () => {
     ).toThrow(/GITHUB_TOKEN/);
   });
 });
+
+describe("service-account key (temporary fallback)", () => {
+  const vertex = {
+    ...base,
+    LLM_MODE: "vertex",
+    GOOGLE_CLOUD_PROJECT: "p",
+    GOOGLE_CLOUD_LOCATION: "us-central1",
+  };
+
+  it("uses Application Default Credentials when no key file is set", () => {
+    expect(parseWorkerEnv(vertex).credentials).toEqual({ kind: "adc" });
+  });
+
+  it("accepts a key file that exists", () => {
+    const env = parseWorkerEnv(
+      { ...vertex, GOOGLE_APPLICATION_CREDENTIALS: "/keys/vertex-key.json" },
+      { fileExists: (p) => p === "/keys/vertex-key.json" },
+    );
+    expect(env.credentials).toEqual({
+      kind: "service-account-key",
+      path: "/keys/vertex-key.json",
+    });
+  });
+
+  it("refuses to start when the key file is missing", () => {
+    expect(() =>
+      parseWorkerEnv(
+        { ...vertex, GOOGLE_APPLICATION_CREDENTIALS: "/nope.json" },
+        { fileExists: () => false },
+      ),
+    ).toThrow(
+      /GOOGLE_APPLICATION_CREDENTIALS points to a file that doesn't exist/,
+    );
+  });
+});

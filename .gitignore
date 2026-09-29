@@ -25,3 +25,9 @@ coverage/
 # superpowers plan workspaces (scratch)
 .superpowers/
 apps/worker/test/eval/private/
+
+# Google Cloud service-account keys (temporary testing fallback) — never commit
+.secrets/
+*-key.json
+*service-account*.json
+application_default_credentials.json

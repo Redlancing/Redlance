@@ -1,3 +1,5 @@
+import { statSync } from "node:fs";
+import { basename } from "node:path";
 import { createDb } from "@redlance/db";
 import { createPgListener } from "./db";
 import { parseWorkerEnv } from "./env";
@@ -16,11 +18,33 @@ async function main() {
   }
   const log = createLogger(env.LOG_LEVEL);
   if (!env.GITHUB_TOKEN) {
-    log.warn("GITHUB_TOKEN not set; GitHub imports use the low anonymous rate limit");
+    log.warn(
+      "GITHUB_TOKEN not set; GitHub imports use the low anonymous rate limit",
+    );
+  }
+  if (
+    env.LLM_MODE === "vertex" &&
+    env.credentials.kind === "service-account-key"
+  ) {
+    // Temporary testing fallback: a long-lived key. Prefer ADC / Workload Identity.
+    log.warn(
+      { keyFile: basename(env.credentials.path) },
+      "Vertex AI is using a service-account key file (temporary, for testing only) — delete the key in Google Cloud when you're done",
+    );
+    try {
+      if (statSync(env.credentials.path).mode & 0o077) {
+        log.warn(
+          "the key file is readable by other users on this machine; run: chmod 600 <key file>",
+        );
+      }
+    } catch {
+      // parseWorkerEnv already checked the file exists; a race here just skips the hint.
+    }
   }
   const { db, pool } = createDb(env.DATABASE_URL, {
     max: env.WORKER_CONCURRENCY + 2,
-    onError: (err) => log.error({ err: err.message }, "postgres idle client error"),
+    onError: (err) =>
+      log.error({ err: err.message }, "postgres idle client error"),
   });
   const llm = createLlmFromEnv(env);
   const runner = createRunner({
@@ -52,6 +76,7 @@ async function main() {
     {
       appEnv: env.APP_ENV,
       llmMode: env.LLM_MODE,
+      credentials: env.LLM_MODE === "vertex" ? env.credentials.kind : undefined,
       modelFast: env.VERTEX_MODEL_FAST,
       modelSmart: env.VERTEX_MODEL_SMART,
       concurrency: env.WORKER_CONCURRENCY,

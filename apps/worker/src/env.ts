@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { z } from "zod";
 
 export type WorkerEnv = {
@@ -11,6 +12,12 @@ export type WorkerEnv = {
   VERTEX_MODEL_SMART: string;
   GITHUB_TOKEN?: string;
   WORKER_CONCURRENCY: number;
+  /**
+   * How the worker signs in to Vertex AI. "adc" = Application Default Credentials
+   * (gcloud login locally, Workload Identity Federation on EC2). "service-account-key" =
+   * a key file named by GOOGLE_APPLICATION_CREDENTIALS — a temporary testing fallback.
+   */
+  credentials: { kind: "adc" } | { kind: "service-account-key"; path: string };
 };
 
 const empty = (v: unknown) => (v === "" ? undefined : v);
@@ -32,6 +39,7 @@ const schema = z.object({
     z.string().default("gemini-3.8-flash"),
   ),
   GITHUB_TOKEN: optional,
+  GOOGLE_APPLICATION_CREDENTIALS: optional,
   WORKER_CONCURRENCY: z.preprocess(
     empty,
     z.coerce.number().int().min(1).max(32).default(4),
@@ -40,7 +48,9 @@ const schema = z.object({
 
 export function parseWorkerEnv(
   raw: Record<string, string | undefined>,
+  deps: { fileExists?: (path: string) => boolean } = {},
 ): WorkerEnv {
+  const fileExists = deps.fileExists ?? existsSync;
   const problems: string[] = [];
   if (raw.GEMINI_API_KEY || raw.GOOGLE_API_KEY) {
     problems.push("Use Vertex AI credentials, not an API key");
@@ -72,7 +82,21 @@ export function parseWorkerEnv(
     ) {
       problems.push("GITHUB_TOKEN is required outside local");
     }
-    if (problems.length === 0) return env as WorkerEnv;
+    const keyPath = env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (keyPath && !fileExists(keyPath)) {
+      problems.push(
+        "GOOGLE_APPLICATION_CREDENTIALS points to a file that doesn't exist",
+      );
+    }
+    if (problems.length === 0) {
+      const { GOOGLE_APPLICATION_CREDENTIALS: _key, ...rest } = env;
+      return {
+        ...rest,
+        credentials: keyPath
+          ? { kind: "service-account-key", path: keyPath }
+          : { kind: "adc" },
+      } as WorkerEnv;
+    }
   }
   throw new Error(`Invalid worker environment:\n- ${problems.join("\n- ")}`);
 }
