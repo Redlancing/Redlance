@@ -11,7 +11,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { CATEGORY_IDS, EXPERIENCE_LEVELS, SKILLS, SKILL_BY_ID } from "@redlance/core";
-import type { AttemptRecord, GenerateRequest, LlmClient } from "@redlance/llm";
+import { LlmError, type AttemptRecord, type GenerateRequest, type LlmClient } from "@redlance/llm";
 import { parseWorkerEnv } from "../../src/env";
 import { createLlmFromEnv } from "../../src/llm";
 import { cleanResumeText } from "../../src/resume/clean";
@@ -20,9 +20,9 @@ import { aggregate, percentile, score, type Expected, type Score, type Suggested
 
 const here = import.meta.dirname;
 
-type Fixture = { name: string; text: string; expected: Expected };
+type Fixture = { name: string; text: string; expected: Expected; isPrivate: boolean };
 
-function loadDir(dir: string): Fixture[] {
+function loadDir(dir: string, isPrivate: boolean): Fixture[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((f) => f.endsWith(".txt"))
@@ -33,6 +33,7 @@ function loadDir(dir: string): Fixture[] {
         name,
         text: readFileSync(join(dir, f), "utf8"),
         expected: JSON.parse(readFileSync(join(dir, `${name}.expected.json`), "utf8")) as Expected,
+        isPrivate,
       };
     });
 }
@@ -73,17 +74,31 @@ function baselinePrompt(text: string): string {
   return `<resume>\n${text.replace(/<\/?resume>/gi, "")}\n</resume>\n\nTasks:\n1. categories: up to 3 job types from: ${CATEGORY_IDS.join(", ")}.\n2. experienceLevel: one of ${EXPERIENCE_LEVELS.join(", ")}.\n3. skills: only ids from this list that the resume gives evidence for (at most 30, at most 8 core): ${skills}.\nReturn JSON with categories, experienceLevel, skills.`;
 }
 
+// Fair comparison: the strongest model the pipeline uses, the Skills step's
+// thinking setting, the sum of the three steps' output budgets (300 + 400 + 1500),
+// the whole-analysis deadline, and one retry.
+const BASELINE_MAX_OUTPUT = 300 + 400 + 1500;
+const BASELINE_DEADLINE_MS = 20_000;
+
 async function runBaseline(llm: LlmClient, model: string, text: string, cost: Cost): Promise<Suggested> {
-  const res = await llm.generateStructured({
-    model,
-    system: BASELINE_SYSTEM,
-    prompt: baselinePrompt(text),
-    schema: baselineSchema,
-    maxOutputTokens: 1500,
-    timeoutMs: 20_000,
-    temperature: 0,
-    retries: 1,
-  });
+  let res;
+  try {
+    res = await llm.generateStructured({
+      model,
+      system: BASELINE_SYSTEM,
+      prompt: baselinePrompt(text),
+      schema: baselineSchema,
+      maxOutputTokens: BASELINE_MAX_OUTPUT,
+      timeoutMs: BASELINE_DEADLINE_MS,
+      temperature: 0,
+      thinking: "off",
+      retries: 1,
+      signal: AbortSignal.timeout(BASELINE_DEADLINE_MS),
+    });
+  } catch (e) {
+    if (e instanceof LlmError) e.attempts.forEach((a) => addAttempt(cost, a));
+    throw e;
+  }
   res.attempts.forEach((a) => addAttempt(cost, a));
   return {
     basics: {
@@ -154,18 +169,30 @@ async function main() {
   if (env.LLM_MODE !== "vertex") {
     throw new Error("The eval needs LLM_MODE=vertex (and Google ADC); the fake client proves nothing.");
   }
-  const llm = await maybeTrace(createLlmFromEnv(env));
-  const fixtures = [...loadDir(join(here, "fixtures")), ...loadDir(join(here, "private"))];
+  const plain = createLlmFromEnv(env);
+  const traced = await maybeTrace(plain);
+  const fixtures = [...loadDir(join(here, "fixtures"), false), ...loadDir(join(here, "private"), true)];
+  const tracing = process.env.LANGSMITH_TRACING === "true";
   console.log(
     `Pipeline ${PIPELINE_VERSION}, fast=${env.VERTEX_MODEL_FAST}, smart=${env.VERTEX_MODEL_SMART}, ${fixtures.length} resumes` +
-      (process.env.LANGSMITH_TRACING === "true" ? ", LangSmith tracing on" : ""),
+      (tracing ? ", LangSmith tracing on" : ""),
   );
+  if (tracing) {
+    console.log("Note: only the committed synthetic fixtures are traced; private/ resumes are never sent to LangSmith.");
+  }
+  if (withBaseline) {
+    console.log(
+      `Baseline settings: one call, model ${env.VERTEX_MODEL_SMART} (smart), thinking off (as the Skills step), ` +
+        `max output ${BASELINE_MAX_OUTPUT} tokens (300+400+1500), timeout/deadline ${BASELINE_DEADLINE_MS}ms, 1 retry.`,
+    );
+  }
 
   const pipeRows: Row[] = [];
   const baseRows: Row[] = [];
 
   for (const f of fixtures) {
     const text = cleanResumeText(f.text);
+    const llm = f.isPrivate ? plain : traced;
 
     const own: Cost = { micros: 0 };
     const t0 = performance.now();
@@ -184,7 +211,7 @@ async function main() {
       const b: Cost = { micros: 0 };
       const b0 = performance.now();
       try {
-        const s = await runBaseline(llm, env.VERTEX_MODEL_FAST, text, b);
+        const s = await runBaseline(llm, env.VERTEX_MODEL_SMART, text, b);
         baseRows.push({ name: f.name, score: score(f.expected, s), ms: performance.now() - b0, micros: b.micros, partial: [] });
       } catch (e) {
         baseRows.push({ name: f.name, score: failed(), ms: performance.now() - b0, micros: b.micros, partial: [], error: message(e) });
@@ -193,7 +220,7 @@ async function main() {
   }
 
   printTable("Pipeline", pipeRows);
-  if (withBaseline) printTable(`Baseline (one call, ${env.VERTEX_MODEL_FAST})`, baseRows);
+  if (withBaseline) printTable(`Baseline (one call, ${env.VERTEX_MODEL_SMART})`, baseRows);
 }
 
 main().catch((e) => {
