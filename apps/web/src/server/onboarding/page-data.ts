@@ -4,6 +4,11 @@ import {
   STEP_SCHEMAS,
   defaultCurrency,
   emptyDraft,
+  mergeSuggestions,
+  suggestedStepData,
+  type MergedSuggestions,
+  type SuggestionSource,
+  type Suggestions,
   type StepData,
   type StepDraft,
   type StepId,
@@ -31,11 +36,41 @@ export function savedDraft<S extends StepId>(
   return parsed?.success ? (parsed.data as StepDraft<S>) : null;
 }
 
+/** Suggestions from the latest finished imports: resume first (it wins ties), then GitHub. */
+export function mergedSuggestions(
+  state: OnboardingState,
+): MergedSuggestions | null {
+  const parts: { source: SuggestionSource; suggestions: Suggestions }[] = [];
+  for (const source of ["resume", "github"] as const) {
+    const job = state.imports[source];
+    if (job?.status === "done" && job.suggestions)
+      parts.push({ source, suggestions: job.suggestions });
+  }
+  return parts.length ? mergeSuggestions(parts) : null;
+}
+
 function defaultsFor<S extends StepId>(
   step: S,
   state: OnboardingState,
 ): StepDraft<S> {
   const empty = emptyDraft(step);
+  if (step === "import" || step === "basics" || step === "skills") {
+    const merged = mergedSuggestions(state);
+    if (merged) {
+      // Suggestions come from validated worker output; if one no longer parses, start empty.
+      try {
+        const data =
+          step === "import"
+            ? suggestedStepData("import", merged)
+            : step === "basics"
+              ? suggestedStepData("basics", merged)
+              : suggestedStepData("skills", merged);
+        return data as StepDraft<S>;
+      } catch {
+        return empty;
+      }
+    }
+  }
   if (step === "rates")
     return {
       ...(empty as StepDraft<"rates">),

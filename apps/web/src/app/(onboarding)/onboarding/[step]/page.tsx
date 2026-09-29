@@ -46,6 +46,12 @@ export default async function OnboardingStepPage(
           <ImportStep
             key={formKey}
             init={stepInit(state, user.userId, "import")}
+            imports={[state.imports.resume, state.imports.github].filter(
+              (j) => j !== null,
+            )}
+            hasSavedProfileSteps={state.steps.some(
+              (r) => r.step === "basics" || r.step === "skills",
+            )}
           />
         )}
         {step === "basics" && (

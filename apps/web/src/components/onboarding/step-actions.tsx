@@ -41,11 +41,14 @@ export function StepActions({
   back,
   nextLabel = "Next",
   showDraft = true,
+  nextDisabled = false,
 }: {
   form: StepForm;
   back: PageId | null;
   nextLabel?: string;
   showDraft?: boolean;
+  /** Locks Next (and Skip) while something must finish first, e.g. an import. */
+  nextDisabled?: boolean;
 }) {
   const router = useRouter();
   const [leaveTo, setLeaveTo] = useState<string | null>(null);
@@ -123,7 +126,11 @@ export function StepActions({
               {form.completed ? "Save changes" : "Save draft"}
             </Button>
           )}
-          <Button size="lg" onClick={form.next} disabled={!!form.pending}>
+          <Button
+            size="lg"
+            onClick={form.next}
+            disabled={!!form.pending || nextDisabled}
+          >
             {form.pending === "complete" && (
               <LoaderCircle className="animate-spin" aria-hidden="true" />
             )}

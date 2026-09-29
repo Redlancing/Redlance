@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { VALID } from "../../../test/onboarding-fixtures";
-import { reviewData, stepInit } from "./page-data";
+import { mergedSuggestions, reviewData, stepInit } from "./page-data";
+import type { ImportSummary } from "./imports";
 import type { OnboardingState } from "./service";
 
 const row = (
@@ -20,13 +21,56 @@ const row = (
 const state = (
   steps: OnboardingState["steps"],
   resumeAt: OnboardingState["resumeAt"] = "import",
+  imports: OnboardingState["imports"] = { resume: null, github: null },
 ): OnboardingState => ({
   steps,
   resumeAt,
   onboardedAt: null,
   trialEndsAt: null,
-  imports: { resume: null, github: null },
+  imports,
 });
+
+const job = (
+  kind: ImportSummary["kind"],
+  suggestions: ImportSummary["suggestions"],
+  status: ImportSummary["status"] = "done",
+): ImportSummary => ({
+  id: `${kind}-job`,
+  kind,
+  status,
+  stage: status === "done" || status === "failed" ? status : "reading",
+  errorCode: null,
+  suggestions,
+  partial: [],
+  createdAt: new Date().toISOString(),
+});
+
+const RESUME = {
+  v: 1 as const,
+  basics: {
+    displayName: "Ravi Kumar",
+    headline: "Web developer",
+    categories: ["development" as const],
+    experienceLevel: "experienced" as const,
+  },
+  skills: [
+    { id: "react", level: "core" as const },
+    { id: "javascript", level: "secondary" as const },
+  ],
+  customSkills: [],
+  githubUsername: null,
+};
+
+const GITHUB = {
+  v: 1 as const,
+  basics: {},
+  skills: [
+    { id: "typescript", level: "secondary" as const },
+    { id: "javascript", level: "core" as const },
+  ],
+  customSkills: [],
+  githubUsername: "ravi-k",
+};
 
 describe("stepInit", () => {
   it("returns the saved data, status and version", () => {
@@ -78,5 +122,67 @@ describe("reviewData", () => {
       ok: false,
       step: "skills",
     });
+  });
+});
+
+describe("pre-fill from imports", () => {
+  const withResume = (steps: OnboardingState["steps"] = []) =>
+    state(steps, "import", { resume: job("resume", RESUME), github: null });
+
+  it("fills Basics and Skills from a finished resume import", () => {
+    const s = withResume();
+    const basics = stepInit(s, "u1", "basics");
+    expect(basics.data.displayName).toBe("Ravi Kumar");
+    expect(basics.data.categories).toEqual(["development"]);
+    expect(basics.data.timeZone).toBeNull();
+    expect(basics.version).toBe(0);
+    const skills = stepInit(s, "u1", "skills").data.skills;
+    expect(skills).toContainEqual({
+      id: "react",
+      level: "core",
+      source: "resume",
+    });
+  });
+
+  it("lets a saved row win over suggestions", () => {
+    const s = withResume([row("basics", VALID.basics, "draft", 2)]);
+    expect(stepInit(s, "u1", "basics").data.displayName).toBe("Asha");
+  });
+
+  it("leaves the steps empty without finished imports", () => {
+    expect(mergedSuggestions(state([]))).toBeNull();
+    const running = state([], "import", {
+      resume: job("resume", null, "running"),
+      github: null,
+    });
+    expect(mergedSuggestions(running)).toBeNull();
+    expect(stepInit(running, "u1", "basics").data.displayName).toBe("");
+    expect(stepInit(running, "u1", "skills").data.skills).toEqual([]);
+  });
+
+  it("merges resume and GitHub (union of skills, highest level wins)", () => {
+    const s = state([], "import", {
+      resume: job("resume", RESUME),
+      github: job("github", GITHUB),
+    });
+    const skills = stepInit(s, "u1", "skills").data.skills;
+    expect(skills.map((x) => x.id).sort()).toEqual([
+      "javascript",
+      "react",
+      "typescript",
+    ]);
+    expect(skills.find((x) => x.id === "javascript")).toMatchObject({
+      level: "core",
+      source: "resume",
+    });
+    expect(skills.find((x) => x.id === "typescript")?.source).toBe("github");
+    expect(stepInit(s, "u1", "import").data.githubUsername).toBe("ravi-k");
+  });
+
+  it("keeps rates unchanged", () => {
+    const s = withResume();
+    expect(stepInit(s, "u1", "rates").data).toEqual(
+      stepInit(state([]), "u1", "rates").data,
+    );
   });
 });
