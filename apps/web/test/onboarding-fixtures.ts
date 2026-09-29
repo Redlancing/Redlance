@@ -20,6 +20,5 @@ export const VALID = {
     currency: "USD",
     rateType: "hourly",
     remoteOnly: true,
-    blockedWords: ["unpaid"],
   },
 } as const;

@@ -170,9 +170,6 @@ export function ReviewStep({
         </Row>
         <Row label="Rate type">{RATE_TYPE_TEXT[rates.rateType]}</Row>
         <Row label="Remote only">{rates.remoteOnly ? "Yes" : "No"}</Row>
-        <Row label="Blocked words">
-          {rates.blockedWords.length ? rates.blockedWords.join(", ") : "None"}
-        </Row>
       </Section>
 
       <div className="mt-2 rounded-xl border border-flare-100 bg-flare-50 p-4 text-sm">

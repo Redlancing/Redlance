@@ -293,7 +293,6 @@ describe("rates", () => {
     currency: "USD",
     rateType: "hourly",
     remoteOnly: true,
-    blockedWords: ["unpaid"],
   };
 
   it("accepts a complete step", () => {
@@ -312,11 +311,23 @@ describe("rates", () => {
     expect(ok("25")).toBe(false);
   });
 
-  it("refuses duplicate blocked words ignoring case, and more than 50", () => {
-    const words = (blockedWords: string[]) =>
-      STEP_SCHEMAS.rates.draft.safeParse({ blockedWords }).success;
-    expect(words(["Unpaid", "unpaid"])).toBe(false);
-    expect(words(Array.from({ length: 51 }, (_, i) => `w${i}`))).toBe(false);
+  it("still parses rows saved with the removed blockedWords key", () => {
+    const old = { ...rates, blockedWords: ["unpaid"] };
+    expect(STEP_SCHEMAS.rates.complete.parse(old)).toEqual(rates);
+    expect(
+      STEP_SCHEMAS.rates.draft.parse({ minRate: 10, blockedWords: [] }),
+    ).toEqual({
+      minRate: 10,
+      currency: null,
+      rateType: null,
+      remoteOnly: false,
+    });
+  });
+
+  it("still refuses other unknown keys", () => {
+    expect(
+      STEP_SCHEMAS.rates.complete.safeParse({ ...rates, extra: 1 }).success,
+    ).toBe(false);
   });
 });
 
@@ -348,11 +359,11 @@ describe("toFieldErrors", () => {
       minRate: -1,
       currency: "USD",
       rateType: "fixed",
-      blockedWords: ["a", "A"],
+      remoteOnly: "yes",
     });
     const errors = toFieldErrors(result.error!, "data");
     expect(errors.map((e) => e.path)).toEqual(
-      expect.arrayContaining(["data.minRate", "data.blockedWords.1"]),
+      expect.arrayContaining(["data.minRate", "data.remoteOnly"]),
     );
   });
 });

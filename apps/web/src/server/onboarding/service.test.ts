@@ -174,7 +174,6 @@ describe("finishOnboarding", () => {
       minRateMinor: 2500,
       currency: "USD",
       remoteOnly: true,
-      blockedWords: ["unpaid"],
     });
     expect(
       profile!.trialEndsAt.getTime() - profile!.onboardedAt.getTime(),

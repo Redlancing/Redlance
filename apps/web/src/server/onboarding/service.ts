@@ -255,7 +255,6 @@ export async function finishOnboarding(
       currency: rates.currency,
       rateType: rates.rateType,
       remoteOnly: rates.remoteOnly,
-      blockedWords: rates.blockedWords,
       onboardedAt: sql`now()`,
       trialEndsAt: sql`now() + make_interval(days => ${TRIAL_DAYS})`,
     });

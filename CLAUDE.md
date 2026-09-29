@@ -46,6 +46,7 @@ Core tables: `profiles`, `job_posts`, `matches`, `replies`, `outcomes`, `client_
 - **Drafts:** a comment and the **first DM** only. Don't market DM conversation handling, and don't state that we don't handle DMs.
 - **Follow-ups (paid plans):** if a reply has no status marked after a few days, remind the user and draft a follow-up.
 - **Subreddit insights (paid plans):** per subreddit, hiring posts per week, share matching the user's skills, posted-budget ranges and peak posting hours (in the user's time zone). Only from RSS-available fields; shown once a subreddit has enough posts (see rule 8).
+- **Blocked words** removed from onboarding (user decision, 2026-09-29).
 
 ## Non-negotiable rules
 
@@ -159,7 +160,7 @@ What slice 1 added:
 - **GitHub field:** `checkGithubInput` (core) accepts a username or a github.com profile/repo link (parsed with `URL`: only `github.com`/`www.github.com`, http(s), no port or credentials; reserved pages like `/settings` refused) and keeps only the username; the form shows the reason as you leave the field and checks the account exists by calling `api.github.com` from the browser (never our server). Safety rules for the slice 3 GitHub import are in the spec's GitHub job section.
 - **Not checked in a real browser yet:** click-through checks were done with curl only.
 - **Deferred minors (from the per-task and final reviews; none block merge):**
-  - UX: Enter doesn't submit a step (no `<form>`); editing from Review goes Next → following step, not back to Review; progress bars show position, not completion; client navigation (progress links, logo) skips the leave dialog (the local copy still saves edits); focus is lost when the skills list fills or a chip is removed; disabled job-type chips drop out of the tab order; no message when a blocked word is refused; Enter during IME composition commits a tag; the country code shows for a moment before its name.
+  - UX: Enter doesn't submit a step (no `<form>`); editing from Review goes Next → following step, not back to Review; progress bars show position, not completion; client navigation (progress links, logo) skips the leave dialog (the local copy still saves edits); focus is lost when the skills list fills or a chip is removed; disabled job-type chips drop out of the tab order; the country code shows for a moment before its name.
   - Form hook: `pending` resets before navigation (a fast double click sends a second save); Back isn't disabled mid-save; STEP_ORDER/ALREADY_ONBOARDED only refresh, no notice; hook save/conflict logic has no tests.
   - A11y: progress rows ~22px tall on mobile; no "(completed)" text for screen readers; add `role="list"` for Safari; some hints aren't linked by `aria-describedby`.
   - Server: a client abort mid-body logs a 500; `getOnboardingState` runs two queries with `Promise.all` on one transaction client (breaks under pg@9); the rate limit runs after reading up to 256 KB; the API accepts retired skill ids; Finish re-validation of bad saved data isn't tested; the finish-vs-save race test is timing-based.

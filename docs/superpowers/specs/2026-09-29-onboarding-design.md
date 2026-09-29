@@ -66,7 +66,7 @@ apps/web/src/
 | 1 | **Import** | optional | GitHub username or `github.com/<name>` URL (optional; normalised to the username), resume upload (slice 2). Saved data is `{ githubUsername: string \| null }`; imports themselves live in `import_jobs` |
 | 2 | **Basics** | yes | display name (1–60), headline (≤120), job types (1–3 categories), experience level (beginner / intermediate / experienced), country (ISO 3166 alpha-2), time zone (IANA; defaults to the browser's) |
 | 3 | **Skills** | yes | taxonomy skills, each core or secondary; custom skills (1–40 chars). ≥1 core, ≤8 core, ≤30 total, no duplicates |
-| 4 | **Rates & filters** | yes | minimum rate (0–100 000, 2 decimals), currency (USD / GBP / EUR / INR), hourly / fixed / either, remote only, blocked words (≤50, each ≤40) |
+| 4 | **Rates & filters** | yes | minimum rate (0–100 000, 2 decimals), currency (USD / GBP / EUR / INR), hourly / fixed / either, remote only |
 | 5 | **Review → Finish** | — | read-only summary with "Edit" links; Finish |
 
 Each step has two zod schemas in `@redlance/core`, used by the form (instant errors) and the server (enforcement): **complete** (everything above) and **draft** (same field types and size limits, but fields may be empty and minimum counts don't apply).
@@ -149,7 +149,7 @@ profiles                                 written once, by Finish
   user_id      uuid PK → users
   display_name, headline, categories text[], experience_level, country, time_zone
   github_username text null                -- from the Import step; drafts can link it
-  min_rate_minor int, currency text, rate_type text, remote_only boolean, blocked_words text[]
+  min_rate_minor int, currency text, rate_type text, remote_only boolean
   onboarded_at timestamptz not null, trial_ends_at timestamptz not null
   created_at, updated_at
 
@@ -393,3 +393,4 @@ Checked against the code before planning:
 - Step rules made explicit (saves need earlier steps completed; completed steps can't go back to draft; `ALREADY_ONBOARDED`).
 - `import_jobs` and `llm_usage` move to slice 2's migration.
 - **Portfolio step removed** (user decision): the Import step asks for an optional GitHub link instead, saved as `profiles.github_username`. Steps are now Import → Basics → Skills → Rates & filters → Review (5). `portfolio_items` is gone, and so are the GitHub/resume portfolio suggestions. CLAUDE.md rule 6 is updated to match.
+- **Blocked words removed** (user decision, 2026-09-29): the Rates & filters step no longer has a blocked-words field; `profiles.blocked_words` is dropped (migration `0004_drop_blocked_words`). Old saved rates rows with a `blockedWords` key still parse (the key is stripped).

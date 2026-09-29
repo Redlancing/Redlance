@@ -35,8 +35,6 @@ export const LIMITS = {
   totalSkills: 30,
   customSkillName: 40,
   maxRate: 100_000,
-  blockedWords: 50,
-  blockedWord: 40,
 } as const;
 
 // ---------- small validators (also used by the forms) ----------
@@ -332,37 +330,32 @@ function skillsSchema(requireCore: boolean) {
     });
 }
 
-const blockedWords = z
-  .array(text(LIMITS.blockedWord).min(1))
-  .max(LIMITS.blockedWords, `Up to ${LIMITS.blockedWords} words.`)
-  .default([]);
-const wordsRefine = (v: { blockedWords: string[] }, ctx: Ctx) =>
-  noDuplicates(
-    v.blockedWords,
-    (w) => w.toLowerCase(),
-    ctx,
-    ["blockedWords"],
-    "Already added.",
-  );
+// Blocked words were removed from onboarding (2026-09-29). Rows saved before
+// then still carry a `blockedWords` key, so drop it before the strict check.
+const withoutBlockedWords = (v: unknown) => {
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return v;
+  const { blockedWords: _dropped, ...rest } = v as Record<string, unknown>;
+  return rest;
+};
 
-const ratesDraft = z
-  .strictObject({
+const ratesDraft = z.preprocess(
+  withoutBlockedWords,
+  z.strictObject({
     minRate: rate.nullable().default(null),
     currency: z.enum(CURRENCIES).nullable().default(null),
     rateType: z.enum(RATE_TYPES).nullable().default(null),
     remoteOnly: z.boolean().default(false),
-    blockedWords,
-  })
-  .superRefine(wordsRefine);
-const ratesComplete = z
-  .strictObject({
+  }),
+);
+const ratesComplete = z.preprocess(
+  withoutBlockedWords,
+  z.strictObject({
     minRate: rate,
     currency: z.enum(CURRENCIES, { error: "Pick a currency." }),
     rateType: z.enum(RATE_TYPES, { error: "Pick hourly, fixed or either." }),
     remoteOnly: z.boolean().default(false),
-    blockedWords,
-  })
-  .superRefine(wordsRefine);
+  }),
+);
 
 export const STEP_SCHEMAS = {
   import: { draft: importData, complete: importData },

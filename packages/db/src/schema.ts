@@ -141,10 +141,6 @@ export const profiles = pgTable(
     currency: text("currency", { enum: PROFILE_CURRENCIES }).notNull(),
     rateType: text("rate_type", { enum: PROFILE_RATE_TYPES }).notNull(),
     remoteOnly: boolean("remote_only").notNull(),
-    blockedWords: text("blocked_words")
-      .array()
-      .notNull()
-      .default(emptyTextArray),
     onboardedAt: timestamp("onboarded_at", { withTimezone: true }).notNull(),
     trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }).notNull(),
     createdAt: createdAt(),
