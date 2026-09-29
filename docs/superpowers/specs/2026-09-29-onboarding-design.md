@@ -128,6 +128,9 @@ import_jobs                              the queue and the record of every impor
   user_id      uuid → users
   kind         text CHECK in ('resume','github')
   status       text CHECK in ('queued','running','done','failed') default 'queued'
+  stage        text CHECK in ('queued','reading','analysing','checking','done','failed') default 'queued'  -- shown to the user
+  content_hash text                      -- SHA-256 of the cleaned text (resume jobs); result cache key with pipeline_version
+  pipeline_version text                  -- e.g. resume@1
   file_bytes   bytea                     -- upload only; NULL once text is extracted (or the job fails)
   file_type    text                      -- 'pdf' | 'docx'
   input        jsonb not null            -- { filename, size } or { username }
@@ -140,6 +143,7 @@ import_jobs                              the queue and the record of every impor
   created_at, finished_at
   INDEX (status, run_after) WHERE status = 'queued'
   INDEX (user_id, created_at)
+  INDEX (content_hash, pipeline_version) WHERE status = 'done'
 
 profiles                                 written once, by Finish
   user_id      uuid PK → users
@@ -153,8 +157,9 @@ profile_skills   user_id, skill_id → skills, level ('core'|'secondary'), sourc
 custom_skills    id, user_id, name, name_normalized, level, source, UNIQUE (user_id, name_normalized)
 user_subreddits  user_id, subreddit → subreddits… (see note), source ('auto'|'user'), PK (user_id, subreddit)
 alert_channels   id, user_id, kind ('email'|'telegram'), target, enabled, verified_at, UNIQUE (user_id, kind)
-llm_usage        id, user_id (nullable), task, model, input_tokens, output_tokens, cost_micros bigint,
-                 latency_ms, import_job_id (nullable), created_at
+llm_usage        id, user_id (nullable), task, step (nullable), prompt_version, model, input_tokens,
+                 cached_input_tokens, output_tokens, cost_micros bigint, latency_ms, attempt, outcome
+                 ('ok'|'timeout'|'error'|'invalid_output'), import_job_id (nullable), created_at
 ```
 
 - `user_subreddits` is filled by Finish from the seed list (every general board, plus the boards for the user's job types; `source = 'auto'`). `subreddit` is plain text, not a foreign key, so the later dashboard feature can let users add subreddits outside the seed list. Ingestion (next spec) decides which to poll.
@@ -296,7 +301,7 @@ cleaned text ─▶ A. early exit + cache ─▶ B. deterministic pre-pass ─�
 
 What a step's form shows = **its saved data** (draft or completed) if the row exists, otherwise **suggestions from the user's latest finished imports** (resume and GitHub merged: skills unioned, highest level wins), otherwise empty. Imports are blocking, so suggestions exist before the user edits later steps. Fields and skills filled from suggestions carry `source: "resume" | "github"` so Finish records where they came from.
 
-**Re-import:** if the user comes back to Import after saving Basics or later steps and starts a new import, the UI asks "This will replace what's in Basics, Skills and Rates with suggestions from the new resume" (Replace / Cancel). Replace calls `POST /onboarding/imports/reset`, which deletes the saved `basics` and `skills` rows (never `import` or `rates` values the resume doesn't cover — Rates is kept) in one transaction, then the import starts. Nothing mixes silently.
+**Re-import:** if the user comes back to Import after saving Basics or later steps and starts a new import, the UI asks "This will replace what's in Basics and Skills with suggestions from the new resume" (Replace / Cancel). Replace calls `POST /onboarding/imports/reset`, which deletes the saved `basics` and `skills` rows in one transaction (Import and Rates are kept; the resume doesn't fill Rates), then the import starts. Nothing mixes silently.
 
 ## API (`/api/v1`, all through `apiRoute()`)
 
