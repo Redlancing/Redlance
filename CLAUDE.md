@@ -13,9 +13,9 @@ npm workspaces monorepo (Node ≥ 20.9). Run everything from the repo root.
 - Server-only code lives in `apps/web/src/server/`. Every API route is under `/api/v1` and wraps its handler in `apiRoute()` (session → origin → input → Redis rate limit). Settings come from env vars validated in `src/server/env.ts`; copy `apps/web/.env.example` to `.env.local`.
 - `brand/` — logo files and brand guide (`brand/README.md`). Brand colours are theme tokens in `apps/web/src/app/globals.css` (`flare-50…700`, `cream`, `ink`, `stone`, `bone`, `feed`, `danger`, `success`; shadcn's `primary` = `ink`, so buttons are near-black like Attio's). Fonts: `font-sans`/`font-heading` = Inter, `font-serif` = Fraunces (quotes only), `font-wordmark` = Bricolage Grotesque (logo only). The homepage follows the Attio teardown in `docs/research/attio-teardown.md`; the logo component is `apps/web/src/components/brand/logo.tsx`.
 - Verbatim copy (one-liner, core promise) lives in `apps/web/src/lib/site.ts` — import it, don't retype it.
-- Coming with onboarding: `apps/worker` (background jobs: imports now, RSS ingestion next), `packages/core`, `packages/llm`. Later: shared `JobPost` types.
+- `apps/worker` — `@redlance/worker`: one Node process for background jobs (resume and GitHub imports now, RSS ingestion next); copy `apps/worker/.env.example` to `.env.local`. `packages/core` — `@redlance/core` (pure: taxonomy, step schemas, suggestions). `packages/llm` — `@redlance/llm` (Gemini on Vertex AI). Later: shared `JobPost` types.
 
-Commands: `npm run dev` (starts Docker db + cache, then Next) · `npm test` · `npm run db:up|db:down|db:migrate|db:generate|db:reset` · `npm run build` · `npm run lint` · `npm run typecheck` · `npm run format`. Add shadcn components with `npx shadcn@latest add <name> -c apps/web`.
+Commands: `npm run dev` (starts Docker db + cache, then Next and the worker together) · `npm test` · `npm run db:up|db:down|db:migrate|db:generate|db:reset` · `npm run build` · `npm run lint` · `npm run typecheck` · `npm run format`. Add shadcn components with `npx shadcn@latest add <name> -c apps/web`.
 
 ## Core loop
 
@@ -91,7 +91,7 @@ Handover for the next chat. Update this section as things change.
 
 - `main`: homepage + local backend foundation, merged through PR #1 on 2026-09-28 (105 tests passing).
 - `feat/homepage`: kept on purpose (the user asked not to delete it); its work is already in `main`.
-- `feat/onboarding`: onboarding slice 1 built and reviewed (not merged or pushed yet). 217 tests passing (web 163, core 39, db 15).
+- `feat/onboarding`: onboarding slices 1–3 built and reviewed (not merged or pushed yet). 471 tests passing (web 224, worker 145, core 47, db 31, llm 24).
 
 ### Built so far (in `main`)
 
@@ -135,9 +135,20 @@ Handover for the next chat. Update this section as things change.
 - `specs/2026-09-26-local-dev-foundation-design.md` and `plans/2026-09-26-local-dev-foundation.md`: done.
 - `specs/2026-09-26-cdn-waf-foundation-design.md` (Phases 0–2: CDK, Route 53, ACM, CloudFront, WAF): **partly outdated.** The static-export-to-S3 idea is replaced: CloudFront's origin is the EC2 server, with static assets still cached at the edge. It uses the CloudFront flat-rate **Free plan** (includes WAF + Route 53, 1M requests, 100 GB and 5 WAF rules a month; no VPC origins, so the server is locked to CloudFront by security group + secret header). The user hasn't explicitly confirmed the flat-rate plan.
 
-### Onboarding: slice 1 built on `feat/onboarding`
+### Onboarding: slices 1–3 built on `feat/onboarding`
 
-Spec: `docs/superpowers/specs/2026-09-29-onboarding-design.md`. Plan: `docs/superpowers/plans/2026-09-29-onboarding-slice-1.md` (13 tasks, built 2026-09-29 with subagent-driven development: one implementer and one review per task, then a whole-branch review).
+Spec: `docs/superpowers/specs/2026-09-29-onboarding-design.md`. Plans: `docs/superpowers/plans/2026-09-29-onboarding-slice-1.md` (13 tasks) and `docs/superpowers/plans/2026-09-29-onboarding-slices-2-3.md` (10 tasks, built in parallel waves). Both built 2026-09-29 with subagent-driven development (an implementer and a review per task, then whole-branch reviews and one fix wave).
+
+**Slices 2–3 (resume and GitHub import):**
+- **Queue:** `import_jobs` in Postgres (migration `0003_imports`), `LISTEN/NOTIFY` + 5 s poll, `FOR UPDATE SKIP LOCKED`, backoff, stale sweep; every write is fenced to the claim that owns it (`status='running' AND attempts=$claim`). `llm_usage` records every model attempt (tokens, cost, step, prompt version; never text).
+- **Worker (`apps/worker`):** runner with concurrency 4, 90 s job timeout, graceful stop that aborts jobs (`SHUTDOWN`, retried). Resume job: extraction in a `worker_threads` thread (memory limits, 20 s kill) → DOCX zip checked (central directory, real inflate limits) and **rebuilt** before `mammoth` reads it → text cleaned (invisible characters stripped) → file bytes deleted, text kept for retries → deterministic pre-pass (sections, years from dates, skill shortlist, GitHub username) → three Gemini steps in parallel (Basics and Job types on Flash-Lite, Skills on Flash; 10 s each, one retry, 20 s total) → evidence checks → merge into suggestions v1. Results cached by text hash + pipeline/prompt/model versions (never partial results). GitHub job: only `api.github.com` user + repos metadata, redirects refused, 1 MB cap.
+- **Vertex AI only:** `new GoogleGenAI({ vertexai: true, project, location })`; the worker refuses to start with an API key set. Uses Google Application Default Credentials.
+- **Web:** `POST /api/v1/onboarding/imports/resume` (multipart, body read capped at ~5 MB, type by magic bytes, 5/day), `…/imports/github` (10/day), `GET …/imports/:id`, `POST …/imports/reset`; the Import step blocks Next while imports run (live stages, 60 s escape), then Basics/Skills/Import are pre-filled from merged suggestions (skills keep `source: resume|github` into the profile). Re-import replaces Basics/Skills only after the new import is accepted.
+- **Eval:** `apps/worker/test/eval` (14 synthetic labelled resumes, scoring, `--baseline` one-call comparison, LangSmith only for eval runs). Not run live yet: needs Google credentials.
+
+**To run resume import against Vertex locally:** create the Google Cloud project (free-trial $300 credits cover Gemini on Vertex), enable the Vertex AI API, `gcloud auth application-default login`, then in `apps/worker/.env.local` set `LLM_MODE=vertex`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` (e.g. `us-central1`). With `LLM_MODE=fake` (the default in `.env.example`) everything works offline with a deterministic fake model.
+
+**Slice 1:**
 
 What slice 1 added:
 - **`packages/core` (`@redlance/core`, pure, zod + uuid only):** 12 job types and about 180 skills (`taxonomy.ts`; skills are retired, never deleted), a 16-subreddit seed list (unverified, `subreddits.ts`), ISO country codes and default currency, the per-step draft/complete schemas and `resumeAt()` (`onboarding.ts`), `parseGithubUsername`, `newId()` (UUIDv7).
@@ -185,10 +196,10 @@ Key decisions (2026-09-29):
 
 ### Open questions and next steps
 
-1. **Onboarding:** click through slice 1 in a browser, merge `feat/onboarding` (user's call), then write the slice 2 plan (worker + resume import), then slice 3 (GitHub import). The user still needs to look over the skill list and subreddit seed list.
+1. **Onboarding:** set up the Google Cloud project and run the eval against Vertex (`npm run eval -w @redlance/worker -- --baseline`); click through the whole flow in a browser; then merge `feat/onboarding` (user's call). The user still needs to look over the skill list and subreddit seed list. Vertex prices in `packages/llm/src/prices.ts` are from a third-party listing (gemini-3.8-flash introductory until 2026-12-31; flash-lite unverified) — confirm on the official pricing page.
 2. **Then:** RSS ingestion in the same worker (RSS adapters → `JobPost`), then matching and alerts, then deployment.
 3. **Subreddit list:** the seed list of hiring subreddits per job type needs checking against each subreddit's rules.
-5. **Deployment spec:** EC2 + CloudFront + WAF with CDK. CloudFront must forward `Origin` and `CloudFront-Viewer-Address`. Run `/api/v1/health?deep=1` after every deploy. Check that Upstash supports `TIME` inside Lua. **Run migrations + `syncReferenceData()` before a new web build takes traffic** (a new skill in code but not yet in the `skills` table makes Finish fail on the `profile_skills` foreign key); `db:migrate` needs `tsx`, so ship a compiled migrate step. WAF: exempt `POST /api/v1/onboarding/imports/resume` from the 8 KB body rule (slice 2).
+5. **Deployment spec:** EC2 + CloudFront + WAF with CDK. CloudFront must forward `Origin` and `CloudFront-Viewer-Address`. Run `/api/v1/health?deep=1` after every deploy. Check that Upstash supports `TIME` inside Lua. **Run migrations + `syncReferenceData()` before a new web build takes traffic** (a new skill in code but not yet in the `skills` table makes Finish fail on the `profile_skills` foreign key); `db:migrate` needs `tsx`, so ship a compiled migrate step. WAF: exempt `POST /api/v1/onboarding/imports/resume` from the 8 KB body rule. **Worker container:** needs `tsx` at runtime (the extraction thread starts with `--import tsx`; don't install with `--omit=dev`, or compile the worker), `stop_grace_period` ≥ 35 s, memory for up to 4 extraction threads (256 + 64 MB heap each) next to web and Postgres, non-root, read-only filesystem, network only to Postgres, Vertex AI and api.github.com. Google credentials on EC2: Workload Identity Federation from the AWS role (no key files). Set a Vertex request quota and a billing budget alert on the Google Cloud project.
 6. **Still undecided:**
    - which features go in which plan, and credit amounts;
    - the payment provider;
