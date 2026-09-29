@@ -31,7 +31,14 @@ describe("yearsOfExperience", () => {
     expect(yearsOfExperience("Hours 0900-1700", NOW)).toBeNull();
     expect(yearsOfExperience("B.Tech 2018 – 2022", NOW)).toBeNull();
     expect(
-      yearsOfExperience("University of X 2015 - 2019\nAcme 2020 - 2021", NOW),
+      yearsOfExperience("B.Sc, University of X 2015 - 2019\nAcme 2020 - 2021", NOW),
     ).toBe(2);
+  });
+  it("does not mistake job titles or employers for education", () => {
+    expect(yearsOfExperience("Scrum Master, Acme 2018 - 2022", NOW)).toBe(5);
+    expect(
+      yearsOfExperience("Software Engineer, Stanford University 2019 - 2021", NOW),
+    ).toBe(3);
+    expect(yearsOfExperience("B.Tech, IIT 2018 - 2022", NOW)).toBeNull();
   });
 });

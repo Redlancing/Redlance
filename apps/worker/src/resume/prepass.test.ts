@@ -51,6 +51,16 @@ describe("shortlist boundaries", () => {
   });
 });
 
+describe("hyphenated matches", () => {
+  const ids = (t: string) => skillShortlist(t, splitSections(t));
+  it("matches -based and Ruby-on-Rails text", () => {
+    expect(ids("React-based apps")).toContain("react");
+    expect(ids("Python-based tools")).toContain("python");
+    expect(ids("Ruby-on-Rails apps")).toContain("ruby");
+    expect(ids("C-suite go-to-market")).not.toContain("go");
+  });
+});
+
 describe("githubFromText", () => {
   it("skips reserved pages and returns the next valid profile", () => {
     const t = "see github.com/settings and https://github.com/octocat/repo";

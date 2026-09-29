@@ -23,14 +23,17 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 type Matcher = { skill: Skill; label: string; re: RegExp; short: boolean };
 
 /**
- * Whole-word match. Before: not a letter/digit/&/-. After: not a letter/digit/+/# and not "-letter"
- * ("C-suite", "go-to-market"); labels of 2 chars or fewer also refuse a following "&" ("R&D").
+ * Whole-word match. After: not a letter/digit/+/#. Labels of 2 chars or fewer are stricter so
+ * "C-suite", "go-to-market" and "R&D" don't match: no letter/digit/&/- before, and no "-letter" or
+ * "&" after. For longer labels "-" is a normal boundary ("React-based", "Ruby-on-Rails").
  */
-const wordRe = (label: string) =>
-  new RegExp(
-    `(?<![a-z0-9&\\-])${escapeRe(label)}(?![a-z0-9+#]|-[a-z]${label.length <= 2 ? "|&" : ""})`,
+const wordRe = (label: string) => {
+  const short = label.length <= 2;
+  return new RegExp(
+    `(?<![a-z0-9${short ? "&\\-" : ""}])${escapeRe(label)}(?![a-z0-9+#]${short ? "|-[a-z]|&" : ""})`,
     "u",
   );
+};
 
 /** True if `label` (already normalised) occurs as a whole word/phrase in `text`. */
 export function containsLabel(text: string, label: string): boolean {

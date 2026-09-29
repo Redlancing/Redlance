@@ -22,4 +22,9 @@ describe("hasEvidence", () => {
     expect(hasSkillEvidence(t, "Built dashboards with", ["React"])).toBe(false);
     expect(hasSkillEvidence(t, "Built dashboards", ["c"])).toBe(false);
   });
+  it("accepts hyphenated evidence", () => {
+    expect(
+      hasSkillEvidence("Built React-based dashboards", "React-based dashboards", ["React"]),
+    ).toBe(true);
+  });
 });

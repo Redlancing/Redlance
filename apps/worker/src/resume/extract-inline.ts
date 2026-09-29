@@ -1,4 +1,4 @@
-import { Unzip, UnzipInflate, unzipSync } from "fflate";
+import { Inflate, unzipSync } from "fflate";
 import mammoth from "mammoth";
 import { getDocumentProxy } from "unpdf";
 import { ResumeError } from "./errors";
@@ -39,33 +39,76 @@ export function checkDocxZip(bytes: Uint8Array): void {
     throw unsupported("The document is too large inside.");
   if (!hasDocument) throw unsupported("Not a Word document.");
 
+  checkCentralDirectory(bytes);
+}
+
+const u16 = (v: DataView, o: number) => v.getUint16(o, true);
+const u32 = (v: DataView, o: number) => v.getUint32(o, true);
+
+/**
+ * Reads the central directory ourselves (it is what mammoth/JSZip trusts to find each entry) and
+ * really inflates every entry it points at, counting actual output bytes. Each entry must have a
+ * local header at the recorded offset with the same name; anything odd is refused. Input goes
+ * into the inflater in small slices so one slice can never expand to more than a few MB unchecked.
+ */
+function checkCentralDirectory(bytes: Uint8Array): void {
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const names = new TextDecoder("utf-8", { fatal: false });
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 22 - 65535); i--)
+    if (u32(v, i) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  if (eocd < 0) throw unsupported("Not a zip file.");
+  const entries = u16(v, eocd + 10);
+  let pos = u32(v, eocd + 16);
+  if (entries === 0xffff || pos === 0xffffffff || entries > MAX_ZIP_ENTRIES)
+    throw unsupported("Unsupported zip.");
+
   let real = 0;
-  let over = false;
-  const unzip = new Unzip((file) => {
+  for (let n = 0; n < entries; n++) {
+    if (pos + 46 > bytes.length || u32(v, pos) !== 0x02014b50)
+      throw unsupported("Broken zip directory.");
+    const method = u16(v, pos + 10);
+    const compSize = u32(v, pos + 20);
+    const nameLen = u16(v, pos + 28);
+    const extraLen = u16(v, pos + 30);
+    const commentLen = u16(v, pos + 32);
+    const local = u32(v, pos + 42);
+    const name = names.decode(bytes.subarray(pos + 46, pos + 46 + nameLen));
+    pos += 46 + nameLen + extraLen + commentLen;
+
+    if (local + 30 > bytes.length || u32(v, local) !== 0x04034b50)
+      throw unsupported("Broken zip entry.");
+    const lNameLen = u16(v, local + 26);
+    const lExtraLen = u16(v, local + 28);
+    const lName = names.decode(bytes.subarray(local + 30, local + 30 + lNameLen));
+    const start = local + 30 + lNameLen + lExtraLen;
+    if (lName !== name || start + compSize > bytes.length)
+      throw unsupported("Broken zip entry.");
+    const data = bytes.subarray(start, start + compSize);
+
     let entry = 0;
-    file.ondata = (err, chunk) => {
-      if (err) {
-        over = true;
-        return;
-      }
-      entry += chunk.length;
-      real += chunk.length;
-      if (entry > MAX_ZIP_ENTRY || real > MAX_ZIP_TOTAL) {
-        over = true;
-        file.terminate();
-      }
+    const count = (len: number) => {
+      entry += len;
+      real += len;
+      if (entry > MAX_ZIP_ENTRY || real > MAX_ZIP_TOTAL)
+        throw unsupported("The document is too large inside.");
     };
-    file.start();
-  });
-  unzip.register(UnzipInflate);
-  try {
-    for (let i = 0; i < bytes.length && !over; i += SLICE)
-      unzip.push(bytes.subarray(i, Math.min(i + SLICE, bytes.length)), false);
-    if (!over) unzip.push(new Uint8Array(0), true);
-  } catch {
-    over = true;
+    if (method === 0) count(data.length);
+    else if (method === 8) {
+      try {
+        const inflater = new Inflate((chunk) => count(chunk.length));
+        for (let i = 0; i < data.length; i += SLICE)
+          inflater.push(data.subarray(i, Math.min(i + SLICE, data.length)), i + SLICE >= data.length);
+        if (data.length === 0) inflater.push(new Uint8Array(0), true);
+      } catch (e) {
+        if (e instanceof ResumeError) throw e;
+        throw unsupported("Broken zip entry.");
+      }
+    } else throw unsupported("Unsupported zip.");
   }
-  if (over) throw unsupported("The document is too large inside.");
 }
 
 async function pdfText(bytes: Uint8Array): Promise<string> {

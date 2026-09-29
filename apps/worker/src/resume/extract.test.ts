@@ -85,6 +85,23 @@ describe("extractText", () => {
     expect(() => checkDocxZip(zip)).toThrow(ResumeError);
   });
 
+  it("rejects a central directory pointing document.xml at another entry", () => {
+    const zip = makeDocx(["hello"]);
+    const v = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+    const dec = new TextDecoder();
+    const cds: { at: number; name: string }[] = [];
+    for (let i = 0; i + 46 < zip.length; i++)
+      if (v.getUint32(i, true) === 0x02014b50)
+        cds.push({
+          at: i,
+          name: dec.decode(zip.subarray(i + 46, i + 46 + v.getUint16(i + 28, true))),
+        });
+    const doc = cds.find((c) => c.name === "word/document.xml")!;
+    const other = cds.find((c) => c.name !== "word/document.xml")!;
+    v.setUint32(doc.at + 42, v.getUint32(other.at + 42, true), true);
+    expect(() => checkDocxZip(zip)).toThrow(ResumeError);
+  });
+
   it("runs the worker-thread path and inline path to the same result", async () => {
     const pdf = makePdf(["Thread test line"]);
     expect(await extractText(pdf, "pdf")).toContain("Thread test line");
