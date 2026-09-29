@@ -6,7 +6,7 @@ export default defineConfig({
     include: ["src/**/*.test.ts", "test/**/*.test.ts"],
     fileParallelism: false,
     env: {
-      TEST_DATABASE_URL: "postgres://redlance:redlance@127.0.0.1:5432/redlance_test",
+      TEST_DATABASE_URL: "postgres://redlance:redlance@127.0.0.1:5432/redlance_test_worker",
     },
   },
 });
