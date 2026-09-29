@@ -91,7 +91,7 @@ Handover for the next chat. Update this section as things change.
 
 - `main`: homepage + local backend foundation, merged through PR #1 on 2026-09-28 (105 tests passing).
 - `feat/homepage`: kept on purpose (the user asked not to delete it); its work is already in `main`.
-- `feat/onboarding`: current work, branched from `main`.
+- `feat/onboarding`: onboarding slice 1 built and reviewed (not merged or pushed yet). 194 tests passing (web 148, core 31, db 15).
 
 ### Built so far (in `main`)
 
@@ -135,15 +135,33 @@ Handover for the next chat. Update this section as things change.
 - `specs/2026-09-26-local-dev-foundation-design.md` and `plans/2026-09-26-local-dev-foundation.md`: done.
 - `specs/2026-09-26-cdn-waf-foundation-design.md` (Phases 0–2: CDK, Route 53, ACM, CloudFront, WAF): **partly outdated.** The static-export-to-S3 idea is replaced: CloudFront's origin is the EC2 server, with static assets still cached at the edge. It uses the CloudFront flat-rate **Free plan** (includes WAF + Route 53, 1M requests, 100 GB and 5 WAF rules a month; no VPC origins, so the server is locked to CloudFront by security group + secret header). The user hasn't explicitly confirmed the flat-rate plan.
 
-### Onboarding: spec written, not built
+### Onboarding: slice 1 built on `feat/onboarding`
 
-Spec: `docs/superpowers/specs/2026-09-29-onboarding-design.md`, revised 2026-09-29 after checking it against the code. Plan for slice 1 (manual onboarding): `docs/superpowers/plans/2026-09-29-onboarding-slice-1.md`, 13 tasks, waiting for the user's review; slices 2 and 3 get their own plans after slice 1 lands. Key decisions (2026-09-29):
+Spec: `docs/superpowers/specs/2026-09-29-onboarding-design.md`. Plan: `docs/superpowers/plans/2026-09-29-onboarding-slice-1.md` (13 tasks, built 2026-09-29 with subagent-driven development: one implementer and one review per task, then a whole-branch review).
+
+What slice 1 added:
+- **`packages/core` (`@redlance/core`, pure, zod + uuid only):** 12 job types and about 180 skills (`taxonomy.ts`; skills are retired, never deleted), a 16-subreddit seed list (unverified, `subreddits.ts`), ISO country codes and default currency, the per-step draft/complete schemas and `resumeAt()` (`onboarding.ts`), `parseGithubUsername`, `newId()` (UUIDv7).
+- **`packages/db`:** migration `0002_onboarding` adds `skills`, `subreddits`, `onboarding_steps`, `profiles` (with `github_username`), `profile_skills`, `custom_skills`, `user_subreddits`, `alert_channels`. `npm run db:migrate` runs `prepareDatabase()`: migrations, then `syncReferenceData()` copies the taxonomy and subreddits in (upsert, never deletes, advisory lock).
+- **Server:** `apiRoute()` takes a `params` zod schema (mismatch → 404) and caps JSON bodies at 256 KB (413). `server/onboarding/service.ts` is the only writer: `saveStep` (one transaction with the user row `FOR SHARE`; step order, no completed→draft, optimistic `version`), `finishOnboarding` (user row `FOR UPDATE`, re-validates every step, writes the profile and child tables, auto-connects subreddits, adds the email alert channel, starts the 5-day trial once). New error codes: `VERSION_CONFLICT`, `STEP_ORDER`, `ALREADY_ONBOARDED`, `PAYLOAD_TOO_LARGE`.
+- **API:** `GET /api/v1/onboarding`, `PUT /api/v1/onboarding/steps/:step`, `POST /api/v1/onboarding/finish`.
+- **Pages:** `(onboarding)` route group with its own layout; `/onboarding` → the first unfinished step; `/onboarding/[step]` = Import (optional GitHub link; resume "coming soon") → Basics → Skills → Rates & filters → Review. Forms share `useStepForm` (Next / Save draft / Save changes, version conflicts, beforeunload, a localStorage safety net with a restore banner). Dashboard card says "Start setup" / "Continue setup · step N of 5", then shows trial days left.
+- **Not checked in a real browser yet:** click-through checks were done with curl only.
+- **Deferred minors (from the per-task and final reviews; none block merge):**
+  - UX: Enter doesn't submit a step (no `<form>`); editing from Review goes Next → following step, not back to Review; progress bars show position, not completion; client navigation (progress links, logo) skips the leave dialog (the local copy still saves edits); focus is lost when the skills list fills or a chip is removed; disabled job-type chips drop out of the tab order; no message when a blocked word is refused; Enter during IME composition commits a tag; the country code shows for a moment before its name.
+  - Form hook: `pending` resets before navigation (a fast double click sends a second save); Back isn't disabled mid-save; STEP_ORDER/ALREADY_ONBOARDED only refresh, no notice; hook save/conflict logic has no tests.
+  - A11y: progress rows ~22px tall on mobile; no "(completed)" text for screen readers; add `role="list"` for Safari; some hints aren't linked by `aria-describedby`.
+  - Server: a client abort mid-body logs a 500; `getOnboardingState` runs two queries with `Promise.all` on one transaction client (breaks under pg@9); the rate limit runs after reading up to 256 KB; the API accepts retired skill ids; Finish re-validation of bad saved data isn't tested; the finish-vs-save race test is timing-based.
+  - Data: taxonomy `group()` can't mark a skill `retired` yet (fix before retiring one); 1–2 letter aliases (c, r, ps, pm…) are risky for free-text matching in slice 2; `parseGithubUsername` accepts `github.com/orgs|settings`; "GMT"/"EST5EDT" time zones are refused; no db CHECKs on profile country / GitHub / lengths (app-validated only); `sqlList` uses `sql.raw` (trusted constants only).
+  - Tests: countries test only checks count; the "edit" ranking test depends on taxonomy order; some core helpers untested.
+
+Key decisions (2026-09-29):
 - **Scope:** all freelance job types found on Reddit (development, design, video, writing, …) with one shared skill taxonomy. This replaces "pick one launch niche".
 - **Steps:** Import (optional GitHub link; resume upload in slice 2) → Basics → Skills → Rates & filters → Review/Finish. No subreddit or alert steps: Finish auto-connects subreddits from the job types and turns on email alerts; editing subreddits and connecting Telegram come later in the dashboard.
 - **Saving:** only on Next (`completed`) or Save draft (`draft`), one `onboarding_steps` row per user per step with a `version` for conflict detection; no autosave. The user lands on the first step that isn't completed.
 - **Imports:** resume (PDF/DOCX → text → Gemini → validated suggestions) and GitHub (public API, no LLM). They run in a new `apps/worker` process that takes jobs from a Postgres `import_jobs` table (`FOR UPDATE SKIP LOCKED` + `LISTEN/NOTIFY`); the browser polls the job every 1.5 s. The resume file is never kept, only its text.
 - **IDs:** UUIDv7 for new tables. New packages: `@redlance/core` (taxonomy, step schemas) and `@redlance/llm`.
-- **Build order:** manual onboarding → worker + resume import → GitHub import.
+- **Build order:** manual onboarding (done) → worker + resume import (slice 2, plan next) → GitHub import (slice 3).
+- **No portfolio step** (user decision): an optional GitHub link on the Import step instead.
 
 ### AWS and accounts
 
@@ -160,13 +178,16 @@ Spec: `docs/superpowers/specs/2026-09-29-onboarding-design.md`, revised 2026-09-
 - The laptop runs Node 26; the project pins Node 24 (`.nvmrc`). Install it with `brew install fnm && fnm install 24`.
 - npm 11 blocks package install scripts. esbuild still works because its platform binary installs separately.
 - Ideas for later: add a per-IP pre-limit before the session lookup; decide whether the quota reset stays at UTC midnight.
+- `npm run db:reset` runs `docker compose down -v`, which deletes the local dev database. Use `npm run db:migrate` for normal work.
+- Long runs: the laptop dozing made a test run and a build take ~15 min and stalled subagents; run `caffeinate -i` during long agent sessions.
+- `main` has 6 files prettier flags (from before onboarding); `npm run format:check` fails on them until someone formats them.
 
 ### Open questions and next steps
 
-1. **Onboarding:** user reviews the spec revisions and the slice 1 plan (taxonomy and subreddit seed list especially) → build slice 1 → plan slices 2 and 3.
+1. **Onboarding:** click through slice 1 in a browser, merge `feat/onboarding` (user's call), then write the slice 2 plan (worker + resume import), then slice 3 (GitHub import). The user still needs to look over the skill list and subreddit seed list.
 2. **Then:** RSS ingestion in the same worker (RSS adapters → `JobPost`), then matching and alerts, then deployment.
 3. **Subreddit list:** the seed list of hiring subreddits per job type needs checking against each subreddit's rules.
-5. **Deployment spec:** EC2 + CloudFront + WAF with CDK. CloudFront must forward `Origin` and `CloudFront-Viewer-Address`. Run `/api/v1/health?deep=1` after every deploy. Check that Upstash supports `TIME` inside Lua.
+5. **Deployment spec:** EC2 + CloudFront + WAF with CDK. CloudFront must forward `Origin` and `CloudFront-Viewer-Address`. Run `/api/v1/health?deep=1` after every deploy. Check that Upstash supports `TIME` inside Lua. **Run migrations + `syncReferenceData()` before a new web build takes traffic** (a new skill in code but not yet in the `skills` table makes Finish fail on the `profile_skills` foreign key); `db:migrate` needs `tsx`, so ship a compiled migrate step. WAF: exempt `POST /api/v1/onboarding/imports/resume` from the 8 KB body rule (slice 2).
 6. **Still undecided:**
    - which features go in which plan, and credit amounts;
    - the payment provider;
