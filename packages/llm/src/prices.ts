@@ -1,13 +1,34 @@
-// PLACEHOLDER PRICES (USD per million tokens). The Vertex AI pricing page
-// (https://cloud.google.com/vertex-ai/generative-ai/pricing, checked 2026-09-29)
-// could not be read by our fetch tool and these model ids were not confirmed there.
-// Replace with the real numbers before relying on cost figures.
+// USD per million tokens.
+//
+// gemini-3.8-flash: $0.75 input / $3.75 output — the introductory price through
+// 2026-12-31; from 2027-01-01 it becomes $1.50 input / $7.50 output (update then).
+// Source: https://www.requesty.ai/models/vertex/gemini-3.8-flash (accessed 2026-09-29);
+// verify on the official Vertex pricing page
+// (https://cloud.google.com/vertex-ai/generative-ai/pricing).
+// Its cached-input price is unverified: it uses the same 10%-of-input ratio as
+// the other entries until a published figure is confirmed.
+//
+// gemini-3.5-flash-lite: UNVERIFIED placeholder prices — the model id and its
+// numbers were not confirmed on the Vertex pricing page. Replace before relying
+// on its cost figures.
 export const PRICES: Record<
   string,
-  { inputPerMillion: number; cachedInputPerMillion: number; outputPerMillion: number }
+  {
+    inputPerMillion: number;
+    cachedInputPerMillion: number;
+    outputPerMillion: number;
+  }
 > = {
-  "gemini-3.5-flash-lite": { inputPerMillion: 0.1, cachedInputPerMillion: 0.01, outputPerMillion: 0.4 },
-  "gemini-3.8-flash": { inputPerMillion: 0.3, cachedInputPerMillion: 0.03, outputPerMillion: 2.5 },
+  "gemini-3.5-flash-lite": {
+    inputPerMillion: 0.1,
+    cachedInputPerMillion: 0.01,
+    outputPerMillion: 0.4,
+  },
+  "gemini-3.8-flash": {
+    inputPerMillion: 0.75,
+    cachedInputPerMillion: 0.075,
+    outputPerMillion: 3.75,
+  },
 };
 
 const warned = new Set<string>();
@@ -21,7 +42,9 @@ export function costMicros(
   if (!p) {
     if (!warned.has(model)) {
       warned.add(model);
-      console.warn(`@redlance/llm: no price for model "${model}", cost recorded as 0`);
+      console.warn(
+        `@redlance/llm: no price for model "${model}", cost recorded as 0`,
+      );
     }
     return 0;
   }
