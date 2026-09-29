@@ -72,4 +72,70 @@ describe("generateStructured", () => {
     expect(e.kind).toBe("aborted");
     expect(e.attempts.length).toBeLessThanOrEqual(1);
   });
+
+  it("ends an attempt at timeoutMs even if the transport ignores the signal", async () => {
+    const never: Transport = () => new Promise(() => {});
+    const c = createClient(never, { sleep });
+    const e = await c.generateStructured(base({ timeoutMs: 20 })).catch((x) => x);
+    expect(e.kind).toBe("timeout");
+    expect(e.attempts).toHaveLength(2);
+  });
+
+  it("waits retryDelayMs exactly once before a retry, whatever the cause", async () => {
+    const cases: Array<() => unknown> = [
+      () => "not json",
+      () => { throw new LlmError("server", "5xx"); },
+    ];
+    for (const bad of cases) {
+      const sleeps: number[] = [];
+      let n = 0;
+      const c = createClient(createFakeTransport(() => (n++ === 0 ? bad() : { name: "ok" })), {
+        sleep: async (ms) => { sleeps.push(ms); },
+      });
+      await c.generateStructured(base());
+      expect(sleeps).toEqual([1000]);
+    }
+    const hang: Transport = () => new Promise(() => {});
+    const sleeps: number[] = [];
+    await createClient(hang, { sleep: async (ms) => { sleeps.push(ms); } })
+      .generateStructured(base({ timeoutMs: 10 })).catch(() => {});
+    expect(sleeps).toEqual([1000]);
+  });
+
+  it("does not sleep when not retrying", async () => {
+    const sleeps: number[] = [];
+    const c = createClient(createFakeTransport(() => { throw new LlmError("bad_request", "x"); }), {
+      sleep: async (ms) => { sleeps.push(ms); },
+    });
+    await c.generateStructured(base()).catch(() => {});
+    const c2 = createClient(createFakeTransport(() => "bad"), { sleep: async (ms) => { sleeps.push(ms); } });
+    await c2.generateStructured(base({ retries: 0 })).catch(() => {});
+    expect(sleeps).toEqual([]);
+  });
+
+  it("aborts during the retry delay without another attempt", async () => {
+    const ctrl = new AbortController();
+    let calls = 0;
+    const c = createClient(createFakeTransport(() => { calls++; return "bad"; }), {
+      sleep: () => new Promise(() => {}),
+    });
+    const p = c.generateStructured(base({ signal: ctrl.signal })).catch((x) => x);
+    await new Promise((r) => setTimeout(r, 10));
+    ctrl.abort();
+    const e = await p;
+    expect(e.kind).toBe("aborted");
+    expect(calls).toBe(1);
+    expect(e.attempts).toHaveLength(1);
+  });
+
+  it("aborts mid-flight with one attempt", async () => {
+    const ctrl = new AbortController();
+    const never: Transport = () => new Promise(() => {});
+    const c = createClient(never, { sleep });
+    const p = c.generateStructured(base({ signal: ctrl.signal, timeoutMs: 5000 })).catch((x) => x);
+    setTimeout(() => ctrl.abort(), 10);
+    const e = await p;
+    expect(e.kind).toBe("aborted");
+    expect(e.attempts).toHaveLength(1);
+  });
 });

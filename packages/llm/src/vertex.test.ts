@@ -19,6 +19,7 @@ const req: GenerateRequest<unknown> = {
   maxOutputTokens: 300, timeoutMs: 1000,
 };
 const schema = { type: "object" };
+const withDollar = { $schema: "https://json-schema.org/draft/2020-12/schema", type: "object" };
 
 beforeEach(() => { generateContent.mockReset(); ctor.mockReset(); });
 
@@ -43,6 +44,13 @@ describe("vertex transport", () => {
       text: '{"a":1}',
       usage: { model: "gemini-3.5-flash-lite", inputTokens: 10, cachedInputTokens: 4, outputTokens: 7 },
     });
+  });
+
+  it("strips $schema from the schema it sends", async () => {
+    generateContent.mockResolvedValue({ text: "{}" });
+    const t = createVertexTransport({ project: "p", location: "l" });
+    await t(req, withDollar, new AbortController().signal);
+    expect(generateContent.mock.calls[0]![0].config.responseJsonSchema).toEqual({ type: "object" });
   });
 
   it("maps quota 429 to quota_exhausted", async () => {

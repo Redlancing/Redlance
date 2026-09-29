@@ -27,7 +27,9 @@ function mapError(e: unknown): LlmError {
 
 export function createVertexTransport(cfg: { project: string; location: string }): Transport {
   const ai = new GoogleGenAI({ vertexai: true, project: cfg.project, location: cfg.location });
-  return async (req, jsonSchema, signal) => {
+  return async (req, rawSchema, signal) => {
+    // Vertex may reject the top-level $schema key that zod adds.
+    const { $schema: _omit, ...jsonSchema } = (rawSchema ?? {}) as Record<string, unknown>;
     try {
       const res = await ai.models.generateContent({
         model: req.model,
