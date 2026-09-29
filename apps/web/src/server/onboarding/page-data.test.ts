@@ -25,6 +25,7 @@ const state = (
   resumeAt,
   onboardedAt: null,
   trialEndsAt: null,
+  imports: { resume: null, github: null },
 });
 
 describe("stepInit", () => {
