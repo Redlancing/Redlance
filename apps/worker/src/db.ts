@@ -32,7 +32,7 @@ export async function createPgListener(
 
   const connect = async () => {
     if (closed) return;
-    const c = new pg.Client({ connectionString: url });
+    const c = new pg.Client({ connectionString: url, keepAlive: true });
     client = c;
     let failed = false;
     const fail = (err: Error) => {

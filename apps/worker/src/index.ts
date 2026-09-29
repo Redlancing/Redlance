@@ -38,7 +38,10 @@ async function main() {
     shuttingDown = true;
     log.info({ signal }, "worker stopping");
     await runner.stop();
-    await pool.end().catch(() => {});
+    await Promise.race([
+      pool.end().catch(() => {}),
+      new Promise((r) => setTimeout(r, 5000)),
+    ]);
     process.exit(0);
   };
   process.on("SIGTERM", () => void shutdown("SIGTERM"));

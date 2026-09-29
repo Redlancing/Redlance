@@ -2,6 +2,7 @@ import {
   claimNextImportJob,
   completeImportJob,
   failImportJob,
+  pgErrorCode,
   requeueStaleImportJobs,
   setImportStage,
   type Database,
@@ -61,22 +62,26 @@ export function createRunner(opts: RunnerOptions) {
       }
       const ac = new AbortController();
       let timer: NodeJS.Timeout | undefined;
-      const timeout = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => {
-          ac.abort();
-          reject(new JobError("TIMEOUT", true, "job timed out"));
-        }, jobTimeoutMs);
-      });
-      const work = handler(job, {
-        db,
-        log: log.child({ jobId: job.id }),
-        env,
-        llm,
-        setStage: (stage) => setImportStage(db, job.id, job.attempts, stage),
-        signal: ac.signal,
-      });
-      work.catch(() => {}); // a late rejection after timeout must not be unhandled
       try {
+        const timeout = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            ac.abort();
+            reject(new JobError("TIMEOUT", true, "job timed out"));
+          }, jobTimeoutMs);
+        });
+        timeout.catch(() => {}); // always has a handler, even if the handler throws first
+        const work = Promise.resolve().then(() =>
+          handler(job, {
+            db,
+            log: log.child({ jobId: job.id }),
+            env,
+            llm,
+            setStage: (stage) =>
+              setImportStage(db, job.id, job.attempts, stage),
+            signal: ac.signal,
+          }),
+        );
+        work.catch(() => {}); // a late rejection after timeout must not be unhandled
         const outcome = await Promise.race([work, timeout]);
         const owned = await completeImportJob(db, job.id, job.attempts, outcome);
         if (!owned) {
@@ -90,6 +95,20 @@ export function createRunner(opts: RunnerOptions) {
       const je =
         err instanceof JobError ? err : new JobError("INTERNAL", true);
       errorCode = je.code;
+      if (!(err instanceof JobError)) {
+        // Never log err.message: it may contain resume text. Frames only.
+        const e = err instanceof Error ? err : undefined;
+        log.error(
+          {
+            jobId: job.id,
+            kind: job.kind,
+            errName: e?.name ?? typeof err,
+            pgCode: pgErrorCode(err),
+            stack: e?.stack?.split("\n").filter((l) => /^\s+at /.test(l)).join("\n"),
+          },
+          "job failed with an unexpected error",
+        );
+      }
       try {
         status = await failImportJob(db, job.id, job.attempts, {
           errorCode: je.code,
@@ -97,7 +116,10 @@ export function createRunner(opts: RunnerOptions) {
         });
       } catch (dbErr) {
         status = "unrecorded";
-        log.error({ jobId: job.id, err: (dbErr as Error).message }, "could not record job failure");
+        log.error(
+          { jobId: job.id, errName: (dbErr as Error)?.name, pgCode: pgErrorCode(dbErr) },
+          "could not record job failure",
+        );
       }
     } finally {
       log.info(
@@ -167,11 +189,14 @@ export function createRunner(opts: RunnerOptions) {
     async start() {
       if (started) return;
       started = true;
-      listener = await opts.listen();
-      listener.onNotify(() => void pump());
+      const l = await opts.listen();
+      listener = l;
+      if (stopping) return void (await l.close());
+      l.onNotify(() => void pump());
       pollTimer = setInterval(() => void pump(), pollMs);
       sweepTimer = setInterval(() => void sweep(), sweepMs);
       await sweep();
+      if (stopping) return;
       await pump();
     },
     async stop(graceMs = 30_000) {

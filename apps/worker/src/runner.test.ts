@@ -190,6 +190,70 @@ describe("runner", () => {
     await runner.stop();
   });
 
+  it("survives a synchronous handler throw without an unhandled rejection", async () => {
+    const seen: unknown[] = [];
+    const spy = (e: unknown) => seen.push(e);
+    process.on("unhandledRejection", spy);
+    try {
+      const { runner } = make(
+        {
+          github: (() => {
+            throw new Error("sync");
+          }) as unknown as JobHandler,
+        },
+        { jobTimeoutMs: 50 },
+      );
+      const id = await enqueue(await newUser());
+      await db.update(importJobs).set({ attempts: 2 }).where(eq(importJobs.id, id));
+      await runner.start();
+      await runner.idle();
+      await sleep(150);
+      const r = await row(id);
+      expect(r.status).toBe("failed");
+      expect(r.errorCode).toBe("INTERNAL");
+      expect(seen).toEqual([]);
+      await runner.stop();
+    } finally {
+      process.off("unhandledRejection", spy);
+    }
+  });
+
+  it("logs unexpected errors as name + stack frames, never the message", async () => {
+    const calls: unknown[][] = [];
+    const stub: any = {
+      info: (...a: unknown[]) => calls.push(a),
+      warn: (...a: unknown[]) => calls.push(a),
+      error: (...a: unknown[]) => calls.push(a),
+      child: () => stub,
+    };
+    const { runner } = make(
+      {
+        github: async () => {
+          throw new TypeError("secret resume text");
+        },
+      },
+      { log: stub },
+    );
+    await enqueue(await newUser());
+    await runner.start();
+    await runner.idle();
+    await runner.stop();
+    const errLog = calls.find(
+      (c) => (c[0] as any)?.errName === "TypeError",
+    )!;
+    expect(errLog).toBeDefined();
+    expect((errLog[0] as any).stack).toMatch(/\bat /);
+    expect(JSON.stringify(calls)).not.toContain("secret resume text");
+  });
+
+  it("stop() during start leaves no timers", async () => {
+    const { runner } = make({ github: ok });
+    const starting = runner.start();
+    await runner.stop();
+    await starting;
+    await runner.idle();
+  });
+
   it("fails an unknown kind as UNSUPPORTED_JOB", async () => {
     const { runner } = make({});
     const id = await enqueue(await newUser(), "resume");
