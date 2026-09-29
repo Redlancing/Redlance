@@ -5,6 +5,7 @@ import {
   LIMITS,
   SKILL_BY_ID,
   findSkill,
+  isUsableSkillName,
   normalizeSkillName,
   searchSkills,
   skillsForCategories,
@@ -60,7 +61,7 @@ export function SkillsStep({
   const exact = found && !found.retired ? found : undefined;
   const customName = query.trim();
   const canAddCustom =
-    customName.length > 0 &&
+    isUsableSkillName(customName) &&
     customName.length <= LIMITS.customSkillName &&
     !exact &&
     !v.customSkills.some(

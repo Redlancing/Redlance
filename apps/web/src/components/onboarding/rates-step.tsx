@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { selectClass } from "./basics-step";
 import { Field, FieldGroup, controlProps, errorId, hintId } from "./field";
+import { parseRateText, rateTextToShow } from "./rate-text";
 import { RestoreBanner, StepActions } from "./step-actions";
 import { StepHeader } from "./step-header";
 import { TagInput } from "./tag-input";
@@ -25,12 +26,7 @@ export function RatesStep({ init }: { init: StepFormInit<"rates"> }) {
     v.minRate === null ? "" : String(v.minRate),
   );
   // Show the typed text only while it still means the form's number (a restore or discard changes it).
-  const rateText =
-    (typed === "" ? null : Number(typed)) === v.minRate
-      ? typed
-      : v.minRate === null
-        ? ""
-        : String(v.minRate);
+  const rateText = rateTextToShow(typed, v.minRate);
   const rateError = form.errorFor("minRate") ?? form.errorFor("currency");
 
   return (
@@ -57,7 +53,7 @@ export function RatesStep({ init }: { init: StepFormInit<"rates"> }) {
                 const text = e.target.value;
                 if (!/^\d*\.?\d*$/.test(text)) return; // digits and one dot only
                 setTyped(text);
-                form.update({ minRate: text === "" ? null : Number(text) });
+                form.update({ minRate: parseRateText(text) });
               }}
               className="h-11 flex-1 text-base md:text-sm"
             />

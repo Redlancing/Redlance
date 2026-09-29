@@ -177,8 +177,13 @@ const skillEntry = z.strictObject({
   level: z.enum(SKILL_LEVELS),
   source,
 });
+/** A custom skill name must show something: at least one letter or digit (no "\u200b" or "--"). */
+export const isUsableSkillName = (name: string) => /[\p{L}\p{N}]/u.test(name);
+
 const customSkillEntry = z.strictObject({
-  name: text(LIMITS.customSkillName).min(1, "Name the skill."),
+  name: text(LIMITS.customSkillName)
+    .min(1, "Name the skill.")
+    .refine(isUsableSkillName, "Use letters or numbers."),
   level: z.enum(SKILL_LEVELS),
   source,
 });

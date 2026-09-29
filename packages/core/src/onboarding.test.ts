@@ -3,6 +3,7 @@ import {
   STEP_SCHEMAS,
   canOpen,
   emptyDraft,
+  isUsableSkillName,
   isValidTimeZone,
   nextPage,
   parseGithubUsername,
@@ -154,6 +155,27 @@ describe("skills", () => {
       })),
     };
     expect(STEP_SCHEMAS.skills.draft.safeParse(thirtyOne).success).toBe(false);
+  });
+
+  it("rejects custom skill names without a letter or digit", () => {
+    const invisible = STEP_SCHEMAS.skills.draft.safeParse({
+      customSkills: [{ name: "\u200b", level: "secondary" }],
+    });
+    expect(invisible.success).toBe(false);
+    expect(invisible.error?.issues[0]?.message).toBe("Use letters or numbers.");
+    expect(
+      STEP_SCHEMAS.skills.draft.safeParse({
+        customSkills: [{ name: "--", level: "secondary" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      STEP_SCHEMAS.skills.draft.safeParse({
+        customSkills: [{ name: "C#", level: "secondary" }],
+      }).success,
+    ).toBe(true);
+    expect(isUsableSkillName("\u200b")).toBe(false);
+    expect(isUsableSkillName(" Figma ")).toBe(true);
+    expect(isUsableSkillName("日本語")).toBe(true);
   });
 });
 
