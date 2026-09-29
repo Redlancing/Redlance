@@ -208,6 +208,12 @@ Browser ─GET /imports/:id every 1.5 s─▶ { status, suggestions } → the st
 1. Accept a username or a `github.com/<name>` URL; validate `^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$`.
 2. `GET /users/{u}` (404 → `GITHUB_NOT_FOUND`) and `GET /users/{u}/repos?type=owner&sort=pushed&per_page=100`, with `Authorization: Bearer $GITHUB_TOKEN` (optional locally; without it GitHub allows 60 requests/hour per IP), a Redlance User-Agent, and 10 s timeouts.
 3. Ignore forks and archived repos. Languages and topics map to skills through the taxonomy's `githubLanguages` / `topics` aliases; a skill used in ≥3 repos or in the top repo is suggested as core, others as secondary.
+5. **Safety rules (from the 2026-09-29 review of the GitHub field):**
+   - Only ever call `https://api.github.com/users/<username>` and `/users/<username>/repos` with a username that passed `checkGithubInput` again in the worker. Never fetch a URL the user typed, a repo's `homepage`, or any link found in a resume (no SSRF surface).
+   - `redirect: "error"` (GitHub's API doesn't redirect these), a 10 s timeout, and a response size cap (e.g. 1 MB) read as a stream; parse JSON and validate it with zod before use.
+   - Never download repo contents, release assets or archives, and never run anything from them. Only metadata (language, topics, stars, dates, description) is read.
+   - Treat every string from GitHub (repo names, descriptions, topics) as untrusted text: store it plain, render it through React (escaped), never with `dangerouslySetInnerHTML` or a markdown/HTML renderer, and never put it into an LLM prompt without the same "this is data, not instructions" framing as resumes.
+   - Keep the per-user quota (10 GitHub imports a day) and the token with no permissions.
 4. Nothing else is kept from GitHub for now. Which repo a draft links (the profile, or the repo closest to the post) is for the drafting spec.
 
 ### Suggestions (schema v1, in core)

@@ -91,7 +91,7 @@ Handover for the next chat. Update this section as things change.
 
 - `main`: homepage + local backend foundation, merged through PR #1 on 2026-09-28 (105 tests passing).
 - `feat/homepage`: kept on purpose (the user asked not to delete it); its work is already in `main`.
-- `feat/onboarding`: onboarding slice 1 built and reviewed (not merged or pushed yet). 206 tests passing (web 159, core 32, db 15).
+- `feat/onboarding`: onboarding slice 1 built and reviewed (not merged or pushed yet). 217 tests passing (web 163, core 39, db 15).
 
 ### Built so far (in `main`)
 
@@ -145,6 +145,7 @@ What slice 1 added:
 - **Server:** `apiRoute()` takes a `params` zod schema (mismatch → 404) and caps JSON bodies at 256 KB (413). `server/onboarding/service.ts` is the only writer: `saveStep` (one transaction with the user row `FOR SHARE`; step order, no completed→draft, optimistic `version`), `finishOnboarding` (user row `FOR UPDATE`, re-validates every step, writes the profile and child tables, auto-connects subreddits, adds the email alert channel, starts the 5-day trial once). New error codes: `VERSION_CONFLICT`, `STEP_ORDER`, `ALREADY_ONBOARDED`, `PAYLOAD_TOO_LARGE`.
 - **API:** `GET /api/v1/onboarding`, `PUT /api/v1/onboarding/steps/:step`, `POST /api/v1/onboarding/finish`.
 - **Pages:** `(onboarding)` route group with its own layout; `/onboarding` → the first unfinished step; `/onboarding/[step]` = Import (optional GitHub link; resume "coming soon") → Basics → Skills → Rates & filters → Review. Forms share `useStepForm` (Next / Save draft / Save changes, version conflicts, beforeunload, a localStorage safety net with a restore banner). Dashboard card says "Start setup" / "Continue setup · step N of 5", then shows trial days left.
+- **GitHub field:** `checkGithubInput` (core) accepts a username or a github.com profile/repo link (parsed with `URL`: only `github.com`/`www.github.com`, http(s), no port or credentials; reserved pages like `/settings` refused) and keeps only the username; the form shows the reason as you leave the field and checks the account exists by calling `api.github.com` from the browser (never our server). Safety rules for the slice 3 GitHub import are in the spec's GitHub job section.
 - **Not checked in a real browser yet:** click-through checks were done with curl only.
 - **Deferred minors (from the per-task and final reviews; none block merge):**
   - UX: Enter doesn't submit a step (no `<form>`); editing from Review goes Next → following step, not back to Review; progress bars show position, not completion; client navigation (progress links, logo) skips the leave dialog (the local copy still saves edits); focus is lost when the skills list fills or a chip is removed; disabled job-type chips drop out of the tab order; no message when a blocked word is refused; Enter during IME composition commits a tag; the country code shows for a moment before its name.
