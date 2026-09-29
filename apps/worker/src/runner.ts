@@ -1,0 +1,203 @@
+import {
+  claimNextImportJob,
+  completeImportJob,
+  failImportJob,
+  requeueStaleImportJobs,
+  setImportStage,
+  type Database,
+  type ImportJob,
+  type ImportKind,
+} from "@redlance/db";
+import type { LlmClient } from "@redlance/llm";
+import type { WorkerEnv } from "./env";
+import { JobError, type JobHandler } from "./jobs/types";
+import type { Logger } from "./logger";
+
+export type RunnerOptions = {
+  db: Database;
+  listen: () => Promise<{
+    onNotify(cb: () => void): void;
+    close(): Promise<void>;
+  }>;
+  handlers: Partial<Record<ImportKind, JobHandler>>;
+  env: WorkerEnv;
+  log: Logger;
+  llm: LlmClient;
+  concurrency?: number;
+  pollMs?: number;
+  sweepMs?: number;
+  jobTimeoutMs?: number;
+};
+
+export function createRunner(opts: RunnerOptions) {
+  const { db, handlers, env, log, llm } = opts;
+  const concurrency = opts.concurrency ?? env.WORKER_CONCURRENCY;
+  const pollMs = opts.pollMs ?? 5000;
+  const sweepMs = opts.sweepMs ?? 60_000;
+  const jobTimeoutMs = opts.jobTimeoutMs ?? 90_000;
+
+  const running = new Set<Promise<void>>();
+  let listener: Awaited<ReturnType<RunnerOptions["listen"]>> | null = null;
+  let pollTimer: NodeJS.Timeout | null = null;
+  let sweepTimer: NodeJS.Timeout | null = null;
+  let stopping = false;
+  let started = false;
+  let pumping: Promise<void> | null = null;
+  let pumpAgain = false;
+
+  async function runJob(job: ImportJob): Promise<void> {
+    const started = Date.now();
+    const handler = handlers[job.kind];
+    let status = "done";
+    let errorCode: string | null = null;
+    try {
+      if (!handler) {
+        errorCode = "UNSUPPORTED_JOB";
+        status = await failImportJob(db, job.id, {
+          errorCode,
+          retryable: false,
+        });
+        return;
+      }
+      const ac = new AbortController();
+      let timer: NodeJS.Timeout | undefined;
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          ac.abort();
+          reject(new JobError("TIMEOUT", true, "job timed out"));
+        }, jobTimeoutMs);
+      });
+      const work = handler(job, {
+        db,
+        log: log.child({ jobId: job.id }),
+        env,
+        llm,
+        setStage: (stage) => setImportStage(db, job.id, stage),
+        signal: ac.signal,
+      });
+      work.catch(() => {}); // a late rejection after timeout must not be unhandled
+      try {
+        const outcome = await Promise.race([work, timeout]);
+        await completeImportJob(db, job.id, outcome);
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch (err) {
+      const je =
+        err instanceof JobError ? err : new JobError("INTERNAL", true);
+      errorCode = je.code;
+      try {
+        status = await failImportJob(db, job.id, {
+          errorCode: je.code,
+          retryable: je.retryable,
+        });
+      } catch (dbErr) {
+        status = "unrecorded";
+        log.error({ jobId: job.id, err: (dbErr as Error).message }, "could not record job failure");
+      }
+    } finally {
+      log.info(
+        {
+          jobId: job.id,
+          kind: job.kind,
+          status,
+          attempts: job.attempts,
+          durationMs: Date.now() - started,
+          errorCode,
+        },
+        "job finished",
+      );
+    }
+  }
+
+  async function pumpOnce(): Promise<void> {
+    while (!stopping && running.size < concurrency) {
+      let job: ImportJob | null;
+      try {
+        job = await claimNextImportJob(db);
+      } catch (err) {
+        log.error({ err: (err as Error).message }, "claim failed");
+        return;
+      }
+      if (!job) return;
+      const p: Promise<void> = runJob(job).finally(() => {
+        running.delete(p);
+        void pump(); // a slot freed up
+      });
+      running.add(p);
+    }
+  }
+
+  function pump(): Promise<void> {
+    if (stopping) return Promise.resolve();
+    if (pumping) {
+      pumpAgain = true;
+      return pumping;
+    }
+    pumping = (async () => {
+      try {
+        do {
+          pumpAgain = false;
+          await pumpOnce();
+        } while (pumpAgain && !stopping);
+      } finally {
+        pumping = null;
+      }
+    })();
+    return pumping;
+  }
+
+  async function sweep() {
+    try {
+      const n = await requeueStaleImportJobs(db);
+      if (n > 0) {
+        log.warn({ count: n }, "re-queued stale jobs");
+        void pump();
+      }
+    } catch (err) {
+      log.error({ err: (err as Error).message }, "stale sweep failed");
+    }
+  }
+
+  return {
+    async start() {
+      if (started) return;
+      started = true;
+      listener = await opts.listen();
+      listener.onNotify(() => void pump());
+      pollTimer = setInterval(() => void pump(), pollMs);
+      sweepTimer = setInterval(() => void sweep(), sweepMs);
+      await sweep();
+      await pump();
+    },
+    async stop(graceMs = 30_000) {
+      stopping = true;
+      if (pollTimer) clearInterval(pollTimer);
+      if (sweepTimer) clearInterval(sweepTimer);
+      if (pumping) await pumping.catch(() => {});
+      let graceTimer: NodeJS.Timeout | undefined;
+      const grace = new Promise<void>((resolve) => {
+        graceTimer = setTimeout(resolve, graceMs);
+      });
+      await Promise.race([
+        (async () => {
+          while (running.size > 0) await Promise.allSettled([...running]);
+        })(),
+        grace,
+      ]);
+      clearTimeout(graceTimer);
+      if (running.size > 0) {
+        log.warn({ running: running.size }, "stopping with jobs still running");
+      }
+      await listener?.close();
+    },
+    /** Resolves once nothing is running or being claimed (used by tests). */
+    async idle() {
+      for (;;) {
+        if (pumping) await pumping.catch(() => {});
+        else if (running.size > 0) await Promise.allSettled([...running]);
+        else return;
+      }
+    },
+  };
+}
