@@ -1,6 +1,6 @@
 import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import { makeDocx, makePdf } from "../../test/fixtures";
+import { makeDocx, makeDocxWithDescriptors, makePdf } from "../../test/fixtures";
 import { ResumeError } from "./errors";
 import { MAX_PDF_PAGES, checkDocxZip, extractText, extractTextInline } from "./extract";
 
@@ -99,6 +99,53 @@ describe("extractText", () => {
     const doc = cds.find((c) => c.name === "word/document.xml")!;
     const other = cds.find((c) => c.name !== "word/document.xml")!;
     v.setUint32(doc.at + 42, v.getUint32(other.at + 42, true), true);
+    expect(() => checkDocxZip(zip)).toThrow(ResumeError);
+  });
+
+  it("extracts text through the rebuilt zip, including data-descriptor DOCX", async () => {
+    expect(await extractTextInline(makeDocx(["Plain text"]), "docx")).toContain("Plain text");
+    expect(
+      await extractTextInline(makeDocxWithDescriptors(["Descriptor text"]), "docx"),
+    ).toContain("Descriptor text");
+  });
+
+  // Builds a zip with a real document.xml and an 11 MB bomb stored under another name.
+  function bombZip() {
+    const zip = zipSync({
+      "word/document.xml": strToU8("<w:document/>"),
+      "word/document.xmX": new Uint8Array(11 * 1024 * 1024),
+    });
+    const v = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+    let eocd = -1;
+    for (let i = zip.length - 22; i >= 0; i--)
+      if (v.getUint32(i, true) === 0x06054b50) {
+        eocd = i;
+        break;
+      }
+    return { zip, v, eocd };
+  }
+
+  it("rejects an extra central-directory record beyond the announced count", () => {
+    const { zip, v, eocd } = bombZip();
+    const cdOff = v.getUint32(eocd + 16, true);
+    const cd = zip.subarray(cdOff, eocd);
+    // last record = the bomb; duplicate it under the real name
+    const recs: number[] = [];
+    for (let i = 0; i + 4 <= cd.length; i++)
+      if (new DataView(cd.buffer, cd.byteOffset).getUint32(i, true) === 0x02014b50) recs.push(i);
+    const extra = cd.slice(recs[recs.length - 1]);
+    extra.set(strToU8("word/document.xml"), 46);
+    const out = new Uint8Array(zip.length + extra.length);
+    out.set(zip.subarray(0, eocd));
+    out.set(extra, eocd);
+    out.set(zip.subarray(eocd), eocd + extra.length);
+    expect(zip.length).toBeLessThan(100_000);
+    expect(() => checkDocxZip(out)).toThrow(ResumeError);
+  });
+
+  it("rejects an understated central directory size", () => {
+    const { zip, v, eocd } = bombZip();
+    v.setUint32(eocd + 12, v.getUint32(eocd + 12, true) - 10, true);
     expect(() => checkDocxZip(zip)).toThrow(ResumeError);
   });
 

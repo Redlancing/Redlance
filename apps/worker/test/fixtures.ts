@@ -1,4 +1,4 @@
-import { zipSync, strToU8 } from "fflate";
+import { deflateSync, strToU8, zipSync } from "fflate";
 
 /** Builds a tiny valid PDF with one line of text per page. */
 export function makePdf(pages: string[]): Uint8Array {
@@ -49,4 +49,41 @@ export function makeDocx(lines: string[]): Uint8Array {
     "_rels/.rels": strToU8(RELS),
     "word/document.xml": strToU8(doc),
   });
+}
+
+/** A DOCX whose entries use data descriptors (bit 3), like Google Docs or LibreOffice output. */
+export function makeDocxWithDescriptors(lines: string[]): Uint8Array {
+  const body = lines
+    .map((l) => `<w:p><w:r><w:t>${xmlEsc(l)}</w:t></w:r></w:p>`)
+    .join("");
+  const doc = `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`;
+  const entries: [string, Uint8Array][] = [
+    ["[Content_Types].xml", strToU8(CONTENT_TYPES)],
+    ["_rels/.rels", strToU8(RELS)],
+    ["word/document.xml", strToU8(doc)],
+  ];
+  const parts: Uint8Array[] = [];
+  const central: Uint8Array[] = [];
+  let offset = 0;
+  const u16 = (n: number) => new Uint8Array([n & 255, (n >> 8) & 255]);
+  const u32 = (n: number) => new Uint8Array([n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255]);
+  const cat = (...a: Uint8Array[]) => {
+    const out = new Uint8Array(a.reduce((s, x) => s + x.length, 0));
+    let at = 0;
+    for (const x of a) {
+      out.set(x, at);
+      at += x.length;
+    }
+    return out;
+  };
+  for (const [name, raw] of entries) {
+    const data = deflateSync(raw);
+    const n = strToU8(name);
+    const local = cat(u32(0x04034b50), u16(20), u16(8), u16(8), u16(0), u16(0x21), u32(0), u32(0), u32(0), u16(n.length), u16(0), n, data, u32(0x08074b50), u32(0), u32(data.length), u32(raw.length));
+    central.push(cat(u32(0x02014b50), u16(20), u16(20), u16(8), u16(8), u16(0), u16(0x21), u32(0), u32(data.length), u32(raw.length), u16(n.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset), n));
+    parts.push(local);
+    offset += local.length;
+  }
+  const cd = cat(...central);
+  return cat(...parts, cd, u32(0x06054b50), u16(0), u16(0), u16(entries.length), u16(entries.length), u32(cd.length), u32(offset), u16(0));
 }

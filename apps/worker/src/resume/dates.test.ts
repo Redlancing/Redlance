@@ -41,4 +41,9 @@ describe("yearsOfExperience", () => {
     ).toBe(3);
     expect(yearsOfExperience("B.Tech, IIT 2018 - 2022", NOW)).toBeNull();
   });
+  it("recognises more qualification spellings but not 360-degree", () => {
+    for (const l of ["B. Tech 2018 - 2022", "B.S. 2018 - 2022", "M.E. 2018 - 2020", "Master’s 2018 - 2020", "Degree in CS 2015 - 2019"])
+      expect(yearsOfExperience(l, NOW)).toBeNull();
+    expect(yearsOfExperience("360-degree video editor 2018 - 2020", NOW)).toBe(3);
+  });
 });

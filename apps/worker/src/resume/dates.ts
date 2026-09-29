@@ -21,11 +21,11 @@ function monthIndex(name: string | undefined, num: string | undefined) {
   return null;
 }
 
-/** Total months of work in the "Experience" text, from date ranges, rounded down to 0.5 years. */
-/** A line that describes a qualification, not a job ("Scrum Master" and employers don't count). */
+/** A line that describes a qualification, not a job ("Scrum Master", "360-degree" and employers don't count). */
 const EDUCATION_LINE =
-  /(?<![a-z])(b\.?tech|b\.?sc|bachelor(?:'s|s)?|master(?:'s|s)|master of|m\.?sc|m\.?tech|mba|ph\.?d|diploma|degree|graduated|student)(?![a-z])/i;
+  /(?<![a-z])(b\.?\s?tech|b\.?\s?sc|[bm]\.[sea]\.?|bachelor['’]?s?|master['’]?s|master of|m\.?\s?sc|m\.?\s?tech|mba|ph\.?d|diploma|associate['’]?s? degree|degree in|graduated|student)(?![a-z])/i;
 
+/** Total months of work in the "Experience" text, from date ranges, rounded down to 0.5 years. */
 export function yearsOfExperience(
   experience: string,
   now: Date = new Date(),
