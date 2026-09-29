@@ -4,7 +4,7 @@
  *
  *   npm run eval -w @redlance/worker [-- --baseline]
  *
- * Needs LLM_MODE=vertex, GOOGLE_CLOUD_PROJECT/LOCATION and Google ADC.
+ * Needs GOOGLE_CLOUD_PROJECT/LOCATION and Google ADC (or the temporary key file).
  * Not part of `npm test`. LangSmith tracing (eval only) with LANGSMITH_TRACING=true.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -166,9 +166,6 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 async function main() {
   const withBaseline = process.argv.includes("--baseline");
   const env = parseWorkerEnv(process.env);
-  if (env.LLM_MODE !== "vertex") {
-    throw new Error("The eval needs LLM_MODE=vertex (and Google ADC); the fake client proves nothing.");
-  }
   const plain = createLlmFromEnv(env);
   const traced = await maybeTrace(plain);
   const fixtures = [...loadDir(join(here, "fixtures"), false), ...loadDir(join(here, "private"), true)];

@@ -4,15 +4,25 @@ import {
   SKILL_BY_ID,
   type ResumeStepName,
 } from "@redlance/core";
-import type { GenerateRequest } from "@redlance/llm";
-import { FULL_LIST_HEADING, SHORTLIST_HEADING } from "./resume/steps/skills";
+import {
+  createClient,
+  createFakeTransport,
+  type GenerateRequest,
+  type LlmClient,
+} from "@redlance/llm";
+import {
+  FULL_LIST_HEADING,
+  SHORTLIST_HEADING,
+} from "../src/resume/steps/skills";
 
-// Deterministic answers for LLM_MODE=fake (local dev without Google credentials) and tests.
-// Built only from the request: never reads anything else.
+// Test-only: a deterministic stand-in for Gemini so tests never call Vertex.
+// Built only from the request. Nothing under src/ may import this file.
 
 const CLOSE = "</resume>";
 
-function parts(req: GenerateRequest<unknown>): { resume: string; task: string } | null {
+function parts(
+  req: GenerateRequest<unknown>,
+): { resume: string; task: string } | null {
   const open = req.prompt.indexOf("<resume>\n");
   const close = req.prompt.lastIndexOf(CLOSE);
   if (open !== 0 || close < 0) return null;
@@ -38,10 +48,14 @@ const substantial = (q: string) => q.length >= 12 || q.split(/\s+/).length >= 2;
 
 /**
  * Evidence for the first whole-word match of `word`: the trimmed line containing it
- * (plus the next line when that's too short), cut to 160 characters around the match.
+ * (plus the next line when that's too short), cut to 160 characters around the match,
+ * so it passes hasEvidence / hasSkillEvidence.
  */
 function findWord(text: string, word: string): string | null {
-  const re = new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(word)}(?![\\p{L}\\p{N}])`, "iu");
+  const re = new RegExp(
+    `(?<![\\p{L}\\p{N}])${escapeRe(word)}(?![\\p{L}\\p{N}])`,
+    "iu",
+  );
   const lines = text.split("\n").map((l) => l.trim());
   for (let i = 0; i < lines.length; i++) {
     const m = re.exec(lines[i]!);
@@ -49,7 +63,10 @@ function findWord(text: string, word: string): string | null {
     let quote = lines[i]!;
     if (!substantial(quote) && lines[i + 1]) quote = `${quote} ${lines[i + 1]}`;
     if (quote.length > MAX_QUOTE) {
-      const from = Math.max(0, Math.min(m.index - 40, quote.length - MAX_QUOTE));
+      const from = Math.max(
+        0,
+        Math.min(m.index - 40, quote.length - MAX_QUOTE),
+      );
       quote = quote.slice(from, from + MAX_QUOTE).trim();
     }
     return quote;
@@ -71,19 +88,35 @@ const CODE_WORDS = [
 ];
 
 function basics(resume: string) {
-  const first = resume.split("\n").find((l) => l.trim())?.trim() ?? null;
-  return { displayName: first ? first.slice(0, 60) : null, headline: null, country: null };
+  const first =
+    resume
+      .split("\n")
+      .find((l) => l.trim())
+      ?.trim() ?? null;
+  return {
+    displayName: first ? first.slice(0, 60) : null,
+    headline: null,
+    country: null,
+  };
 }
 
 function jobTypes(resume: string) {
   for (const w of CODE_WORDS) {
     const hit = findWord(resume, w);
-    if (hit) return { categories: [{ id: "development", evidence: hit }], experienceLevel: null };
+    if (hit)
+      return {
+        categories: [{ id: "development", evidence: hit }],
+        experienceLevel: null,
+      };
   }
   for (const c of CATEGORIES) {
     for (const word of c.hint.split(/,\s*/)) {
       const hit = word.length >= 3 ? findWord(resume, word) : null;
-      if (hit) return { categories: [{ id: c.id, evidence: hit }], experienceLevel: null };
+      if (hit)
+        return {
+          categories: [{ id: c.id, evidence: hit }],
+          experienceLevel: null,
+        };
     }
   }
   return { categories: [], experienceLevel: null };
@@ -92,8 +125,12 @@ function jobTypes(resume: string) {
 function skills(resume: string, task: string) {
   const start = task.indexOf(SHORTLIST_HEADING);
   const end = task.indexOf(FULL_LIST_HEADING);
-  const block = start >= 0 ? task.slice(start + SHORTLIST_HEADING.length, end >= 0 ? end : undefined) : "";
-  const out: { id: string; level: "core" | "secondary"; evidence: string }[] = [];
+  const block =
+    start >= 0
+      ? task.slice(start + SHORTLIST_HEADING.length, end >= 0 ? end : undefined)
+      : "";
+  const out: { id: string; level: "core" | "secondary"; evidence: string }[] =
+    [];
   for (const line of block.split("\n")) {
     const id = /^(\S+) — /.exec(line.trim())?.[1];
     const skill = id ? SKILL_BY_ID.get(id) : undefined;
@@ -101,7 +138,11 @@ function skills(resume: string, task: string) {
     for (const label of [skill.name, ...skill.aliases]) {
       const hit = label.length >= 3 ? findWord(resume, label) : null;
       if (hit) {
-        out.push({ id: skill.id, level: out.length < 3 ? "core" : "secondary", evidence: hit });
+        out.push({
+          id: skill.id,
+          level: out.length < 3 ? "core" : "secondary",
+          evidence: hit,
+        });
         break;
       }
     }
@@ -110,7 +151,8 @@ function skills(resume: string, task: string) {
   return { skills: out, customSkills: [] };
 }
 
-export function fakeResumeResponder(req: GenerateRequest<unknown>): unknown {
+/** Deterministic, schema-valid answers for the three resume steps. */
+export function stubResumeResponder(req: GenerateRequest<unknown>): unknown {
   const p = parts(req);
   switch (stepOf(req)) {
     case "basics":
@@ -122,4 +164,9 @@ export function fakeResumeResponder(req: GenerateRequest<unknown>): unknown {
     default:
       return {};
   }
+}
+
+/** An LlmClient that answers resume steps with the stub (no network). */
+export function stubLlm(): LlmClient {
+  return createClient(createFakeTransport(stubResumeResponder));
 }

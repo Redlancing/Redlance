@@ -6,6 +6,8 @@ export type Usage = {
   inputTokens: number;
   cachedInputTokens: number;
   outputTokens: number;
+  /** The thinking share of outputTokens, when the provider reports it. */
+  thoughtTokens?: number;
   costMicros: number;
   latencyMs: number;
 };

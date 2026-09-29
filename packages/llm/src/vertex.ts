@@ -112,6 +112,7 @@ export function createVertexTransport(cfg: {
           cachedInputTokens: u?.cachedContentTokenCount ?? 0,
           outputTokens:
             (u?.candidatesTokenCount ?? 0) + (u?.thoughtsTokenCount ?? 0),
+          thoughtTokens: u?.thoughtsTokenCount ?? 0,
         },
       };
     } catch (e) {

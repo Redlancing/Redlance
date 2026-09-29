@@ -34,7 +34,7 @@ Per resume and in total:
 ## Running
 
 1. `gcloud auth application-default login`
-2. In `apps/worker/.env.local` set `LLM_MODE=vertex`, `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`.
+2. In `apps/worker/.env.local` set `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`.
 3. From the repo root: `npm run eval -w @redlance/worker` (add `-- --baseline` for the comparison).
 
 ## Private resumes

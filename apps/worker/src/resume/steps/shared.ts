@@ -28,7 +28,7 @@ export const SYSTEM =
   "Answer only with JSON matching the schema. " +
   "If something isn't stated, use null or an empty list — never guess.";
 
-/** The marker a step's instructions start with (the fake responder reads it). */
+/** The marker a step's instructions start with (the test stub reads it). */
 export const taskMarker = (name: ResumeStepName) => `Task: ${name}`;
 
 /**

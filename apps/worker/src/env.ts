@@ -5,9 +5,8 @@ export type WorkerEnv = {
   APP_ENV: "local" | "test" | "staging" | "production";
   DATABASE_URL: string;
   LOG_LEVEL: string;
-  LLM_MODE: "vertex" | "fake";
-  GOOGLE_CLOUD_PROJECT?: string;
-  GOOGLE_CLOUD_LOCATION?: string;
+  GOOGLE_CLOUD_PROJECT: string;
+  GOOGLE_CLOUD_LOCATION: string;
   VERTEX_MODEL_FAST: string;
   VERTEX_MODEL_SMART: string;
   GITHUB_TOKEN?: string;
@@ -27,7 +26,6 @@ const schema = z.object({
   APP_ENV: z.enum(["local", "test", "staging", "production"]),
   DATABASE_URL: z.string().min(1),
   LOG_LEVEL: z.preprocess(empty, z.string().default("info")),
-  LLM_MODE: z.preprocess(empty, z.enum(["vertex", "fake"]).default("vertex")),
   GOOGLE_CLOUD_PROJECT: optional,
   GOOGLE_CLOUD_LOCATION: optional,
   VERTEX_MODEL_FAST: z.preprocess(
@@ -62,19 +60,11 @@ export function parseWorkerEnv(
     }
   } else {
     const env = parsed.data;
-    if (
-      env.LLM_MODE === "fake" &&
-      env.APP_ENV !== "local" &&
-      env.APP_ENV !== "test"
-    ) {
-      problems.push("LLM_MODE=fake is only allowed with APP_ENV=local or test");
-    }
-    if (env.LLM_MODE === "vertex") {
-      if (!env.GOOGLE_CLOUD_PROJECT)
-        problems.push("GOOGLE_CLOUD_PROJECT is required when LLM_MODE=vertex");
-      if (!env.GOOGLE_CLOUD_LOCATION)
-        problems.push("GOOGLE_CLOUD_LOCATION is required when LLM_MODE=vertex");
-    }
+    // Resume imports always use Gemini on Vertex AI (tests stub the client instead).
+    if (!env.GOOGLE_CLOUD_PROJECT)
+      problems.push("GOOGLE_CLOUD_PROJECT is required (Vertex AI)");
+    if (!env.GOOGLE_CLOUD_LOCATION)
+      problems.push("GOOGLE_CLOUD_LOCATION is required (Vertex AI)");
     if (
       !env.GITHUB_TOKEN &&
       env.APP_ENV !== "local" &&

@@ -336,8 +336,8 @@ Web: no new variables. Worker (`apps/worker/.env.local`, from `.env.example`):
 | Variable | Notes |
 |---|---|
 | `APP_ENV`, `DATABASE_URL`, `LOG_LEVEL` | as in web |
-| `LLM_MODE` | `vertex` or `fake`. `fake` only allowed with `APP_ENV=local` |
-| `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | required when `LLM_MODE=vertex`. Use **`global`**: on 2026-09-29 the Gemini 3.x models (`gemini-3.5-flash-lite`, `gemini-3.8-flash`) answered 404 in `us-central1` and worked in `global` |
+| (no `LLM_MODE`) | removed 2026-09-29: the worker always uses Vertex AI, locally too. Tests use a deterministic stub client (`apps/worker/test/stub-llm.ts`), never Vertex |
+| `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | always required. Use **`global`**: on 2026-09-29 the Gemini 3.x models (`gemini-3.5-flash-lite`, `gemini-3.8-flash`) answered 404 in `us-central1` and worked in `global` |
 | Thinking level | "off" maps to MINIMAL, but `gemini-3.8-flash` rejects MINIMAL (400); the Vertex transport falls back to LOW once per model and remembers it |
 | SDK client | `new GoogleGenAI({ vertexai: true, project, location })` — the Vertex (Google Cloud) backend. `vertexai` and the newer `enterprise` flag are the same switch; we use `vertexai`. Billing runs on the Google Cloud project, so the $300 free-trial credits apply (they don't cover the AI Studio Gemini API for accounts opened after 2026-03-02). |
 | Google credentials | Application Default Credentials: locally `gcloud auth application-default login`; on EC2, Workload Identity Federation from the AWS role (no key files), or a service-account key from AWS Secrets Manager as a fallback. The service account has only `roles/aiplatform.user`. **No AI Studio API key.** |
@@ -370,7 +370,7 @@ Onboarding adds no AWS infrastructure: the worker shares the server; Gemini runs
 - **Eval (manual, against Vertex):** the labelled resume set with accuracy, cost and latency per step; not part of `npm test`.
 - **Integration (db):** claim with `SKIP LOCKED` — two concurrent claimers never get the same job; stale sweep; `file_bytes` cleared on done and on failure; reference-data sync is idempotent.
 - **Integration (web routes):** save draft / complete / version conflict / step order; Finish writes every table, is idempotent, and starts the trial once; upload rejects big and fake files and enforces the quota; import status is private to its owner.
-- **End to end (local):** worker with `LLM_MODE=fake` processes a real sample PDF and DOCX from `apps/worker/test/fixtures`.
+- **End to end (local):** worker (Vertex credentials) processes a real sample PDF and DOCX from `apps/worker/test/fixtures`.
 
 ## Build order
 

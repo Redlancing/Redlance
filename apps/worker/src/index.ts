@@ -22,10 +22,7 @@ async function main() {
       "GITHUB_TOKEN not set; GitHub imports use the low anonymous rate limit",
     );
   }
-  if (
-    env.LLM_MODE === "vertex" &&
-    env.credentials.kind === "service-account-key"
-  ) {
+  if (env.credentials.kind === "service-account-key") {
     // Temporary testing fallback: a long-lived key. Prefer ADC / Workload Identity.
     log.warn(
       { keyFile: basename(env.credentials.path) },
@@ -75,8 +72,7 @@ async function main() {
   log.info(
     {
       appEnv: env.APP_ENV,
-      llmMode: env.LLM_MODE,
-      credentials: env.LLM_MODE === "vertex" ? env.credentials.kind : undefined,
+      credentials: env.credentials.kind,
       modelFast: env.VERTEX_MODEL_FAST,
       modelSmart: env.VERTEX_MODEL_SMART,
       concurrency: env.WORKER_CONCURRENCY,

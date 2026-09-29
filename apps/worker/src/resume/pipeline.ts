@@ -21,20 +21,18 @@ const STEPS = [basicsStep, jobTypesStep, skillsStep] as const;
 
 /**
  * The cache key stored as import_jobs.pipeline_version: everything that
- * changes the output (pipeline, prompt versions, models, LLM mode), so a
+ * changes the output (pipeline, prompt versions, models), so a
  * change to any of them misses the cache.
  */
 export function resumeCacheKey(env: {
   VERTEX_MODEL_FAST: string;
   VERTEX_MODEL_SMART: string;
-  LLM_MODE: string;
 }): string {
   return [
     PIPELINE_VERSION,
     ...STEPS.map((s) => s.version),
     env.VERTEX_MODEL_FAST,
     env.VERTEX_MODEL_SMART,
-    env.LLM_MODE,
   ].join("|");
 }
 

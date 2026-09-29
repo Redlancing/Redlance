@@ -2,7 +2,7 @@ import { LlmError } from "./errors";
 import type { GenerateRequest, Transport } from "./types";
 
 /**
- * A transport for tests and LLM_MODE=fake. `respond` returns a value (JSON-encoded
+ * A transport for tests (never calls a real model). `respond` returns a value (JSON-encoded
  * for the caller; a string is passed through as-is) or throws/returns nothing useful.
  * It may throw an LlmError. It never resolves after the signal aborts.
  */

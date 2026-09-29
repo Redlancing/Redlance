@@ -74,6 +74,7 @@ describe("vertex transport", () => {
         inputTokens: 10,
         cachedInputTokens: 4,
         outputTokens: 7,
+        thoughtTokens: 2,
       },
     });
   });
