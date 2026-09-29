@@ -1,6 +1,7 @@
 "use client";
 
 import { CURRENCIES, LIMITS, RATE_TYPES } from "@redlance/core";
+import { cn } from "cn";
 import { useId, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { selectClass } from "./basics-step";
@@ -48,6 +49,7 @@ export function RatesStep({ init }: { init: StepFormInit<"rates"> }) {
               {...controlProps("minRate", rateError, "hint")}
               aria-label="Minimum budget"
               inputMode="decimal"
+              placeholder="e.g. 25"
               value={rateText}
               onChange={(e) => {
                 const text = e.target.value;
@@ -55,7 +57,7 @@ export function RatesStep({ init }: { init: StepFormInit<"rates"> }) {
                 setTyped(text);
                 form.update({ minRate: parseRateText(text) });
               }}
-              className="h-11 flex-1 text-base md:text-sm"
+              className="h-11 min-w-0 flex-1 text-base md:text-sm"
             />
             <select
               aria-label="Currency"
@@ -69,7 +71,7 @@ export function RatesStep({ init }: { init: StepFormInit<"rates"> }) {
                   currency: (e.target.value || null) as typeof v.currency,
                 })
               }
-              className={`${selectClass} w-28`}
+              className={cn(selectClass, "w-28 shrink-0")}
             >
               {!v.currency && <option value="">Choose…</option>}
               {CURRENCIES.map((c) => (
