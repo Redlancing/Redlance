@@ -78,6 +78,50 @@ describe("vertex transport", () => {
     });
   });
 
+  it("falls back to LOW when a model rejects the MINIMAL thinking level, and remembers it", async () => {
+    // gemini-3.8-flash on Vertex answers 400 "Thinking level is unsupported: THINKING_LEVEL_MINIMAL".
+    const unsupported = Object.assign(
+      new Error(
+        '{"error":{"code":400,"message":"Thinking level is unsupported: THINKING_LEVEL_MINIMAL","status":"INVALID_ARGUMENT"}}',
+      ),
+      { status: 400 },
+    );
+    generateContent
+      .mockRejectedValueOnce(unsupported)
+      .mockResolvedValue({ text: "{}" });
+    const t = createVertexTransport({ project: "p", location: "l" });
+    const smart = { ...req, model: "gemini-3.8-flash" };
+    await expect(
+      t(smart, schema, new AbortController().signal),
+    ).resolves.toMatchObject({ text: "{}" });
+    const levels = generateContent.mock.calls.map(
+      (c) => c[0].config.thinkingConfig.thinkingLevel,
+    );
+    expect(levels).toEqual(["MINIMAL", "LOW"]);
+    // Next call for the same model goes straight to LOW; other models still use MINIMAL.
+    await t(smart, schema, new AbortController().signal);
+    await t(req, schema, new AbortController().signal);
+    expect(
+      generateContent.mock.calls
+        .slice(2)
+        .map((c) => [c[0].model, c[0].config.thinkingConfig.thinkingLevel]),
+    ).toEqual([
+      ["gemini-3.8-flash", "LOW"],
+      ["gemini-3.5-flash-lite", "MINIMAL"],
+    ]);
+  });
+
+  it("does not retry other 400s", async () => {
+    generateContent.mockRejectedValue(
+      Object.assign(new Error("bad schema"), { status: 400 }),
+    );
+    const t = createVertexTransport({ project: "p", location: "l" });
+    await expect(
+      t(req, schema, new AbortController().signal),
+    ).rejects.toMatchObject({ kind: "bad_request" });
+    expect(generateContent).toHaveBeenCalledTimes(1);
+  });
+
   it("strips $schema from the schema it sends", async () => {
     generateContent.mockResolvedValue({ text: "{}" });
     const t = createVertexTransport({ project: "p", location: "l" });

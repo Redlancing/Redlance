@@ -11,6 +11,16 @@ function statusOf(e: unknown): number | undefined {
   return undefined;
 }
 
+const UNSUPPORTED_THINKING_RE = /thinking level is unsupported/i;
+
+function isUnsupportedThinking(e: unknown): boolean {
+  const message =
+    e instanceof Error
+      ? e.message
+      : String((e as { message?: unknown })?.message ?? "");
+  return statusOf(e) === 400 && UNSUPPORTED_THINKING_RE.test(message);
+}
+
 const HARD_QUOTA_RE = /per[ _-]?day|daily|billing|quota metric .*per_day/i;
 
 function mapError(e: unknown): LlmError {
@@ -53,14 +63,22 @@ export function createVertexTransport(cfg: {
     project: cfg.project,
     location: cfg.location,
   });
+  // Some models reject the MINIMAL thinking level (e.g. gemini-3.8-flash on Vertex answers
+  // 400 "Thinking level is unsupported"). Such models get LOW instead, remembered per model.
+  const minimalUnsupported = new Set<string>();
+  const levelFor = (req: { model: string; thinking?: "off" | "low" }) =>
+    req.thinking === "low" || minimalUnsupported.has(req.model)
+      ? ThinkingLevel.LOW
+      : ThinkingLevel.MINIMAL;
+
   return async (req, rawSchema, signal) => {
     // Vertex may reject the top-level $schema key that zod adds.
     const { $schema: _omit, ...jsonSchema } = (rawSchema ?? {}) as Record<
       string,
       unknown
     >;
-    try {
-      const res = await ai.models.generateContent({
+    const call = (thinkingLevel: ThinkingLevel) =>
+      ai.models.generateContent({
         model: req.model,
         contents: [{ role: "user", parts: [{ text: req.prompt }] }],
         config: {
@@ -70,15 +88,21 @@ export function createVertexTransport(cfg: {
           temperature: req.temperature ?? 0,
           maxOutputTokens: req.maxOutputTokens,
           // Gemini 3.x models take a thinking level, not a budget.
-          thinkingConfig: {
-            thinkingLevel:
-              req.thinking === "low"
-                ? ThinkingLevel.LOW
-                : ThinkingLevel.MINIMAL,
-          },
+          thinkingConfig: { thinkingLevel },
           abortSignal: signal,
         },
       });
+    try {
+      const level = levelFor(req);
+      let res;
+      try {
+        res = await call(level);
+      } catch (e) {
+        if (level !== ThinkingLevel.MINIMAL || !isUnsupportedThinking(e))
+          throw e;
+        minimalUnsupported.add(req.model);
+        res = await call(ThinkingLevel.LOW);
+      }
       const u = res.usageMetadata;
       return {
         text: res.text ?? "",
