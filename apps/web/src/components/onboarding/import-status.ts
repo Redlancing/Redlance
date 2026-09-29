@@ -28,11 +28,34 @@ const ERROR_MESSAGES: Record<string, string> = {
   "413": "That file is over 5 MB.",
   "415": "Upload a PDF or Word (.docx) file.",
   "429": "You've reached today's import limit.",
+  // Error codes from starting an import.
+  QUOTA_EXCEEDED: "You've reached today's import limit.",
+  RATE_LIMITED: "Too many requests — try again in a moment.",
+  PAYLOAD_TOO_LARGE: "That file is over 5 MB.",
 };
 
 /** A job's error code (or an HTTP status as a string) → a plain sentence for the user. */
 export function importErrorMessage(code: string | null): string {
   return (code && ERROR_MESSAGES[code]) || GENERIC;
+}
+
+/** The sentence for a refused start (upload or GitHub): by error code first, then status. */
+export function startErrorMessage(
+  status: number,
+  code: string | null,
+  message: string,
+): string {
+  if (
+    code === "QUOTA_EXCEEDED" ||
+    code === "RATE_LIMITED" ||
+    code === "PAYLOAD_TOO_LARGE"
+  )
+    return importErrorMessage(code);
+  if (code === "UNSUPPORTED_FILE" || status === 415)
+    return importErrorMessage("415");
+  if (status === 413 || status === 429)
+    return importErrorMessage(String(status));
+  return message;
 }
 
 const RUNNING_STAGE: Record<string, string> = {
@@ -84,8 +107,8 @@ export function describeImports(
   if (!jobs.length)
     return { busy: false, message: null, tone: "info", stage: null };
 
-  const done = jobs.filter((j) => j.status === "done" && j.suggestions);
-  const failed = jobs.filter((j) => !done.includes(j));
+  const done = jobs.filter((j) => j.status === "done");
+  const failed = jobs.filter((j) => j.status === "failed");
   const failures = failed.map((j) => importErrorMessage(j.errorCode));
   if (!done.length)
     return {
@@ -95,8 +118,11 @@ export function describeImports(
       stage: "failed",
     };
 
+  // A done import with no suggestions found nothing; that's not a failure.
   const merged = mergeSuggestions(
-    done.map((j) => ({ source: j.kind, suggestions: j.suggestions! })),
+    done.flatMap((j) =>
+      j.suggestions ? [{ source: j.kind, suggestions: j.suggestions }] : [],
+    ),
   );
   const b = merged.basics;
   const filled: string[] = [];
@@ -111,7 +137,7 @@ export function describeImports(
   const sentences: string[] = [];
   if (!filled.length)
     sentences.push(
-      "We couldn't find anything to fill in. Add your details by hand on the next steps.",
+      "We couldn't find anything to fill in from that. Add your details by hand on the next steps.",
     );
   else if (partial.length)
     sentences.push(
@@ -133,3 +159,26 @@ export function describeImports(
     stage: "done",
   };
 }
+
+/** What the live region reads out: stage changes only (the progress bar carries the %). */
+export function liveAnnouncement(view: ImportView): string | null {
+  return view.stage === "uploading" ? "Uploading your resume…" : view.message;
+}
+
+/**
+ * Adds imports that are queued/running but not tracked yet (e.g. a GitHub import the worker
+ * started from a link in the resume), replacing an older job of the same kind.
+ * Returns null when there is nothing new to follow.
+ */
+export function adoptImports(
+  tracked: ImportSummary[],
+  incoming: ImportSummary[],
+): ImportSummary[] | null {
+  const ids = new Set(tracked.map((j) => j.id));
+  const fresh = incoming.filter((j) => isActive(j) && !ids.has(j.id));
+  if (!fresh.length) return null;
+  const kinds = new Set(fresh.map((j) => j.kind));
+  return [...tracked.filter((j) => !kinds.has(j.kind)), ...fresh];
+}
+
+export { isActive as isActiveImport };

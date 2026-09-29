@@ -2,7 +2,7 @@
 
 import { cn } from "cn";
 import { FileText, Upload, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 const ACCEPT = ".pdf,.docx";
@@ -36,6 +36,18 @@ export function ResumeDrop({
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
+  // A file dropped just outside the zone would otherwise make the browser open it and leave
+  // the page (and a running import) behind.
+  useEffect(() => {
+    const stop = (event: DragEvent) => event.preventDefault();
+    window.addEventListener("dragover", stop);
+    window.addEventListener("drop", stop);
+    return () => {
+      window.removeEventListener("dragover", stop);
+      window.removeEventListener("drop", stop);
+    };
+  }, []);
+
   function choose(picked: File | undefined) {
     if (!picked) return;
     const problem = checkResumeFile(picked);
@@ -48,9 +60,8 @@ export function ResumeDrop({
       <label
         htmlFor="resume"
         onDragOver={(e) => {
-          if (disabled) return;
           e.preventDefault();
-          setDragging(true);
+          if (!disabled) setDragging(true);
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => {
@@ -106,7 +117,7 @@ export function ResumeDrop({
         </div>
       )}
       {error && (
-        <p id="resume-error" className="text-sm text-danger">
+        <p id="resume-error" role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}

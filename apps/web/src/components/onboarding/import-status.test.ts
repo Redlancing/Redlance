@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ImportSummary } from "@/server/onboarding/imports";
-import { describeImports, importErrorMessage } from "./import-status";
+import {
+  adoptImports,
+  describeImports,
+  importErrorMessage,
+  liveAnnouncement,
+  startErrorMessage,
+} from "./import-status";
 
 const job = (over: Partial<ImportSummary> = {}): ImportSummary => ({
   id: "j1",
@@ -148,5 +154,82 @@ describe("importErrorMessage", () => {
 
   it("falls back to a generic message", () => {
     expect(importErrorMessage(null)).toBe(importErrorMessage("INTERNAL"));
+  });
+});
+
+describe("adoptImports", () => {
+  const resumeDone = job({
+    id: "r1",
+    kind: "resume",
+    suggestions: SUGGESTIONS,
+  });
+  const githubQueued = job({
+    id: "g1",
+    kind: "github",
+    status: "queued",
+    stage: "queued",
+  });
+
+  it("picks up a GitHub import the worker started, so the step stays busy", () => {
+    const adopted = adoptImports([resumeDone], [resumeDone, githubQueued]);
+    expect(adopted?.map((j) => j.id)).toEqual(["r1", "g1"]);
+    expect(describeImports(adopted!, null).busy).toBe(true);
+  });
+
+  it("replaces an older job of the same kind", () => {
+    const oldGithub = job({ id: "g0", kind: "github" });
+    const adopted = adoptImports([resumeDone, oldGithub], [githubQueued]);
+    expect(adopted?.map((j) => j.id)).toEqual(["r1", "g1"]);
+  });
+
+  it("changes nothing when every active import is already tracked or none are active", () => {
+    expect(adoptImports([githubQueued], [githubQueued])).toBeNull();
+    expect(adoptImports([], [resumeDone])).toBeNull();
+  });
+});
+
+describe("describeImports with a done import that found nothing", () => {
+  it("says nothing was found instead of failing", () => {
+    const view = describeImports([job({ suggestions: null })], null);
+    expect(view.tone).toBe("warning");
+    expect(view.message).toBe(
+      "We couldn't find anything to fill in from that. Add your details by hand on the next steps.",
+    );
+  });
+});
+
+describe("liveAnnouncement", () => {
+  it("keeps the upload percentage out of the live text", () => {
+    expect(liveAnnouncement(describeImports([], 45))).toBe(
+      "Uploading your resume…",
+    );
+    const view = describeImports(
+      [job({ status: "running", stage: "reading" })],
+      null,
+    );
+    expect(liveAnnouncement(view)).toBe("Reading your resume…");
+  });
+});
+
+describe("startErrorMessage", () => {
+  it("tells a daily quota apart from a burst rate limit", () => {
+    expect(startErrorMessage(429, "QUOTA_EXCEEDED", "x")).toBe(
+      "You've reached today's import limit.",
+    );
+    expect(startErrorMessage(429, "RATE_LIMITED", "x")).toBe(
+      "Too many requests — try again in a moment.",
+    );
+  });
+
+  it("maps size and type refusals and passes other messages through", () => {
+    expect(startErrorMessage(413, "PAYLOAD_TOO_LARGE", "x")).toBe(
+      "That file is over 5 MB.",
+    );
+    expect(startErrorMessage(415, "UNSUPPORTED_FILE", "x")).toBe(
+      "Upload a PDF or Word (.docx) file.",
+    );
+    expect(startErrorMessage(400, "INVALID_INPUT", "That file is empty.")).toBe(
+      "That file is empty.",
+    );
   });
 });

@@ -4,7 +4,8 @@ import { checkGithubInput, pageIndex } from "@redlance/core";
 import { cn } from "cn";
 import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -19,7 +20,12 @@ import { Input } from "@/components/ui/input";
 import type { ImportSummary } from "@/server/onboarding/imports";
 import { Field, controlProps } from "./field";
 import { lookupGithubUser, type GithubLookup } from "./github-lookup";
-import { describeImports, importErrorMessage } from "./import-status";
+import {
+  describeImports,
+  liveAnnouncement,
+  startErrorMessage,
+} from "./import-status";
+import { setImportLock } from "./import-lock";
 import { ResumeDrop } from "./resume-drop";
 import { StepActions } from "./step-actions";
 import { StepHeader } from "./step-header";
@@ -33,18 +39,6 @@ const TONE_CLASS = {
   warning: "text-foreground",
   error: "text-danger",
 } as const;
-
-/** Statuses whose sentence we own; anything else shows the server's message. */
-function startErrorMessage(
-  status: number,
-  code: string | null,
-  message: string,
-) {
-  if (status === 413 || status === 415 || status === 429)
-    return importErrorMessage(String(status));
-  if (code === "UNSUPPORTED_FILE") return importErrorMessage("415");
-  return message;
-}
 
 export function ImportStep({
   init,
@@ -87,8 +81,10 @@ export function ImportStep({
   const [starting, setStarting] = useState(false);
   const [startErrors, setStartErrors] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // "Continue without waiting": the user gave up on a stuck import and may move on.
+  const [released, setReleased] = useState(false);
 
-  const { jobs, track, clear } = useImportJobs(imports, (finished) => {
+  const { jobs, stall, track, clear } = useImportJobs(imports, (finished) => {
     // Later steps read suggestions on the server, so fetch fresh page data.
     router.refresh();
     const suggested = finished.find((j) => j.suggestions?.githubUsername)
@@ -98,7 +94,13 @@ export function ImportStep({
   });
   const view = describeImports(jobs, uploading);
   const busy = view.busy || starting;
-  const canImport = !busy && !form.pending && (!!file || !!username);
+  const locked = busy && !released;
+  const canImport =
+    !locked && !starting && !form.pending && (!!file || !!username);
+
+  // The progress bar (outside this component) stops linking to other steps while locked.
+  useEffect(() => setImportLock(locked), [locked]);
+  useEffect(() => () => setImportLock(false), []);
   const needsConfirm =
     hasSavedProfileSteps || pageIndex(init.resumeAt) > pageIndex("basics");
 
@@ -146,6 +148,7 @@ export function ImportStep({
 
   async function runImport(reset: boolean) {
     setConfirmOpen(false);
+    setReleased(false);
     setStarting(true);
     setStartErrors([]);
     try {
@@ -203,8 +206,8 @@ export function ImportStep({
         title="Let's set up your profile"
         description="Redlance matches Reddit hiring posts to your skills, so it needs to know what you do. It takes about three minutes, and you can change everything later."
       />
-      <fieldset disabled={!!form.pending || busy} className="space-y-6">
-        <ResumeDrop file={file} onFile={setFile} disabled={busy} />
+      <fieldset disabled={!!form.pending || locked} className="space-y-6">
+        <ResumeDrop file={file} onFile={setFile} disabled={locked} />
         <Field
           id="githubUsername"
           label="GitHub"
@@ -243,14 +246,22 @@ export function ImportStep({
             onClick={onImport}
             disabled={!canImport}
           >
-            {busy && (
+            {locked && (
               <LoaderCircle className="animate-spin" aria-hidden="true" />
             )}
             Import
           </Button>
         </div>
       </fieldset>
-      <div aria-live="polite" className="mt-6 space-y-2 text-sm">
+      {/* Only stage changes are announced; the progress bar carries the percentage. */}
+      <p aria-live="polite" className="sr-only">
+        {stall === "signed-out"
+          ? "Your session has ended."
+          : stall === "slow" && !released
+            ? "This is taking longer than expected."
+            : liveAnnouncement(view)}
+      </p>
+      <div className="mt-6 space-y-2 text-sm">
         {view.message && (
           <div
             className={cn(
@@ -259,7 +270,7 @@ export function ImportStep({
             )}
           >
             <p className={cn("flex items-center gap-2", TONE_CLASS[view.tone])}>
-              {view.busy && (
+              {view.busy && !stall && (
                 <LoaderCircle
                   className="size-4 shrink-0 animate-spin"
                   aria-hidden="true"
@@ -282,6 +293,34 @@ export function ImportStep({
                 />
               </div>
             )}
+            {view.busy && stall === "slow" && (
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-muted-foreground">
+                  This is taking longer than expected.
+                </p>
+                {!released && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setReleased(true)}
+                  >
+                    Continue without waiting
+                  </Button>
+                )}
+              </div>
+            )}
+            {stall === "signed-out" && (
+              <p className="mt-3 text-muted-foreground">
+                Your session has ended.{" "}
+                <Link
+                  href="/login?next=%2Fonboarding%2Fimport"
+                  className="font-medium text-foreground underline underline-offset-2"
+                >
+                  Sign in again
+                </Link>{" "}
+                to see the result.
+              </p>
+            )}
             {!view.busy && view.tone === "error" && (
               <p className="mt-1 text-muted-foreground">
                 Try another file, or continue and fill in the steps yourself.
@@ -299,14 +338,14 @@ export function ImportStep({
         form={form}
         back={null}
         nextLabel={
-          busy ||
+          locked ||
           form.value.githubUsername?.trim() ||
           jobs.some((j) => j.status === "done")
             ? "Next"
             : "Skip for now"
         }
         showDraft={false}
-        nextDisabled={busy}
+        nextDisabled={locked}
       />
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
@@ -314,7 +353,7 @@ export function ImportStep({
             <AlertDialogTitle>Replace Basics and Skills?</AlertDialogTitle>
             <AlertDialogDescription>
               This will replace what&apos;s in Basics and Skills with
-              suggestions from the new resume.
+              suggestions from {file ? "the new resume" : "GitHub"}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

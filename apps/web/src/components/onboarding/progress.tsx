@@ -1,3 +1,5 @@
+"use client";
+
 import {
   PAGE_IDS,
   PAGE_TITLES,
@@ -7,6 +9,7 @@ import {
 } from "@redlance/core";
 import { cn } from "cn";
 import Link from "next/link";
+import { useImportLock } from "./import-lock";
 
 export function Progress({
   current,
@@ -16,6 +19,8 @@ export function Progress({
   resumeAt: PageId;
 }) {
   const index = pageIndex(current);
+  // While an import runs, the steps aren't links: the user waits for it (or chooses to skip).
+  const locked = useImportLock();
   return (
     <nav aria-label="Setup progress" className="mb-6">
       <p className="text-sm font-medium text-stone">
@@ -40,7 +45,7 @@ export function Progress({
           );
           return (
             <li key={page} className="flex-1">
-              {page !== current && canOpen(page, resumeAt) ? (
+              {!locked && page !== current && canOpen(page, resumeAt) ? (
                 <Link
                   href={`/onboarding/${page}`}
                   className="block rounded py-2 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
