@@ -16,6 +16,19 @@ import type { BasicsOutput, JobTypesOutput, SkillsOutput } from "./step-types";
 
 type Level = "core" | "secondary";
 
+/** Something a step suggested that the merge left out, and why (for the dev console). */
+export type DroppedItem = {
+  what:
+    | "displayName"
+    | "headline"
+    | "country"
+    | "category"
+    | "skill"
+    | "customSkill";
+  value: string;
+  reason: string;
+};
+
 // Links in a suggested name or headline would be shown (and saved) as the
 // user's own words, so they're removed. Scheme/www links match in any case;
 // a bare "domain.tld/path" only in lowercase with a common TLD, so tech names
@@ -59,28 +72,35 @@ export function mergeResumeSteps(
     pipelineVersion: string;
     promptVersions: Record<ResumeStepName, string>;
     partial: ResumeStepName[];
+    /** When given, collects what was left out and why. */
+    dropped?: DroppedItem[];
   },
 ): Suggestions {
+  const drop = (what: DroppedItem["what"], value: string, reason: string) =>
+    ctx.dropped?.push({ what, value, reason });
   const basics: Record<string, unknown> = {};
   const displayName = steps.basics?.displayName
     ?.trim()
     .slice(0, LIMITS.displayName);
   if (displayName && isPlainName(displayName)) basics.displayName = displayName;
-  const headline = stripLinks(steps.basics?.headline ?? "")
-    .slice(0, LIMITS.headline)
-    .trim();
+  else if (displayName)
+    drop("displayName", displayName, "looks like contact details or a link");
+  const rawHeadline = steps.basics?.headline?.trim() ?? "";
+  const headline = stripLinks(rawHeadline).slice(0, LIMITS.headline).trim();
   if (headline) basics.headline = headline;
+  else if (rawHeadline) drop("headline", rawHeadline, "only links");
   const country = steps.basics?.country?.trim().toUpperCase();
   if (country && isCountryCode(country)) basics.country = country;
+  else if (country) drop("country", country, "not a known country code");
 
   const categories: string[] = [];
   for (const c of steps.jobTypes?.categories ?? []) {
-    if (
-      hasEvidence(ctx.text, c.evidence) &&
-      !categories.includes(c.id) &&
-      categories.length < LIMITS.categories
-    )
-      categories.push(c.id);
+    if (categories.includes(c.id)) continue;
+    if (!hasEvidence(ctx.text, c.evidence))
+      drop("category", c.id, "evidence not found in the text");
+    else if (categories.length >= LIMITS.categories)
+      drop("category", c.id, `over the limit of ${LIMITS.categories}`);
+    else categories.push(c.id);
   }
   if (categories.length) basics.categories = categories;
 
@@ -105,23 +125,34 @@ export function mergeResumeSteps(
 
   for (const sk of steps.skills?.skills ?? []) {
     const known = SKILL_BY_ID.get(sk.id);
-    if (!known || known.retired) continue;
+    if (!known || known.retired) {
+      drop("skill", sk.id, known ? "retired id" : "unknown id");
+      continue;
+    }
     if (
       hasSkillEvidence(ctx.text, sk.evidence, [known.name, ...known.aliases]) ||
       (shortlist.has(sk.id) && skillLabelOccurs(known, ctx.sections.skills))
     )
       add(sk.id, sk.level);
+    else drop("skill", sk.id, "evidence not found in the text");
   }
   for (const c of steps.skills?.customSkills ?? []) {
     const known = findSkill(c.name);
     const labels = known ? [known.name, ...known.aliases, c.name] : [c.name];
-    if (!hasSkillEvidence(ctx.text, c.evidence, labels)) continue;
+    if (!hasSkillEvidence(ctx.text, c.evidence, labels)) {
+      drop("customSkill", c.name, "evidence not found in the text");
+      continue;
+    }
     if (known) {
       if (!known.retired) add(known.id, c.level);
+      else drop("customSkill", c.name, `matches retired id ${known.id}`);
       continue;
     }
     const name = c.name.trim();
-    if (!isUsableSkillName(name)) continue;
+    if (!isUsableSkillName(name)) {
+      drop("customSkill", c.name, "not a usable skill name");
+      continue;
+    }
     const key = normalizeSkillName(name);
     const have = custom.get(key);
     if (!have) custom.set(key, { name, level: c.level });
@@ -137,9 +168,14 @@ export function mergeResumeSteps(
   const skillList = [...skills]
     .slice(0, LIMITS.totalSkills)
     .map(([id, lvl]) => ({ id, level: cap(lvl) }));
+  for (const [id] of [...skills].slice(LIMITS.totalSkills))
+    drop("skill", id, `over the limit of ${LIMITS.totalSkills}`);
+  const customCap = Math.min(10, LIMITS.totalSkills - skillList.length);
   const customList = [...custom.values()]
-    .slice(0, Math.min(10, LIMITS.totalSkills - skillList.length))
+    .slice(0, customCap)
     .map((c) => ({ name: c.name, level: cap(c.level) }));
+  for (const c of [...custom.values()].slice(customCap))
+    drop("customSkill", c.name, "over the skill limit");
 
   return suggestionsSchema.parse({
     v: 1,

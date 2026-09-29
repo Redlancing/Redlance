@@ -25,7 +25,8 @@ for (const s of SKILLS) {
   for (const t of s.githubTopics ?? []) push(byTopic, t, s.id);
 }
 
-function skillsOf(repo: GithubRepo): Set<string> {
+/** The taxonomy skill ids a repo's language and topics map to. */
+export function repoSkillIds(repo: GithubRepo): Set<string> {
   const ids = new Set<string>();
   if (repo.language)
     for (const id of byLanguage.get(repo.language.toLowerCase()) ?? [])
@@ -47,11 +48,11 @@ export function mapGithubToSuggestions(profile: {
       Date.parse(b.pushed_at || "") - Date.parse(a.pushed_at || "") ||
       0,
   )[0];
-  const topSkills = top ? skillsOf(top) : new Set<string>();
+  const topSkills = top ? repoSkillIds(top) : new Set<string>();
 
   const counts = new Map<string, number>();
   for (const r of repos)
-    for (const id of skillsOf(r)) counts.set(id, (counts.get(id) ?? 0) + 1);
+    for (const id of repoSkillIds(r)) counts.set(id, (counts.get(id) ?? 0) + 1);
 
   const ranked = [...counts.entries()]
     .map(([id, n]) => ({ id, n, core: n >= 3 || topSkills.has(id) }))

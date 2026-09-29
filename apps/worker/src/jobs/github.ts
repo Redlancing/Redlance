@@ -30,6 +30,11 @@ export function makeGithubHandler(fetchFn?: typeof fetch): JobHandler {
       );
       throw new JobError("GITHUB_UNAVAILABLE", false);
     }
+    ctx.dev?.github({
+      username,
+      repos: profile.repos,
+      suggestions: parsed.data,
+    });
     return { result: parsed.data };
   };
 }

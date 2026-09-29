@@ -10,6 +10,7 @@ import {
   type ImportKind,
 } from "@redlance/db";
 import type { LlmClient } from "@redlance/llm";
+import { createDevReport } from "./dev-report";
 import type { WorkerEnv } from "./env";
 import { JobError, type JobHandler } from "./jobs/types";
 import type { Logger } from "./logger";
@@ -55,6 +56,13 @@ export function createRunner(opts: RunnerOptions) {
     const handler = handlers[job.kind];
     let status = "done";
     let errorCode: string | null = null;
+    // Local only: never prints in staging or production.
+    const dev = createDevReport({
+      enabled: env.APP_ENV === "local",
+      jobId: job.id,
+      kind: job.kind,
+      attempt: job.attempts,
+    });
     try {
       if (!handler) {
         errorCode = "UNSUPPORTED_JOB";
@@ -97,6 +105,7 @@ export function createRunner(opts: RunnerOptions) {
             setStage: (stage) =>
               setImportStage(db, job.id, job.attempts, stage),
             signal: ac.signal,
+            dev,
           }),
         );
         work.catch(() => {}); // a late rejection after timeout must not be unhandled
@@ -155,6 +164,7 @@ export function createRunner(opts: RunnerOptions) {
         );
       }
     } finally {
+      dev.end(status, errorCode);
       log.info(
         {
           jobId: job.id,

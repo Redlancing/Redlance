@@ -1,8 +1,13 @@
 import type { ResumeStepName, Suggestions } from "@redlance/core";
-import { LlmError, type AttemptRecord, type LlmClient } from "@redlance/llm";
+import {
+  LlmError,
+  type AttemptRecord,
+  type LlmClient,
+  type LlmErrorKind,
+} from "@redlance/llm";
 import { JobError } from "../jobs/types";
 import { yearsOfExperience } from "./dates";
-import { mergeResumeSteps } from "./merge";
+import { mergeResumeSteps, type DroppedItem } from "./merge";
 import { skillShortlist } from "./prepass";
 import { splitSections } from "./sections";
 import type { BasicsOutput, JobTypesOutput, SkillsOutput } from "./step-types";
@@ -12,6 +17,22 @@ import type { PipelineInput, StepSpec } from "./steps/shared";
 import { skillsStep } from "./steps/skills";
 
 export type { PipelineInput, StepSpec } from "./steps/shared";
+
+/** One step's outcome: the validated JSON the model returned, or why it failed. */
+export type StepResult = {
+  step: ResumeStepName;
+  model: string;
+  ms: number;
+  attempts: AttemptRecord[];
+  output?: unknown;
+  error?: LlmErrorKind | "unknown";
+};
+
+export type MergeReport = {
+  dropped: DroppedItem[];
+  partial: ResumeStepName[];
+  suggestions: Suggestions;
+};
 
 export const PIPELINE_VERSION = "resume@1";
 export const STEP_TIMEOUT_MS = 10_000;
@@ -58,11 +79,16 @@ export async function runResumePipeline(
       attempt: AttemptRecord,
       model: string,
     ) => void;
+    /** Hooks for the dev console (optional; no effect on the result). */
+    onPrepass?: (input: PipelineInput) => void;
+    onStepResult?: (result: StepResult) => void;
+    onMerge?: (report: MergeReport) => void;
     deadlineMs?: number;
     signal?: AbortSignal;
   },
 ): Promise<{ suggestions: Suggestions; partial: ResumeStepName[] }> {
   const input = buildPipelineInput(text);
+  deps.onPrepass?.(input);
 
   const deadline = new AbortController();
   const timer = setTimeout(
@@ -87,6 +113,7 @@ export async function runResumePipeline(
     settled = await Promise.allSettled(
       (STEPS as readonly StepSpec<unknown>[]).map(async (step) => {
         const model = deps.models[step.model];
+        const t0 = Date.now();
         try {
           const res = await deps.llm.generateStructured({
             model,
@@ -101,9 +128,23 @@ export async function runResumePipeline(
             signal: deadline.signal,
           });
           report(step, model, res.attempts);
+          deps.onStepResult?.({
+            step: step.name,
+            model,
+            ms: Date.now() - t0,
+            attempts: res.attempts,
+            output: res.data,
+          });
           return res.data;
         } catch (e) {
           if (e instanceof LlmError) report(step, model, e.attempts);
+          deps.onStepResult?.({
+            step: step.name,
+            model,
+            ms: Date.now() - t0,
+            attempts: e instanceof LlmError ? e.attempts : [],
+            error: e instanceof LlmError ? e.kind : "unknown",
+          });
           throw e;
         }
       }),
@@ -141,6 +182,7 @@ export async function runResumePipeline(
       : new JobError("LLM_FAILED", true, "every resume step failed");
   }
 
+  const dropped: DroppedItem[] = [];
   const suggestions = mergeResumeSteps(
     {
       basics: out.basics as BasicsOutput | undefined,
@@ -157,7 +199,9 @@ export async function runResumePipeline(
         skills: skillsStep.version,
       },
       partial,
+      dropped,
     },
   );
+  deps.onMerge?.({ dropped, partial, suggestions });
   return { suggestions, partial };
 }

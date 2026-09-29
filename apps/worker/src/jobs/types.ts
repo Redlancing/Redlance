@@ -1,5 +1,6 @@
 import type { Database, ImportJob, ImportStage } from "@redlance/db";
 import type { LlmClient } from "@redlance/llm";
+import type { DevReport } from "../dev-report";
 import type { WorkerEnv } from "../env";
 import type { Logger } from "../logger";
 
@@ -28,6 +29,8 @@ export type JobContext = {
   llm: LlmClient;
   setStage(stage: ImportStage): Promise<void>;
   signal: AbortSignal;
+  /** Dev-console report (APP_ENV=local only); absent or a no-op elsewhere. */
+  dev?: DevReport;
 };
 
 export type JobHandler = (

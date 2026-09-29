@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ImportSummary } from "@/server/onboarding/imports";
 import { adoptImports, isActiveImport as isActive } from "./import-status";
+import { logImportChanges } from "./import-dev-log";
 
 const POLL_MS = 1500;
 /** After this long without every import finishing, stop and offer a way out. */
@@ -73,6 +74,13 @@ export function useImportJobs(
     jobsRef.current = jobs;
     onSettledRef.current = onSettled;
   }, [jobs, onSettled]);
+
+  // Dev only (a no-op in production): stage changes and results in the browser console.
+  const loggedRef = useRef<ImportSummary[]>([]);
+  useEffect(() => {
+    logImportChanges(loggedRef.current, jobs);
+    loggedRef.current = jobs;
+  }, [jobs]);
 
   // A refresh can bring imports we aren't following yet: adopt them (prev-prop comparison).
   const importsKey = imports.map((j) => `${j.id}:${j.status}`).join(",");
