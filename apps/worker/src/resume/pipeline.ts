@@ -91,6 +91,10 @@ export async function runResumePipeline(
     deps.signal?.removeEventListener("abort", onOuter);
   }
 
+  // The worker is stopping (not our own deadline): retry the whole job cleanly.
+  if (deps.signal?.aborted)
+    throw new JobError("SHUTDOWN", true, "stopped before the analysis finished");
+
   const partial: ResumeStepName[] = [];
   const out: Record<string, unknown> = {};
   settled.forEach((r, i) => {

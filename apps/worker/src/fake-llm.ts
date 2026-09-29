@@ -33,12 +33,28 @@ export function stepOf(req: GenerateRequest<unknown>): ResumeStepName | null {
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** The first whole-word match of `word` in `text`, in the text's own spelling. */
+const MAX_QUOTE = 160;
+const substantial = (q: string) => q.length >= 12 || q.split(/\s+/).length >= 2;
+
+/**
+ * Evidence for the first whole-word match of `word`: the trimmed line containing it
+ * (plus the next line when that's too short), cut to 160 characters around the match.
+ */
 function findWord(text: string, word: string): string | null {
-  const m = new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(word)}(?![\\p{L}\\p{N}])`, "iu").exec(
-    text,
-  );
-  return m ? m[0] : null;
+  const re = new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(word)}(?![\\p{L}\\p{N}])`, "iu");
+  const lines = text.split("\n").map((l) => l.trim());
+  for (let i = 0; i < lines.length; i++) {
+    const m = re.exec(lines[i]!);
+    if (!m) continue;
+    let quote = lines[i]!;
+    if (!substantial(quote) && lines[i + 1]) quote = `${quote} ${lines[i + 1]}`;
+    if (quote.length > MAX_QUOTE) {
+      const from = Math.max(0, Math.min(m.index - 40, quote.length - MAX_QUOTE));
+      quote = quote.slice(from, from + MAX_QUOTE).trim();
+    }
+    return quote;
+  }
+  return null;
 }
 
 const CODE_WORDS = [

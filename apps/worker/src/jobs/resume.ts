@@ -54,18 +54,20 @@ export const resumeHandler: JobHandler = async (job, ctx) => {
   const contentHash = createHash("sha256").update(text).digest("hex");
   const githubUsername = githubFromText(text);
   let suggestions: Suggestions | null = null;
+  let complete = true;
 
   const cached = suggestionsSchema.safeParse(
     await findCachedResumeResult(ctx.db, contentHash, PIPELINE_VERSION),
   );
-  if (cached.success) {
+  // Only complete results are reused (older rows may predate the no-partial rule).
+  if (cached.success && !cached.data.meta?.partial.length) {
     await ctx.setStage("checking");
     suggestions = cached.data;
   } else {
     await ctx.setStage("analysing");
     const usage: Promise<void>[] = [];
     try {
-      ({ suggestions } = await runResumePipeline(text, {
+      const run = await runResumePipeline(text, {
         llm: ctx.llm,
         models: { fast: ctx.env.VERTEX_MODEL_FAST, smart: ctx.env.VERTEX_MODEL_SMART },
         signal: ctx.signal,
@@ -88,7 +90,9 @@ export const resumeHandler: JobHandler = async (job, ctx) => {
             }),
           );
         },
-      }));
+      });
+      suggestions = run.suggestions;
+      complete = run.partial.length === 0;
     } finally {
       // Cost records are kept even when the job fails; a failed insert doesn't fail the job.
       for (const r of await Promise.allSettled(usage))
@@ -107,10 +111,8 @@ export const resumeHandler: JobHandler = async (job, ctx) => {
     });
   }
 
-  return {
-    result: suggestions,
-    sourceText: text,
-    contentHash,
-    pipelineVersion: PIPELINE_VERSION,
-  };
+  // A partial result isn't cached: a one-off step failure mustn't stick to this text.
+  return complete
+    ? { result: suggestions, sourceText: text, contentHash, pipelineVersion: PIPELINE_VERSION }
+    : { result: suggestions, sourceText: text };
 };

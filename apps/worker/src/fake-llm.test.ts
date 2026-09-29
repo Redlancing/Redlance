@@ -1,6 +1,8 @@
 import type { GenerateRequest } from "@redlance/llm";
 import { describe, expect, it } from "vitest";
+import { SKILL_BY_ID } from "@redlance/core";
 import { fakeResumeResponder, stepOf } from "./fake-llm";
+import { hasEvidence, hasSkillEvidence } from "./resume/evidence";
 import { buildPipelineInput } from "./resume/pipeline";
 import { basicsStep } from "./resume/steps/basics";
 import { jobTypesStep } from "./resume/steps/job-types";
@@ -53,7 +55,11 @@ describe("fakeResumeResponder", () => {
     expect(skills.skills.map((s) => s.id)).toEqual(
       expect.arrayContaining(["premiere-pro", "after-effects"]),
     );
-    for (const s of skills.skills) expect(TEXT.toLowerCase()).toContain(s.evidence.toLowerCase());
+    for (const c of jobTypes.categories) expect(hasEvidence(TEXT, c.evidence)).toBe(true);
+    for (const s of skills.skills) {
+      const skill = SKILL_BY_ID.get(s.id)!;
+      expect(hasSkillEvidence(TEXT, s.evidence, [skill.name, ...skill.aliases])).toBe(true);
+    }
   });
 
   it("returns an empty object for an unknown request", () => {

@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import {
+  completeImportJob,
   createDb,
   enqueueImportJob,
   importJobs,
@@ -9,12 +11,12 @@ import {
   type ImportStage,
 } from "@redlance/db";
 import { runMigrations } from "@redlance/db/migrate";
-import { createClient, createFakeTransport } from "@redlance/llm";
+import { createClient, createFakeTransport, LlmError } from "@redlance/llm";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { makeDocx } from "../../test/fixtures";
 import { parseWorkerEnv } from "../env";
-import { fakeResumeResponder } from "../fake-llm";
+import { fakeResumeResponder, stepOf } from "../fake-llm";
 import { createLogger } from "../logger";
 import { PIPELINE_VERSION } from "../resume/pipeline";
 import { resumeHandler } from "./resume";
@@ -79,13 +81,13 @@ async function claimed(userId: string, bytes: Uint8Array, fileType: "pdf" | "doc
   return job!;
 }
 
-function ctxFor(job: ImportJob) {
+function ctxFor(job: ImportJob, client = llm) {
   const stages: ImportStage[] = [];
   const ctx: JobContext = {
     db,
     log,
     env,
-    llm,
+    llm: client,
     signal: new AbortController().signal,
     async setStage(stage) {
       stages.push(stage);
@@ -165,6 +167,38 @@ describe("resumeHandler", () => {
     expect(out2.contentHash).toBe(out1.contentHash);
     expect(stages).toEqual(["reading", "checking"]);
     expect(await usageRows()).toHaveLength(3);
+  });
+
+  it("never caches a partial result", async () => {
+    const userId = await newUser();
+    const flaky = createClient(
+      createFakeTransport((req) => {
+        if (stepOf(req) === "skills") throw new LlmError("server", "down");
+        return fakeResumeResponder(req);
+      }),
+      { sleep: async () => {} },
+    );
+    const first = await claimed(userId, makeDocx(LINES));
+    const out1 = await resumeHandler(first, ctxFor(first, flaky).ctx);
+    expect((out1.result as { meta: { partial: string[] } }).meta.partial).toEqual(["skills"]);
+    expect(out1.contentHash).toBeUndefined();
+    expect(out1.pipelineVersion).toBeUndefined();
+    await completeImportJob(db, first.id, first.attempts, out1);
+
+    // An older row that did store a partial result under the hash is ignored too.
+    const hash = createHash("sha256").update(out1.sourceText!).digest("hex");
+    await db
+      .update(importJobs)
+      .set({ contentHash: hash, pipelineVersion: PIPELINE_VERSION })
+      .where(eq(importJobs.id, first.id));
+
+    const before = (await usageRows()).length;
+    const second = await claimed(userId, makeDocx(LINES));
+    const { ctx, stages } = ctxFor(second);
+    const out2 = await resumeHandler(second, ctx);
+    expect(stages).toEqual(["reading", "analysing", "checking"]);
+    expect((await usageRows()).length).toBe(before + 3);
+    expect(out2.contentHash).toBe(hash);
   });
 
   it("enqueues one GitHub import for a username in the resume, only once", async () => {

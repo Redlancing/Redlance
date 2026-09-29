@@ -50,6 +50,6 @@ export function routeText(
 /** Resume first (a shared prefix for implicit caching), then the task. */
 export function resumePrompt(routed: string, instructions: string): string {
   // The resume can't close its own delimiter early.
-  const safe = routed.replace(/<\/?resume>/gi, "");
+  const safe = routed.replace(/<\s*\/?\s*resume\s*>/gi, "");
   return `<resume>\n${safe}\n</resume>\n\n${instructions}`;
 }
