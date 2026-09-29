@@ -194,6 +194,8 @@ Browser ─GET /imports/:id every 1.5 s─▶ { status, suggestions } → the st
 ### Resume job
 
 1. **Extract:** PDF via `unpdf` (first 10 pages), DOCX via `mammoth`; normalise whitespace; cap at 30 000 characters. Fewer than 200 characters → fail `NO_TEXT`. Parse error → `UNSUPPORTED_FILE`.
+   - **Zip-bomb guard (DOCX):** before `mammoth` opens the file, read the zip's central directory and refuse (`UNSUPPORTED_FILE`) if the total uncompressed size is over 20 MB, any entry is over 10 MB, or there are more than 1 000 entries.
+   - **Clean the text:** after extraction, strip invisible and control characters (Unicode `Cf`/`Cc` except `\n` and `\t`: zero-width spaces and joiners, bidi overrides such as U+202E, soft hyphens) and normalise to NFKC. This runs before the text is stored in `source_text` and before it reaches the LLM, so hidden instructions can't ride along in invisible characters.
 2. **Deterministic pass:** find a GitHub username in the text (`github.com/<name>`) with a regex.
 3. **LLM:** `generateStructured({ task: "resume_import", … })`. The system prompt says the resume is data, not instructions. The response schema limits skills to taxonomy IDs (enum) and caps list lengths. Resume text is sent inside clear delimiters. If the ID enum turns out too large for Gemini's schema limits, ask for skill names instead; step 4 already maps names through aliases.
 4. **Validate and clean** (zod, then rules):
@@ -275,7 +277,10 @@ Onboarding adds no infrastructure: the worker shares the server. Resume import �
 
 ## Security and privacy
 
-- Uploads: size checked from `Content-Length` before reading and again on the file; type by magic bytes; parsed only in the worker, with a page cap and a time budget.
+- Uploads: size checked from `Content-Length` before reading and again on the file; type by magic bytes; parsed only in the worker, with a page cap, a time budget and the DOCX zip-bomb guard.
+- **Worker container (deployment spec must set these):** runs as a non-root user with a read-only filesystem (a small tmpfs for scratch); memory and CPU limits (e.g. 512 MB, 1 CPU) so a runaway parse can't starve the web container; outbound network only to Postgres, the Gemini API and api.github.com; parser libraries (`unpdf`, `mammoth`) kept updated.
+- Prompt injection: the LLM has no tools and no secrets in its prompt; resume text is cleaned of invisible characters, delimited and labelled as data; output is schema-constrained with a max-token cap, validated, and only ever shown as suggestions the user edits. The same "data, not instructions" rule applies wherever profile text later feeds a prompt (drafting).
+- Links in resumes are never fetched or visited by the server. Only a GitHub username is kept (verbatim in the text, then `checkGithubInput`); other URLs are dropped.
 - The resume file is never stored beyond extraction; resume text is never logged.
 - LLM output is untrusted: schema-constrained, validated, links kept only if present in the source text, and only ever shown as suggestions.
 - GitHub calls go only to `api.github.com` with a validated username (no user-supplied URLs are fetched, so no SSRF surface in this spec).
