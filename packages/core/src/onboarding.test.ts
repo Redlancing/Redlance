@@ -6,6 +6,7 @@ import {
   isUsableSkillName,
   isValidTimeZone,
   nextPage,
+  checkGithubInput,
   parseGithubUsername,
   resumeAt,
   toFieldErrors,
@@ -198,6 +199,91 @@ describe("GitHub link", () => {
     expect(parseGithubUsername("a".repeat(40))).toBeNull();
     expect(parseGithubUsername("https://gitlab.com/octocat")).toBeNull();
     expect(parseGithubUsername("octo cat")).toBeNull();
+  });
+});
+
+describe("checkGithubInput", () => {
+  const ok = (input: string) => checkGithubInput(input);
+  const reason = (input: string) => {
+    const r = checkGithubInput(input);
+    return r.ok ? null : r.reason;
+  };
+
+  it("treats an empty field as fine (GitHub is optional)", () => {
+    expect(ok("")).toEqual({ ok: true, username: null });
+    expect(ok("   ")).toEqual({ ok: true, username: null });
+  });
+
+  it("accepts profile and repo links on github.com, with or without scheme or www", () => {
+    for (const input of [
+      "octocat",
+      "@octocat",
+      "github.com/octocat",
+      "GitHub.com/octocat/",
+      "http://github.com/octocat",
+      "https://www.github.com/octocat/hello-world?tab=readme#top",
+    ])
+      expect(ok(input)).toEqual({ ok: true, username: "octocat" });
+  });
+
+  it("says when a link isn't on GitHub, including look-alike hosts", () => {
+    for (const input of [
+      "https://gitlab.com/octocat",
+      "linkedin.com/in/octocat",
+      "https://github.com.evil.example/octocat",
+      "https://evil.example/github.com/octocat",
+      "https://github.com@evil.example/octocat",
+      "https://gist.github.com/octocat",
+      "https://raw.githubusercontent.com/octocat/x/main/a.sh",
+      "javascript:alert(1)",
+      "ftp://github.com/octocat",
+      "https://github.com:8443/octocat",
+      "https://user:pass@github.com/octocat",
+    ])
+      expect(reason(input), input).toBe("not_github");
+  });
+
+  it("says when a GitHub link isn't a profile", () => {
+    expect(reason("https://github.com")).toBe("no_username");
+    expect(reason("github.com/")).toBe("no_username");
+    for (const page of [
+      "settings",
+      "orgs",
+      "explore",
+      "Topics",
+      "marketplace",
+      "login",
+    ])
+      expect(reason(`https://github.com/${page}`), page).toBe("not_a_profile");
+  });
+
+  it("says when the username itself is invalid", () => {
+    for (const input of [
+      "-octocat",
+      "octo--cat",
+      "a".repeat(40),
+      "octo cat",
+      "octo_cat",
+      "<script>",
+    ])
+      expect(reason(input), input).toBe("invalid_username");
+    expect(ok("a".repeat(39))).toEqual({ ok: true, username: "a".repeat(39) });
+  });
+
+  it("gives every failure a message", () => {
+    const r = checkGithubInput("https://gitlab.com/octocat");
+    expect(!r.ok && r.message).toMatch(/GitHub/);
+  });
+
+  it("the import schema refuses reserved GitHub pages as usernames", () => {
+    expect(
+      STEP_SCHEMAS.import.complete.safeParse({ githubUsername: "settings" })
+        .success,
+    ).toBe(false);
+    expect(
+      STEP_SCHEMAS.import.complete.safeParse({ githubUsername: "octocat" })
+        .success,
+    ).toBe(true);
   });
 });
 

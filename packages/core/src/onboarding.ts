@@ -44,19 +44,118 @@ export const LIMITS = {
 export const GITHUB_USERNAME_RE =
   /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
 
+// Top-level github.com pages that aren't user profiles.
+export const GITHUB_RESERVED: ReadonlySet<string> = new Set([
+  "about",
+  "account",
+  "apps",
+  "blog",
+  "business",
+  "codespaces",
+  "collections",
+  "contact",
+  "customer-stories",
+  "dashboard",
+  "enterprise",
+  "events",
+  "explore",
+  "features",
+  "gist",
+  "issues",
+  "join",
+  "login",
+  "logout",
+  "marketplace",
+  "new",
+  "notifications",
+  "orgs",
+  "organizations",
+  "pricing",
+  "pulls",
+  "readme",
+  "search",
+  "security",
+  "settings",
+  "site",
+  "sitemap",
+  "sponsors",
+  "stars",
+  "team",
+  "topics",
+  "trending",
+  "watching",
+]);
+
+const GITHUB_HOSTS: ReadonlySet<string> = new Set([
+  "github.com",
+  "www.github.com",
+]);
+
+export type GithubCheckFailure =
+  "not_github" | "no_username" | "not_a_profile" | "invalid_username";
+
+export type GithubCheck =
+  | { ok: true; username: string | null }
+  | { ok: false; reason: GithubCheckFailure; message: string };
+
+const GITHUB_MESSAGES: Record<GithubCheckFailure, string> = {
+  not_github:
+    "That link isn't on GitHub. Paste your github.com profile link or just your username.",
+  no_username: "Add your username after github.com/.",
+  not_a_profile:
+    "That's a GitHub page, not a profile. Use your username, like github.com/octocat.",
+  invalid_username:
+    "GitHub usernames use letters, numbers and single hyphens (up to 39 characters).",
+};
+
+const githubFailure = (reason: GithubCheckFailure): GithubCheck => ({
+  ok: false,
+  reason,
+  message: GITHUB_MESSAGES[reason],
+});
+
 /**
- * "octocat", "@octocat" or any github.com/<name>/… URL → "octocat".
- * null when the input is empty or can't be a GitHub username.
+ * Checks what someone typed in the GitHub field: empty (fine, it's optional), a username
+ * ("octocat", "@octocat"), or a link to their profile or one of their repos on github.com.
+ * Links are parsed with URL, so look-alike hosts (github.com.evil.example, github.com@evil…),
+ * other schemes, ports and credentials are refused. Only the username is ever kept.
  */
+export function checkGithubInput(input: string): GithubCheck {
+  let candidate = input.trim().replace(/^@/, "");
+  if (!candidate) return { ok: true, username: null };
+
+  if (/[/.:@]/.test(candidate)) {
+    const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(candidate);
+    let url: URL;
+    try {
+      url = new URL(hasScheme ? candidate : `https://${candidate}`);
+    } catch {
+      return githubFailure("not_github");
+    }
+    if (
+      (url.protocol !== "https:" && url.protocol !== "http:") ||
+      !GITHUB_HOSTS.has(url.hostname) ||
+      url.port ||
+      url.username ||
+      url.password
+    )
+      return githubFailure("not_github");
+    const first = url.pathname.split("/").find(Boolean);
+    if (!first) return githubFailure("no_username");
+    candidate = first;
+  }
+
+  if (!GITHUB_USERNAME_RE.test(candidate))
+    return githubFailure("invalid_username");
+  if (GITHUB_RESERVED.has(candidate.toLowerCase()))
+    return githubFailure("not_a_profile");
+  return { ok: true, username: candidate };
+}
+
+/** The bare username from a GitHub field, or null when it's empty or not a valid profile. */
 export function parseGithubUsername(input: string): string | null {
-  let value = input.trim().replace(/^@/, "");
-  if (!value) return null;
-  const fromUrl = value.match(
-    /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/?#]+)/i,
-  );
-  if (fromUrl) value = fromUrl[1]!;
-  else if (/[/.:]/.test(value)) return null;
-  return GITHUB_USERNAME_RE.test(value) ? value : null;
+  const check = checkGithubInput(input);
+  return check.ok ? check.username : null;
 }
 
 const TZ_RE = /^(?:UTC|[A-Za-z][A-Za-z_-]*(?:\/[A-Za-z0-9_+-]+){1,2})$/;
@@ -123,6 +222,10 @@ const importData = z.strictObject({
   githubUsername: z
     .string()
     .regex(GITHUB_USERNAME_RE, "That doesn't look like a GitHub username.")
+    .refine(
+      (name) => !GITHUB_RESERVED.has(name.toLowerCase()),
+      "That's a GitHub page, not a profile.",
+    )
     .nullable()
     .default(null),
 });

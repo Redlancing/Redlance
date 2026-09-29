@@ -1,27 +1,55 @@
 "use client";
 
-import { parseGithubUsername } from "@redlance/core";
+import { checkGithubInput } from "@redlance/core";
 import { FileText } from "lucide-react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Field, controlProps } from "./field";
+import { lookupGithubUser, type GithubLookup } from "./github-lookup";
 import { StepActions } from "./step-actions";
 import { StepHeader } from "./step-header";
 import { useStepForm, type StepFormInit } from "./use-step-form";
 
 export function ImportStep({ init }: { init: StepFormInit<"import"> }) {
   const form = useStepForm(init, {
-    // The field accepts "octocat", "@octocat" or a github.com URL; we store the bare username.
-    // Unparseable text is kept as typed so the schema shows the error.
+    // The field accepts "octocat", "@octocat" or a github.com link; we store the bare username.
+    // Anything that fails the check is kept as typed so the schema refuses it on save.
     prepare: (v) => {
       const typed = v.githubUsername?.trim() ?? "";
-      return {
-        githubUsername: typed ? (parseGithubUsername(typed) ?? typed) : null,
-      };
+      const check = checkGithubInput(typed);
+      return { githubUsername: check.ok ? check.username : typed };
     },
   });
-  const error = form.errorFor("githubUsername");
+  const [touched, setTouched] = useState(false);
+  const [lookup, setLookup] = useState<{
+    username: string;
+    status: GithubLookup | "checking";
+  } | null>(null);
+
+  const typed = form.value.githubUsername ?? "";
+  const check = checkGithubInput(typed);
+  const savedError = form.errorFor("githubUsername");
+  // Show our specific message once the user has left the field (or tried to continue).
+  const error =
+    !check.ok && (touched || savedError) ? check.message : savedError;
+  const username = check.ok ? check.username : null;
+  const lookupStatus =
+    lookup && lookup.username === username ? lookup.status : null;
   const hint =
-    "Optional. Your username or a github.com link. Drafts can link your work from it.";
+    username && typed.trim() !== username
+      ? `We'll save github.com/${username}.`
+      : "Optional. Your username or a github.com link. Drafts can link your work from it.";
+
+  function onBlur() {
+    setTouched(true);
+    if (!username || lookup?.username === username) return;
+    setLookup({ username, status: "checking" });
+    void lookupGithubUser(username).then((status) =>
+      setLookup((current) =>
+        current?.username === username ? { username, status } : current,
+      ),
+    );
+  }
 
   return (
     <>
@@ -46,8 +74,20 @@ export function ImportStep({ init }: { init: StepFormInit<"import"> }) {
             onChange={(e) =>
               form.update({ githubUsername: e.target.value || null })
             }
+            onBlur={onBlur}
             className="h-11 text-base md:text-sm"
           />
+          {!error && lookupStatus && lookupStatus !== "unknown" && (
+            <p role="status" className="text-xs text-muted-foreground">
+              {lookupStatus === "checking" && "Checking GitHub…"}
+              {lookupStatus === "found" && `Found github.com/${username}.`}
+              {lookupStatus === "missing" && (
+                <span className="text-danger">
+                  No GitHub account called “{username}”. Check the spelling.
+                </span>
+              )}
+            </p>
+          )}
         </Field>
         <div className="rounded-xl border border-dashed border-feed bg-bone/60 p-4">
           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
