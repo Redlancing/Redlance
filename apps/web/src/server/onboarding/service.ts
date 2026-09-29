@@ -15,6 +15,8 @@ import {
   type StepStatus,
 } from "@redlance/core";
 import {
+  latestImportJobs,
+  type Database,
   alertChannels,
   customSkills,
   onboardingSteps,
@@ -26,6 +28,7 @@ import {
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { ApiError } from "../errors";
+import { toImportSummary, type ImportSummary } from "./imports";
 
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 type Executor = ReturnType<typeof getDb> | Tx;
@@ -43,6 +46,7 @@ export type OnboardingState = {
   resumeAt: PageId;
   onboardedAt: Date | null;
   trialEndsAt: Date | null;
+  imports: { resume: ImportSummary | null; github: ImportSummary | null };
 };
 
 export type SaveStepInput = {
@@ -61,7 +65,7 @@ export async function getOnboardingState(
   userId: string,
   db: Executor = getDb(),
 ): Promise<OnboardingState> {
-  const [rows, [profile]] = await Promise.all([
+  const [rows, [profile], jobs] = await Promise.all([
     db
       .select({
         step: onboardingSteps.step,
@@ -80,6 +84,8 @@ export async function getOnboardingState(
       .from(profiles)
       .where(eq(profiles.userId, userId))
       .limit(1),
+    // A transaction exposes the same query API as the database.
+    latestImportJobs(db as Database, userId),
   ]);
   const steps = STEP_IDS.flatMap((id) => rows.filter((r) => r.step === id));
   return {
@@ -87,6 +93,10 @@ export async function getOnboardingState(
     resumeAt: resumeAt(steps),
     onboardedAt: profile?.onboardedAt ?? null,
     trialEndsAt: profile?.trialEndsAt ?? null,
+    imports: {
+      resume: jobs.resume ? toImportSummary(jobs.resume) : null,
+      github: jobs.github ? toImportSummary(jobs.github) : null,
+    },
   };
 }
 

@@ -42,6 +42,7 @@ describe("onboarding routes", () => {
       steps: [],
       resumeAt: "import",
       onboardedAt: null,
+      imports: [],
     });
   });
 

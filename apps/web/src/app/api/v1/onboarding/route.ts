@@ -9,6 +9,7 @@ export const GET = apiRoute({
       steps: state.steps.map(({ step, ...rest }) => ({ id: step, ...rest })),
       resumeAt: state.resumeAt,
       onboardedAt: state.onboardedAt,
+      imports: [state.imports.resume, state.imports.github].filter(Boolean),
     });
   },
 });
