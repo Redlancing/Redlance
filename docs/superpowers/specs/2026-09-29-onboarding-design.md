@@ -338,6 +338,7 @@ Web: no new variables. Worker (`apps/worker/.env.local`, from `.env.example`):
 | `APP_ENV`, `DATABASE_URL`, `LOG_LEVEL` | as in web |
 | `LLM_MODE` | `vertex` or `fake`. `fake` only allowed with `APP_ENV=local` |
 | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | required when `LLM_MODE=vertex` (e.g. `global` or `us-central1`) |
+| SDK client | `new GoogleGenAI({ vertexai: true, project, location })` — the Vertex (Google Cloud) backend. `vertexai` and the newer `enterprise` flag are the same switch; we use `vertexai`. Billing runs on the Google Cloud project, so the $300 free-trial credits apply (they don't cover the AI Studio Gemini API for accounts opened after 2026-03-02). |
 | Google credentials | Application Default Credentials: locally `gcloud auth application-default login`; on EC2, Workload Identity Federation from the AWS role (no key files), or a service-account key from AWS Secrets Manager as a fallback. The service account has only `roles/aiplatform.user`. **No AI Studio API key.** |
 | `VERTEX_MODEL_FAST` | Flash-Lite model for the Basics and Job-types steps; default chosen at build time from the Vertex model list (e.g. `gemini-3.5-flash-lite`) |
 | `VERTEX_MODEL_SMART` | Flash model for the Skills step (e.g. `gemini-3.8-flash`) |
