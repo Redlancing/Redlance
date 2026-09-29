@@ -28,6 +28,8 @@ export type ImportSummary = {
   errorCode: string | null;
   suggestions: Suggestions | null;
   partial: ResumeStepName[];
+  /** A GitHub import the worker started from a link in the resume. */
+  fromResume?: boolean;
   createdAt: string;
 };
 
@@ -58,6 +60,8 @@ export function toImportSummary(
     errorCode: job.errorCode,
     suggestions,
     partial: suggestions?.meta?.partial ?? [],
+    fromResume:
+      (job.input as { fromResume?: unknown } | null)?.fromResume === true,
     createdAt: job.createdAt.toISOString(),
   };
 }

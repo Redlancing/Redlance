@@ -26,6 +26,7 @@ import {
   startErrorMessage,
 } from "./import-status";
 import { setImportLock } from "./import-lock";
+import { localCopyKey, removeLocal } from "./local-copy";
 import { ResumeDrop } from "./resume-drop";
 import { StepActions } from "./step-actions";
 import { StepHeader } from "./step-header";
@@ -146,33 +147,45 @@ export function ImportStep({
     }
   }
 
+  /**
+   * Clears saved Basics and Skills so the new import can pre-fill them. Runs only after an
+   * import was accepted, so a refused start never costs the user their answers.
+   */
+  async function resetSavedSteps(): Promise<string | null> {
+    const res = await fetch("/api/v1/onboarding/imports/reset", {
+      method: "POST",
+    }).catch(() => null);
+    if (!res?.ok) {
+      const body = (await res?.json().catch(() => ({}))) as
+        { error?: { code?: string } } | undefined;
+      if (body?.error?.code === "ALREADY_ONBOARDED") router.refresh();
+      return "We couldn't clear your earlier answers — they'll stay as they are.";
+    }
+    // This browser's unsaved copies of those steps would come back otherwise.
+    removeLocal(localCopyKey(init.userId, "basics"));
+    removeLocal(localCopyKey(init.userId, "skills"));
+    return null;
+  }
+
   async function runImport(reset: boolean) {
     setConfirmOpen(false);
     setReleased(false);
     setStarting(true);
     setStartErrors([]);
     try {
-      if (reset) {
-        const res = await fetch("/api/v1/onboarding/imports/reset", {
-          method: "POST",
-        }).catch(() => null);
-        if (!res?.ok) {
-          const body = (await res?.json().catch(() => ({}))) as
-            { error?: { code?: string; message?: string } } | undefined;
-          if (body?.error?.code === "ALREADY_ONBOARDED") router.refresh();
-          setStartErrors([
-            body?.error?.message ??
-              "Can't reach Redlance. Check your connection and try again.",
-          ]);
-          return;
-        }
-      }
       clear();
-      const errors = await Promise.all([
+      const starts = [
         username ? startGithub(username) : null,
         file ? startResume(file) : null,
-      ]);
-      setStartErrors(errors.filter((e): e is string => e !== null));
+      ].filter((p): p is Promise<string | null> => p !== null);
+      const results = await Promise.all(starts);
+      const errors = results.filter((e): e is string => e !== null);
+      // At least one import was accepted (202): only now replace the saved steps.
+      if (reset && errors.length < results.length) {
+        const resetError = await resetSavedSteps();
+        if (resetError) errors.push(resetError);
+      }
+      setStartErrors(errors);
     } finally {
       setStarting(false);
     }
@@ -352,8 +365,9 @@ export function ImportStep({
           <AlertDialogHeader>
             <AlertDialogTitle>Replace Basics and Skills?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will replace what&apos;s in Basics and Skills with
-              suggestions from {file ? "the new resume" : "GitHub"}.
+              Once the import starts, what&apos;s in Basics and Skills will be
+              replaced with suggestions from{" "}
+              {file ? "the new resume" : "GitHub"}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

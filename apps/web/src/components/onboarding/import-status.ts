@@ -10,6 +10,8 @@ export type ImportView = {
 
 const GENERIC =
   "Something went wrong reading your resume. Try again, or fill in the steps yourself.";
+const GENERIC_GITHUB =
+  "Something went wrong reading your GitHub. Try again, or add your skills by hand.";
 const GITHUB_DOWN = "GitHub isn't answering right now. Try again in a minute.";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -18,10 +20,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   UNSUPPORTED_FILE: "That file isn't a readable PDF or Word document.",
   LLM_BUSY:
     "Resume import is busy right now. Fill in the steps yourself or try again later.",
-  LLM_FAILED: GENERIC,
-  INTERNAL: GENERIC,
-  TIMEOUT: GENERIC,
   GITHUB_NOT_FOUND: "We couldn't find that GitHub account.",
+  GITHUB_TOO_LARGE:
+    "That GitHub account has too much data to read. Add your skills by hand.",
   GITHUB_RATE_LIMITED: GITHUB_DOWN,
   GITHUB_UNAVAILABLE: GITHUB_DOWN,
   // HTTP statuses from starting an import.
@@ -34,9 +35,21 @@ const ERROR_MESSAGES: Record<string, string> = {
   PAYLOAD_TOO_LARGE: "That file is over 5 MB.",
 };
 
-/** A job's error code (or an HTTP status as a string) → a plain sentence for the user. */
-export function importErrorMessage(code: string | null): string {
-  return (code && ERROR_MESSAGES[code]) || GENERIC;
+/**
+ * A job's error code (or an HTTP status as a string) → a plain sentence for the user.
+ * Codes without their own sentence (LLM_FAILED, INTERNAL, TIMEOUT, SHUTDOWN,
+ * UNSUPPORTED_JOB, anything new) get a retry sentence worded for the job's kind.
+ */
+export function importErrorMessage(
+  code: string | null,
+  job: { kind?: ImportSummary["kind"]; fromResume?: boolean } = {},
+): string {
+  if (code === "GITHUB_NOT_FOUND" && job.fromResume)
+    return "We found a GitHub link in your resume but couldn't open that account.";
+  return (
+    (code && ERROR_MESSAGES[code]) ||
+    (job.kind === "github" ? GENERIC_GITHUB : GENERIC)
+  );
 }
 
 /** The sentence for a refused start (upload or GitHub): by error code first, then status. */
@@ -109,7 +122,7 @@ export function describeImports(
 
   const done = jobs.filter((j) => j.status === "done");
   const failed = jobs.filter((j) => j.status === "failed");
-  const failures = failed.map((j) => importErrorMessage(j.errorCode));
+  const failures = failed.map((j) => importErrorMessage(j.errorCode, j));
   if (!done.length)
     return {
       busy: false,

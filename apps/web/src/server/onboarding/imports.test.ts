@@ -43,6 +43,18 @@ describe("toImportSummary", () => {
     expect(s.partial).toEqual(["skills"]);
     expect(s.createdAt).toBe("2026-09-29T00:00:00.000Z");
   });
+  it("exposes whether a GitHub import came from the resume", () => {
+    const gh = { ...base, kind: "github" as const, result: null };
+    expect(
+      toImportSummary({
+        ...gh,
+        input: { username: "octocat", fromResume: true },
+      }).fromResume,
+    ).toBe(true);
+    expect(
+      toImportSummary({ ...gh, input: { username: "octocat" } }).fromResume,
+    ).toBe(false);
+  });
   it("drops an invalid result", () => {
     const s = toImportSummary({ ...base, result: { v: 2, junk: true } });
     expect(s.suggestions).toBeNull();

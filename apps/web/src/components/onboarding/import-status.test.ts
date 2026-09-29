@@ -155,6 +155,59 @@ describe("importErrorMessage", () => {
   it("falls back to a generic message", () => {
     expect(importErrorMessage(null)).toBe(importErrorMessage("INTERNAL"));
   });
+
+  it("says a GitHub account is too large to read", () => {
+    expect(importErrorMessage("GITHUB_TOO_LARGE", { kind: "github" })).toBe(
+      "That GitHub account has too much data to read. Add your skills by hand.",
+    );
+  });
+
+  it.each([
+    "SHUTDOWN",
+    "UNSUPPORTED_JOB",
+    "INTERNAL",
+    "TIMEOUT",
+    "SOMETHING_NEW",
+  ])("uses kind-aware retry wording for %s", (code) => {
+    expect(importErrorMessage(code, { kind: "resume" })).toBe(
+      "Something went wrong reading your resume. Try again, or fill in the steps yourself.",
+    );
+    expect(importErrorMessage(code, { kind: "github" })).toBe(
+      "Something went wrong reading your GitHub. Try again, or add your skills by hand.",
+    );
+  });
+
+  it("explains a GitHub link from the resume that couldn't be opened", () => {
+    expect(
+      importErrorMessage("GITHUB_NOT_FOUND", {
+        kind: "github",
+        fromResume: true,
+      }),
+    ).toBe(
+      "We found a GitHub link in your resume but couldn't open that account.",
+    );
+    expect(importErrorMessage("GITHUB_NOT_FOUND", { kind: "github" })).toBe(
+      "We couldn't find that GitHub account.",
+    );
+  });
+
+  it("describeImports words each failure by its job", () => {
+    const view = describeImports(
+      [
+        job({
+          kind: "github",
+          status: "failed",
+          stage: "failed",
+          errorCode: "GITHUB_NOT_FOUND",
+          fromResume: true,
+        }),
+      ],
+      null,
+    );
+    expect(view.message).toBe(
+      "We found a GitHub link in your resume but couldn't open that account.",
+    );
+  });
 });
 
 describe("adoptImports", () => {
