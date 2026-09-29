@@ -53,7 +53,7 @@ export function createRunner(opts: RunnerOptions) {
     try {
       if (!handler) {
         errorCode = "UNSUPPORTED_JOB";
-        status = await failImportJob(db, job.id, {
+        status = await failImportJob(db, job.id, job.attempts, {
           errorCode,
           retryable: false,
         });
@@ -72,13 +72,17 @@ export function createRunner(opts: RunnerOptions) {
         log: log.child({ jobId: job.id }),
         env,
         llm,
-        setStage: (stage) => setImportStage(db, job.id, stage),
+        setStage: (stage) => setImportStage(db, job.id, job.attempts, stage),
         signal: ac.signal,
       });
       work.catch(() => {}); // a late rejection after timeout must not be unhandled
       try {
         const outcome = await Promise.race([work, timeout]);
-        await completeImportJob(db, job.id, outcome);
+        const owned = await completeImportJob(db, job.id, job.attempts, outcome);
+        if (!owned) {
+          status = "lost";
+          log.warn({ jobId: job.id }, "claim lost before completion; result dropped");
+        }
       } finally {
         clearTimeout(timer);
       }
@@ -87,7 +91,7 @@ export function createRunner(opts: RunnerOptions) {
         err instanceof JobError ? err : new JobError("INTERNAL", true);
       errorCode = je.code;
       try {
-        status = await failImportJob(db, job.id, {
+        status = await failImportJob(db, job.id, job.attempts, {
           errorCode: je.code,
           retryable: je.retryable,
         });
