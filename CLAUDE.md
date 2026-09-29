@@ -91,7 +91,7 @@ Handover for the next chat. Update this section as things change.
 
 - `main`: homepage + local backend foundation, merged through PR #1 on 2026-09-28 (105 tests passing).
 - `feat/homepage`: kept on purpose (the user asked not to delete it); its work is already in `main`.
-- `feat/onboarding`: onboarding slice 1 built and reviewed (not merged or pushed yet). 194 tests passing (web 148, core 31, db 15).
+- `feat/onboarding`: onboarding slice 1 built and reviewed (not merged or pushed yet). 206 tests passing (web 159, core 32, db 15).
 
 ### Built so far (in `main`)
 
