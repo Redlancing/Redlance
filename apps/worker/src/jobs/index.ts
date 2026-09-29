@@ -1,5 +1,8 @@
 import type { ImportKind } from "@redlance/db";
+import { githubHandler } from "./github";
 import type { JobHandler } from "./types";
 
 // Task 7 adds `resume`, task 8 adds `github`.
-export const handlers: Partial<Record<ImportKind, JobHandler>> = {};
+export const handlers: Partial<Record<ImportKind, JobHandler>> = {
+  github: githubHandler,
+};
