@@ -3,6 +3,13 @@ import { checkGithubInput } from "@redlance/core";
 import { JobError } from "../jobs/types";
 import type { GithubRepo } from "./map";
 
+type GithubDeps = {
+  token?: string;
+  fetch?: typeof fetch;
+  /** The job's signal: aborting it (worker shutdown) fails with SHUTDOWN. */
+  signal?: AbortSignal;
+};
+
 const API = "https://api.github.com";
 const MAX_BYTES = 1024 * 1024;
 const TIMEOUT_MS = 10_000;
@@ -50,10 +57,16 @@ async function readCapped(res: Response): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
+/** A network failure, or SHUTDOWN when the job itself was aborted. */
+const unavailable = (deps: GithubDeps) =>
+  deps.signal?.aborted
+    ? new JobError("SHUTDOWN", true, "stopped before GitHub answered")
+    : new JobError("GITHUB_UNAVAILABLE", true);
+
 async function getJson<S extends z.ZodType>(
   url: string,
   schema: S,
-  deps: { token?: string; fetch?: typeof fetch },
+  deps: GithubDeps,
 ): Promise<z.output<S>> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
@@ -68,10 +81,12 @@ async function getJson<S extends z.ZodType>(
       method: "GET",
       headers,
       redirect: "error",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: deps.signal
+        ? AbortSignal.any([deps.signal, AbortSignal.timeout(TIMEOUT_MS)])
+        : AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {
-    throw new JobError("GITHUB_UNAVAILABLE", true);
+    throw unavailable(deps);
   }
 
   if (res.status === 404) {
@@ -99,7 +114,7 @@ async function getJson<S extends z.ZodType>(
     text = await readCapped(res);
   } catch (e) {
     if (e instanceof JobError) throw e;
-    throw new JobError("GITHUB_UNAVAILABLE", true);
+    throw unavailable(deps);
   }
   let parsed: unknown;
   try {
@@ -114,7 +129,7 @@ async function getJson<S extends z.ZodType>(
 
 export async function fetchGithubProfile(
   username: string,
-  deps: { token?: string; fetch?: typeof fetch } = {},
+  deps: GithubDeps = {},
 ): Promise<{ login: string; name: string | null; repos: GithubRepo[] }> {
   const check = checkGithubInput(username);
   if (!check.ok || !check.username || check.username !== username.trim())

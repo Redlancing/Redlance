@@ -50,7 +50,11 @@ describe("runResumePipeline", () => {
     expect(ids).toEqual(expect.arrayContaining(["react", "typescript"]));
     expect(suggestions.meta).toEqual({
       pipelineVersion: PIPELINE_VERSION,
-      promptVersions: { basics: "basics@1", jobTypes: "jobTypes@1", skills: "skills@1" },
+      promptVersions: {
+        basics: "basics@1",
+        jobTypes: "jobTypes@1",
+        skills: "skills@1",
+      },
       partial: [],
     });
     expect(attempts.map(([s, v, a]) => [s, v, a.outcome]).sort()).toEqual([
@@ -101,10 +105,9 @@ describe("runResumePipeline", () => {
     expect(suggestions.meta?.partial).toEqual(["skills"]);
     expect(suggestions.basics.displayName).toBe("Jane Doe");
     expect(suggestions.skills).toEqual([]);
-    expect(attempts.filter(([s]) => s === "skills").map(([, a]) => a.outcome)).toEqual([
-      "error",
-      "error",
-    ]);
+    expect(
+      attempts.filter(([s]) => s === "skills").map(([, a]) => a.outcome),
+    ).toEqual(["error", "error"]);
   });
 
   it("throws LLM_BUSY when every step hits the quota", async () => {
@@ -116,7 +119,8 @@ describe("runResumePipeline", () => {
     }).catch((e) => e);
     expect(err).toBeInstanceOf(JobError);
     expect(err.code).toBe("LLM_BUSY");
-    expect(err.retryable).toBe(false);
+    // Retryable so the job backoff (5 s, 10 s) gets a chance.
+    expect(err.retryable).toBe(true);
   });
 
   it("throws LLM_FAILED when every step fails", async () => {
@@ -140,7 +144,11 @@ describe("runResumePipeline", () => {
             { id: "figma", level: "core", evidence: "Designed in Figma daily" },
           ],
           customSkills: [
-            { name: "Kubernetes wrangling", level: "secondary", evidence: "ran k8s" },
+            {
+              name: "Kubernetes wrangling",
+              level: "secondary",
+              evidence: "ran k8s",
+            },
           ],
         };
       }),
@@ -176,12 +184,13 @@ describe("runResumePipeline", () => {
       const outside = r.prompt.slice(close);
       expect(outside).not.toContain(INJECTED);
       expect(outside.match(/^Task: /gm)).toHaveLength(1);
-      if (stepOf(r) !== "basics") expect(r.prompt.slice(0, close)).toContain(INJECTED);
+      if (stepOf(r) !== "basics")
+        expect(r.prompt.slice(0, close)).toContain(INJECTED);
     }
     expect(seen.map(stepOf).sort()).toEqual(["basics", "jobTypes", "skills"]);
-    expect(suggestions.skills.filter((s) => s.level === "core").length).toBeLessThan(
-      suggestions.skills.length,
-    );
+    expect(
+      suggestions.skills.filter((s) => s.level === "core").length,
+    ).toBeLessThan(suggestions.skills.length);
   });
 
   it("throws a retryable SHUTDOWN when the worker stops mid-analysis", async () => {

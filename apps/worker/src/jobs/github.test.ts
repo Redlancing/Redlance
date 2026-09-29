@@ -50,4 +50,51 @@ describe("githubHandler", () => {
     ).rejects.toMatchObject({ code: "GITHUB_NOT_FOUND", retryable: false });
     expect(fetchFn).not.toHaveBeenCalled();
   });
+
+  const repo = {
+    name: "a",
+    fork: false,
+    archived: false,
+    language: "Python",
+    topics: [],
+    stargazers_count: 1,
+    pushed_at: "2026-01-01T00:00:00Z",
+    description: null,
+  };
+
+  it("uses the validated input username, not the API login", async () => {
+    const fetchFn = (async (url: string) =>
+      url.endsWith("/octocat")
+        ? body({ login: "oct--cat", name: null })
+        : body([repo])) as typeof fetch;
+    const handler = makeGithubHandler(fetchFn);
+    const ctx = { env: {}, setStage: vi.fn() } as unknown as JobContext;
+    const out = await handler(
+      { input: { username: "octocat" } } as unknown as ImportJob,
+      ctx,
+    );
+    const parsed = suggestionsSchema.safeParse(out.result);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.githubUsername).toBe("octocat");
+  });
+
+  it("fails as SHUTDOWN when the job signal aborts mid-fetch", async () => {
+    const ac = new AbortController();
+    const fetchFn = ((_url: string, init?: RequestInit) =>
+      new Promise((_, reject) => {
+        init?.signal?.addEventListener("abort", () =>
+          reject(new DOMException("aborted", "AbortError")),
+        );
+        setTimeout(() => ac.abort(), 10);
+      })) as typeof fetch;
+    const handler = makeGithubHandler(fetchFn);
+    const ctx = {
+      env: {},
+      setStage: vi.fn(),
+      signal: ac.signal,
+    } as unknown as JobContext;
+    await expect(
+      handler({ input: { username: "octocat" } } as unknown as ImportJob, ctx),
+    ).rejects.toMatchObject({ code: "SHUTDOWN", retryable: true });
+  });
 });

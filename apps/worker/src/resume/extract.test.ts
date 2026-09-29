@@ -1,8 +1,18 @@
 import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import { makeDocx, makeDocxWithDescriptors, makePdf } from "../../test/fixtures";
+import {
+  makeDocx,
+  makeDocxWithDescriptors,
+  makePdf,
+} from "../../test/fixtures";
+import { JobError } from "../jobs/types";
 import { ResumeError } from "./errors";
-import { MAX_PDF_PAGES, checkDocxZip, extractText, extractTextInline } from "./extract";
+import {
+  MAX_PDF_PAGES,
+  checkDocxZip,
+  extractText,
+  extractTextInline,
+} from "./extract";
 
 const code = async (p: Promise<unknown> | (() => void)) => {
   try {
@@ -29,7 +39,10 @@ describe("extractText", () => {
   });
 
   it("reads a DOCX", async () => {
-    const text = await extractText(makeDocx(["Jane Doe", "React developer"]), "docx");
+    const text = await extractText(
+      makeDocx(["Jane Doe", "React developer"]),
+      "docx",
+    );
     expect(text).toContain("Jane Doe");
     expect(text).toContain("React developer");
   });
@@ -94,7 +107,9 @@ describe("extractText", () => {
       if (v.getUint32(i, true) === 0x02014b50)
         cds.push({
           at: i,
-          name: dec.decode(zip.subarray(i + 46, i + 46 + v.getUint16(i + 28, true))),
+          name: dec.decode(
+            zip.subarray(i + 46, i + 46 + v.getUint16(i + 28, true)),
+          ),
         });
     const doc = cds.find((c) => c.name === "word/document.xml")!;
     const other = cds.find((c) => c.name !== "word/document.xml")!;
@@ -103,9 +118,14 @@ describe("extractText", () => {
   });
 
   it("extracts text through the rebuilt zip, including data-descriptor DOCX", async () => {
-    expect(await extractTextInline(makeDocx(["Plain text"]), "docx")).toContain("Plain text");
+    expect(await extractTextInline(makeDocx(["Plain text"]), "docx")).toContain(
+      "Plain text",
+    );
     expect(
-      await extractTextInline(makeDocxWithDescriptors(["Descriptor text"]), "docx"),
+      await extractTextInline(
+        makeDocxWithDescriptors(["Descriptor text"]),
+        "docx",
+      ),
     ).toContain("Descriptor text");
   });
 
@@ -132,7 +152,10 @@ describe("extractText", () => {
     // last record = the bomb; duplicate it under the real name
     const recs: number[] = [];
     for (let i = 0; i + 4 <= cd.length; i++)
-      if (new DataView(cd.buffer, cd.byteOffset).getUint32(i, true) === 0x02014b50) recs.push(i);
+      if (
+        new DataView(cd.buffer, cd.byteOffset).getUint32(i, true) === 0x02014b50
+      )
+        recs.push(i);
     const extra = cd.slice(recs[recs.length - 1]);
     extra.set(strToU8("word/document.xml"), 46);
     const out = new Uint8Array(zip.length + extra.length);
@@ -160,5 +183,42 @@ describe("extractText", () => {
     expect(
       await code(extractText(makePdf(["x"]), "pdf", { timeoutMs: 1 })),
     ).toBe("UNSUPPORTED_FILE");
+  });
+
+  function logStub() {
+    const calls: unknown[][] = [];
+    const log: any = {
+      info: (...a: unknown[]) => calls.push(a),
+      warn: (...a: unknown[]) => calls.push(a),
+      error: (...a: unknown[]) => calls.push(a),
+      child: () => log,
+    };
+    return { log, calls };
+  }
+
+  it("logs the timeout path without any message", async () => {
+    const { log, calls } = logStub();
+    await code(
+      extractText(makePdf(["secret line"]), "pdf", { timeoutMs: 1, log }),
+    );
+    expect(calls).toHaveLength(1);
+    expect(calls[0]![0]).toMatchObject({ path: "timeout" });
+    expect(JSON.stringify(calls)).not.toContain("secret");
+  });
+
+  it("maps a thread that cannot start to a retryable INTERNAL, and logs it", async () => {
+    const { log, calls } = logStub();
+    const err = await extractText(makePdf(["x"]), "pdf", {
+      log,
+      workerUrl: new URL("file:///nonexistent/extract-worker.ts"),
+    }).catch((e) => e);
+    expect(err).toBeInstanceOf(JobError);
+    expect(err).toMatchObject({ code: "INTERNAL", retryable: true });
+    expect(calls[0]![0]).toMatchObject({
+      path: "error",
+      errName: "Error",
+      errCode: "ERR_MODULE_NOT_FOUND",
+    });
+    expect(JSON.stringify(calls)).not.toContain("nonexistent");
   });
 });

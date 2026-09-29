@@ -16,6 +16,34 @@ import type { BasicsOutput, JobTypesOutput, SkillsOutput } from "./step-types";
 
 type Level = "core" | "secondary";
 
+// Links in a suggested name or headline would be shown (and saved) as the
+// user's own words, so they're removed. Scheme/www links match in any case;
+// a bare "domain.tld/path" only in lowercase with a common TLD, so tech names
+// like "Node.js/React" or "ASP.NET/C#" survive.
+const SCHEME_LINK_RE = /(?:https?:\/\/|www\.)\S*/gi;
+const TLDS =
+  "com|net|org|io|dev|app|ai|co|me|xyz|in|uk|gg|tv|ly|so|sh|to|be|de|site|page|link|bio";
+const PATH_LINK_RE = new RegExp(`\\b(?:[a-z0-9-]+\\.)+(?:${TLDS})\\/\\S*`, "g");
+const BARE_DOMAIN_RE = new RegExp(`\\b[a-z0-9-]+\\.(?:${TLDS})\\b`, "i");
+
+function stripLinks(value: string): string {
+  return value
+    .replace(SCHEME_LINK_RE, " ")
+    .replace(PATH_LINK_RE, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^[\s|·•,;:/-]+|[\s|·•,;:/-]+$/g, "")
+    .trim();
+}
+
+function isPlainName(name: string): boolean {
+  if (name.includes("@")) return false;
+  if (/^[\d\s()+.\-]+$/.test(name)) return false; // a phone number or other digits
+  if (/https?:\/\/|www\./i.test(name) || BARE_DOMAIN_RE.test(name))
+    return false;
+  return true;
+}
+
 export function mergeResumeSteps(
   steps: {
     basics?: BasicsOutput;
@@ -34,9 +62,13 @@ export function mergeResumeSteps(
   },
 ): Suggestions {
   const basics: Record<string, unknown> = {};
-  const displayName = steps.basics?.displayName?.trim().slice(0, LIMITS.displayName);
-  if (displayName) basics.displayName = displayName;
-  const headline = steps.basics?.headline?.trim().slice(0, LIMITS.headline);
+  const displayName = steps.basics?.displayName
+    ?.trim()
+    .slice(0, LIMITS.displayName);
+  if (displayName && isPlainName(displayName)) basics.displayName = displayName;
+  const headline = stripLinks(steps.basics?.headline ?? "")
+    .slice(0, LIMITS.headline)
+    .trim();
   if (headline) basics.headline = headline;
   const country = steps.basics?.country?.trim().toUpperCase();
   if (country && isCountryCode(country)) basics.country = country;

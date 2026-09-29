@@ -30,6 +30,8 @@ export type RunnerOptions = {
   jobTimeoutMs?: number;
 };
 
+const SHUTDOWN_REASON = Symbol("shutdown");
+
 export function createRunner(opts: RunnerOptions) {
   const { db, handlers, env, log, llm } = opts;
   const concurrency = opts.concurrency ?? env.WORKER_CONCURRENCY;
@@ -38,6 +40,8 @@ export function createRunner(opts: RunnerOptions) {
   const jobTimeoutMs = opts.jobTimeoutMs ?? 90_000;
 
   const running = new Set<Promise<void>>();
+  /** One controller per running job, so stop() can abort them. */
+  const controllers = new Set<AbortController>();
   let listener: Awaited<ReturnType<RunnerOptions["listen"]>> | null = null;
   let pollTimer: NodeJS.Timeout | null = null;
   let sweepTimer: NodeJS.Timeout | null = null;
@@ -61,8 +65,22 @@ export function createRunner(opts: RunnerOptions) {
         return;
       }
       const ac = new AbortController();
+      controllers.add(ac);
       let timer: NodeJS.Timeout | undefined;
       try {
+        // stop() aborts with SHUTDOWN_REASON; the job then fails as SHUTDOWN
+        // (retryable) even if the handler ignores the signal.
+        const shutdown = new Promise<never>((_, reject) => {
+          ac.signal.addEventListener(
+            "abort",
+            () => {
+              if (ac.signal.reason === SHUTDOWN_REASON)
+                reject(new JobError("SHUTDOWN", true, "worker stopping"));
+            },
+            { once: true },
+          );
+        });
+        shutdown.catch(() => {});
         const timeout = new Promise<never>((_, reject) => {
           timer = setTimeout(() => {
             ac.abort();
@@ -82,18 +100,26 @@ export function createRunner(opts: RunnerOptions) {
           }),
         );
         work.catch(() => {}); // a late rejection after timeout must not be unhandled
-        const outcome = await Promise.race([work, timeout]);
-        const owned = await completeImportJob(db, job.id, job.attempts, outcome);
+        const outcome = await Promise.race([work, timeout, shutdown]);
+        const owned = await completeImportJob(
+          db,
+          job.id,
+          job.attempts,
+          outcome,
+        );
         if (!owned) {
           status = "lost";
-          log.warn({ jobId: job.id }, "claim lost before completion; result dropped");
+          log.warn(
+            { jobId: job.id },
+            "claim lost before completion; result dropped",
+          );
         }
       } finally {
         clearTimeout(timer);
+        controllers.delete(ac);
       }
     } catch (err) {
-      const je =
-        err instanceof JobError ? err : new JobError("INTERNAL", true);
+      const je = err instanceof JobError ? err : new JobError("INTERNAL", true);
       errorCode = je.code;
       if (!(err instanceof JobError)) {
         // Never log err.message: it may contain resume text. Frames only.
@@ -104,7 +130,10 @@ export function createRunner(opts: RunnerOptions) {
             kind: job.kind,
             errName: e?.name ?? typeof err,
             pgCode: pgErrorCode(err),
-            stack: e?.stack?.split("\n").filter((l) => /^\s+at /.test(l)).join("\n"),
+            stack: e?.stack
+              ?.split("\n")
+              .filter((l) => /^\s+at /.test(l))
+              .join("\n"),
           },
           "job failed with an unexpected error",
         );
@@ -117,7 +146,11 @@ export function createRunner(opts: RunnerOptions) {
       } catch (dbErr) {
         status = "unrecorded";
         log.error(
-          { jobId: job.id, errName: (dbErr as Error)?.name, pgCode: pgErrorCode(dbErr) },
+          {
+            jobId: job.id,
+            errName: (dbErr as Error)?.name,
+            pgCode: pgErrorCode(dbErr),
+          },
           "could not record job failure",
         );
       }
@@ -204,6 +237,13 @@ export function createRunner(opts: RunnerOptions) {
       if (pollTimer) clearInterval(pollTimer);
       if (sweepTimer) clearInterval(sweepTimer);
       if (pumping) await pumping.catch(() => {});
+      // Abort running jobs 5 s before the grace period ends (at once for a
+      // short grace), so they fail as SHUTDOWN and are re-queued now instead
+      // of waiting for the stale sweep.
+      const abortAll = () => {
+        for (const ac of controllers) ac.abort(SHUTDOWN_REASON);
+      };
+      const abortTimer = setTimeout(abortAll, Math.max(0, graceMs - 5000));
       let graceTimer: NodeJS.Timeout | undefined;
       const grace = new Promise<void>((resolve) => {
         graceTimer = setTimeout(resolve, graceMs);
@@ -215,6 +255,7 @@ export function createRunner(opts: RunnerOptions) {
         grace,
       ]);
       clearTimeout(graceTimer);
+      clearTimeout(abortTimer);
       if (running.size > 0) {
         log.warn({ running: running.size }, "stopping with jobs still running");
       }

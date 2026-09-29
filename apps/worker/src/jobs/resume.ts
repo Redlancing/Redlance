@@ -13,7 +13,7 @@ import { and, eq } from "drizzle-orm";
 import { cleanResumeText, MIN_RESUME_CHARS } from "../resume/clean";
 import { ResumeError } from "../resume/errors";
 import { extractText } from "../resume/extract";
-import { PIPELINE_VERSION, runResumePipeline } from "../resume/pipeline";
+import { resumeCacheKey, runResumePipeline } from "../resume/pipeline";
 import { githubFromText } from "../resume/prepass";
 import { JobError, type JobContext, type JobHandler } from "./types";
 
@@ -27,7 +27,7 @@ async function readText(job: ImportJob, ctx: JobContext): Promise<string> {
     throw new JobError("UNSUPPORTED_FILE", false);
   let raw: string;
   try {
-    raw = await extractText(job.fileBytes, job.fileType);
+    raw = await extractText(job.fileBytes, job.fileType, { log: ctx.log });
   } catch (e) {
     if (e instanceof ResumeError) throw new JobError(e.code, false, e.message);
     throw e;
@@ -56,8 +56,9 @@ export const resumeHandler: JobHandler = async (job, ctx) => {
   let suggestions: Suggestions | null = null;
   let complete = true;
 
+  const cacheKey = resumeCacheKey(ctx.env);
   const cached = suggestionsSchema.safeParse(
-    await findCachedResumeResult(ctx.db, contentHash, PIPELINE_VERSION),
+    await findCachedResumeResult(ctx.db, contentHash, cacheKey),
   );
   // Only complete results are reused (older rows may predate the no-partial rule).
   if (cached.success && !cached.data.meta?.partial.length) {
@@ -69,7 +70,10 @@ export const resumeHandler: JobHandler = async (job, ctx) => {
     try {
       const run = await runResumePipeline(text, {
         llm: ctx.llm,
-        models: { fast: ctx.env.VERTEX_MODEL_FAST, smart: ctx.env.VERTEX_MODEL_SMART },
+        models: {
+          fast: ctx.env.VERTEX_MODEL_FAST,
+          smart: ctx.env.VERTEX_MODEL_SMART,
+        },
         signal: ctx.signal,
         onAttempt: (step, promptVersion, a, model) => {
           usage.push(
@@ -97,7 +101,10 @@ export const resumeHandler: JobHandler = async (job, ctx) => {
       // Cost records are kept even when the job fails; a failed insert doesn't fail the job.
       for (const r of await Promise.allSettled(usage))
         if (r.status === "rejected")
-          ctx.log.error({ err: (r.reason as Error).message }, "could not record llm usage");
+          ctx.log.error(
+            { err: (r.reason as Error).message },
+            "could not record llm usage",
+          );
     }
     await ctx.setStage("checking");
   }
@@ -113,6 +120,11 @@ export const resumeHandler: JobHandler = async (job, ctx) => {
 
   // A partial result isn't cached: a one-off step failure mustn't stick to this text.
   return complete
-    ? { result: suggestions, sourceText: text, contentHash, pipelineVersion: PIPELINE_VERSION }
+    ? {
+        result: suggestions,
+        sourceText: text,
+        contentHash,
+        pipelineVersion: cacheKey,
+      }
     : { result: suggestions, sourceText: text };
 };

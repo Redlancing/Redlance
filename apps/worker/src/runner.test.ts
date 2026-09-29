@@ -180,7 +180,10 @@ describe("runner", () => {
     );
     const id = await enqueue(await newUser());
     // On the last attempt the timeout is final.
-    await db.update(importJobs).set({ attempts: 2 }).where(eq(importJobs.id, id));
+    await db
+      .update(importJobs)
+      .set({ attempts: 2 })
+      .where(eq(importJobs.id, id));
     await runner.start();
     await runner.idle();
     const r = await row(id);
@@ -204,7 +207,10 @@ describe("runner", () => {
         { jobTimeoutMs: 50 },
       );
       const id = await enqueue(await newUser());
-      await db.update(importJobs).set({ attempts: 2 }).where(eq(importJobs.id, id));
+      await db
+        .update(importJobs)
+        .set({ attempts: 2 })
+        .where(eq(importJobs.id, id));
       await runner.start();
       await runner.idle();
       await sleep(150);
@@ -238,9 +244,7 @@ describe("runner", () => {
     await runner.start();
     await runner.idle();
     await runner.stop();
-    const errLog = calls.find(
-      (c) => (c[0] as any)?.errName === "TypeError",
-    )!;
+    const errLog = calls.find((c) => (c[0] as any)?.errName === "TypeError")!;
     expect(errLog).toBeDefined();
     expect((errLog[0] as any).stack).toMatch(/\bat /);
     expect(JSON.stringify(calls)).not.toContain("secret resume text");
@@ -280,6 +284,60 @@ describe("runner", () => {
     await runner.stop();
     expect(finished).toBe(true);
     expect((await row(id)).status).toBe("done");
+  });
+
+  function finishedLogs() {
+    const calls: unknown[][] = [];
+    const stub: any = {
+      info: (...a: unknown[]) => calls.push(a),
+      warn: (...a: unknown[]) => calls.push(a),
+      error: (...a: unknown[]) => calls.push(a),
+      child: () => stub,
+    };
+    const finished = () =>
+      calls
+        .filter((c) => c[1] === "job finished")
+        .map((c) => c[0] as { status: string; errorCode: string | null });
+    return { stub, finished };
+  }
+
+  it("stop() aborts a running job so SHUTDOWN is recorded and the job re-queued", async () => {
+    const logs = finishedLogs();
+    const { runner } = make(
+      {
+        github: (_job, ctx) =>
+          new Promise((_, reject) => {
+            ctx.signal.addEventListener("abort", () =>
+              reject(new JobError("SHUTDOWN", true)),
+            );
+          }),
+      },
+      { log: logs.stub },
+    );
+    const id = await enqueue(await newUser());
+    await runner.start();
+    await until(async () => (await row(id)).status === "running");
+    await runner.stop(100);
+    expect((await row(id)).status).toBe("queued");
+    expect(logs.finished()).toEqual([
+      expect.objectContaining({ status: "requeued", errorCode: "SHUTDOWN" }),
+    ]);
+  });
+
+  it("stop() records SHUTDOWN even when the handler ignores the signal", async () => {
+    const { runner } = make({ github: () => new Promise(() => {}) });
+    const id = await enqueue(await newUser());
+    // Last attempt, so the failure is final and the code is stored.
+    await db
+      .update(importJobs)
+      .set({ attempts: 2 })
+      .where(eq(importJobs.id, id));
+    await runner.start();
+    await until(async () => (await row(id)).status === "running");
+    await runner.stop(100);
+    const r = await row(id);
+    expect(r.status).toBe("failed");
+    expect(r.errorCode).toBe("SHUTDOWN");
   });
 
   it("sweeps stale running jobs back into the queue", async () => {

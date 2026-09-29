@@ -19,6 +19,25 @@ export const PIPELINE_DEADLINE_MS = 20_000;
 
 const STEPS = [basicsStep, jobTypesStep, skillsStep] as const;
 
+/**
+ * The cache key stored as import_jobs.pipeline_version: everything that
+ * changes the output (pipeline, prompt versions, models, LLM mode), so a
+ * change to any of them misses the cache.
+ */
+export function resumeCacheKey(env: {
+  VERTEX_MODEL_FAST: string;
+  VERTEX_MODEL_SMART: string;
+  LLM_MODE: string;
+}): string {
+  return [
+    PIPELINE_VERSION,
+    ...STEPS.map((s) => s.version),
+    env.VERTEX_MODEL_FAST,
+    env.VERTEX_MODEL_SMART,
+    env.LLM_MODE,
+  ].join("|");
+}
+
 /** The deterministic pre-pass (no model). GitHub is added by the job, not here. */
 export function buildPipelineInput(text: string): PipelineInput {
   const sections = splitSections(text);
@@ -56,8 +75,13 @@ export async function runResumePipeline(
   if (deps.signal?.aborted) deadline.abort();
   else deps.signal?.addEventListener("abort", onOuter, { once: true });
 
-  const report = (step: StepSpec<unknown>, model: string, attempts: AttemptRecord[]) => {
-    for (const a of attempts) deps.onAttempt?.(step.name, step.version, a, model);
+  const report = (
+    step: StepSpec<unknown>,
+    model: string,
+    attempts: AttemptRecord[],
+  ) => {
+    for (const a of attempts)
+      deps.onAttempt?.(step.name, step.version, a, model);
   };
 
   let settled: PromiseSettledResult<unknown>[];
@@ -93,7 +117,11 @@ export async function runResumePipeline(
 
   // The worker is stopping (not our own deadline): retry the whole job cleanly.
   if (deps.signal?.aborted)
-    throw new JobError("SHUTDOWN", true, "stopped before the analysis finished");
+    throw new JobError(
+      "SHUTDOWN",
+      true,
+      "stopped before the analysis finished",
+    );
 
   const partial: ResumeStepName[] = [];
   const out: Record<string, unknown> = {};
@@ -111,7 +139,7 @@ export async function runResumePipeline(
         r.reason.kind === "quota_exhausted",
     );
     throw quota
-      ? new JobError("LLM_BUSY", false, "the model quota is exhausted")
+      ? new JobError("LLM_BUSY", true, "the model quota is exhausted")
       : new JobError("LLM_FAILED", true, "every resume step failed");
   }
 

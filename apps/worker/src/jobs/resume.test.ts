@@ -18,13 +18,17 @@ import { makeDocx } from "../../test/fixtures";
 import { parseWorkerEnv } from "../env";
 import { fakeResumeResponder, stepOf } from "../fake-llm";
 import { createLogger } from "../logger";
-import { PIPELINE_VERSION } from "../resume/pipeline";
+import { resumeCacheKey } from "../resume/pipeline";
 import { resumeHandler } from "./resume";
 import { JobError, type JobContext } from "./types";
 
 const url = process.env.TEST_DATABASE_URL!;
 const { db, pool } = createDb(url, { max: 4 });
-const env = parseWorkerEnv({ APP_ENV: "test", DATABASE_URL: url, LLM_MODE: "fake" });
+const env = parseWorkerEnv({
+  APP_ENV: "test",
+  DATABASE_URL: url,
+  LLM_MODE: "fake",
+});
 const log = createLogger("silent");
 const llm = createClient(createFakeTransport(fakeResumeResponder));
 
@@ -64,7 +68,11 @@ const LINES = [
 ];
 
 /** Enqueues a resume and claims it, as the runner would. */
-async function claimed(userId: string, bytes: Uint8Array, fileType: "pdf" | "docx" = "docx") {
+async function claimed(
+  userId: string,
+  bytes: Uint8Array,
+  fileType: "pdf" | "docx" = "docx",
+) {
   const id = await enqueueImportJob(db, {
     userId,
     kind: "resume",
@@ -107,10 +115,18 @@ describe("resumeHandler", () => {
     const { ctx, stages } = ctxFor(job);
     const out = await resumeHandler(job, ctx);
 
-    const result = out.result as { basics: { displayName?: string }; skills: { id: string }[] };
+    const result = out.result as {
+      basics: { displayName?: string };
+      skills: { id: string }[];
+    };
     expect(result.basics.displayName).toBe("Jane Doe");
-    expect(result.skills.map((s) => s.id)).toEqual(expect.arrayContaining(["react"]));
-    expect(out.pipelineVersion).toBe(PIPELINE_VERSION);
+    expect(result.skills.map((s) => s.id)).toEqual(
+      expect.arrayContaining(["react"]),
+    );
+    expect(out.pipelineVersion).toBe(
+      "resume@1|basics@1|jobTypes@1|skills@1|" +
+        `${env.VERTEX_MODEL_FAST}|${env.VERTEX_MODEL_SMART}|fake`,
+    );
     expect(out.contentHash).toMatch(/^[0-9a-f]{64}$/);
     expect(out.sourceText).toContain("Jane Doe");
     expect(stages).toEqual(["reading", "analysing", "checking"]);
@@ -169,6 +185,22 @@ describe("resumeHandler", () => {
     expect(await usageRows()).toHaveLength(3);
   });
 
+  it("misses the cache when a model name changes", async () => {
+    const userId = await newUser();
+    const first = await claimed(userId, makeDocx(LINES));
+    const out1 = await resumeHandler(first, ctxFor(first).ctx);
+    await completeImportJob(db, first.id, first.attempts, out1);
+
+    const second = await claimed(userId, makeDocx(LINES));
+    const { ctx, stages } = ctxFor(second);
+    ctx.env = { ...env, VERTEX_MODEL_SMART: "some-newer-model" };
+    const out2 = await resumeHandler(second, ctx);
+    expect(stages).toEqual(["reading", "analysing", "checking"]);
+    expect(out2.contentHash).toBe(out1.contentHash);
+    expect(out2.pipelineVersion).not.toBe(out1.pipelineVersion);
+    expect(out2.pipelineVersion).toContain("some-newer-model");
+  });
+
   it("never caches a partial result", async () => {
     const userId = await newUser();
     const flaky = createClient(
@@ -180,7 +212,9 @@ describe("resumeHandler", () => {
     );
     const first = await claimed(userId, makeDocx(LINES));
     const out1 = await resumeHandler(first, ctxFor(first, flaky).ctx);
-    expect((out1.result as { meta: { partial: string[] } }).meta.partial).toEqual(["skills"]);
+    expect(
+      (out1.result as { meta: { partial: string[] } }).meta.partial,
+    ).toEqual(["skills"]);
     expect(out1.contentHash).toBeUndefined();
     expect(out1.pipelineVersion).toBeUndefined();
     await completeImportJob(db, first.id, first.attempts, out1);
@@ -189,7 +223,7 @@ describe("resumeHandler", () => {
     const hash = createHash("sha256").update(out1.sourceText!).digest("hex");
     await db
       .update(importJobs)
-      .set({ contentHash: hash, pipelineVersion: PIPELINE_VERSION })
+      .set({ contentHash: hash, pipelineVersion: resumeCacheKey(env) })
       .where(eq(importJobs.id, first.id));
 
     const before = (await usageRows()).length;
@@ -206,9 +240,14 @@ describe("resumeHandler", () => {
     const lines = [...LINES, "Code: github.com/octocat"];
     const a = await claimed(userId, makeDocx(lines));
     const out = await resumeHandler(a, ctxFor(a).ctx);
-    expect((out.result as { githubUsername: string | null }).githubUsername).toBe("octocat");
+    expect(
+      (out.result as { githubUsername: string | null }).githubUsername,
+    ).toBe("octocat");
 
-    const b = await claimed(userId, makeDocx([...lines, "Also available for contract work."]));
+    const b = await claimed(
+      userId,
+      makeDocx([...lines, "Also available for contract work."]),
+    );
     await resumeHandler(b, ctxFor(b).ctx);
 
     const gh = await db
@@ -221,7 +260,10 @@ describe("resumeHandler", () => {
 
   it("fails with NO_TEXT for a very short resume", async () => {
     const userId = await newUser();
-    const job = await claimed(userId, makeDocx(["Jane Doe", "Developer, React and Node.js."]));
+    const job = await claimed(
+      userId,
+      makeDocx(["Jane Doe", "Developer, React and Node.js."]),
+    );
     const err = await resumeHandler(job, ctxFor(job).ctx).catch((e) => e);
     expect(err).toBeInstanceOf(JobError);
     expect(err.code).toBe("NO_TEXT");
