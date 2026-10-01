@@ -14,7 +14,9 @@ export type Listener = {
 export async function createPgListener(
   url: string,
   log: Logger,
+  channel: string = IMPORT_JOBS_CHANNEL,
 ): Promise<Listener> {
+  if (!/^[a-z_]+$/.test(channel)) throw new Error(`bad channel: ${channel}`);
   const callbacks: Array<() => void> = [];
   let closed = false;
   let client: pg.Client | null = null;
@@ -52,7 +54,7 @@ export async function createPgListener(
     });
     try {
       await c.connect();
-      await c.query(`LISTEN ${IMPORT_JOBS_CHANNEL}`);
+      await c.query(`LISTEN ${channel}`);
       delay = 1000;
       // Jobs may have arrived while we were disconnected.
       for (const cb of callbacks) cb();
@@ -77,6 +79,48 @@ export async function createPgListener(
         c.on("error", () => {});
         await c.end().catch(() => {});
       }
+    },
+  };
+}
+
+/**
+ * A Postgres session advisory lock on its own connection: held until release() or until the
+ * connection drops (then `lost` resolves and another worker can take over). Null if taken.
+ */
+export async function acquireSessionLock(
+  url: string,
+  key: string,
+  log: Logger,
+): Promise<{ lost: Promise<void>; release(): Promise<void> } | null> {
+  const c = new pg.Client({ connectionString: url, keepAlive: true });
+  let markLost!: () => void;
+  const lost = new Promise<void>((r) => (markLost = r));
+  c.on("error", (err) => {
+    log.warn({ err: err.message }, "lock connection lost");
+    markLost();
+  });
+  c.on("end", () => markLost());
+  await c.connect();
+  try {
+    const res = await c.query<{ ok: boolean }>(
+      "select pg_try_advisory_lock(hashtext($1)) as ok",
+      [key],
+    );
+    if (!res.rows[0]?.ok) {
+      await c.end().catch(() => {});
+      return null;
+    }
+  } catch (err) {
+    await c.end().catch(() => {});
+    throw err;
+  }
+  return {
+    lost,
+    async release() {
+      await c
+        .query("select pg_advisory_unlock(hashtext($1))", [key])
+        .catch(() => {});
+      await c.end().catch(() => {});
     },
   };
 }

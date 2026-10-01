@@ -1,4 +1,9 @@
-import { PAGE_TITLES, canOpen, isPageId } from "@redlance/core";
+import {
+  ACTIVE_SUBREDDITS,
+  PAGE_TITLES,
+  canOpen,
+  isPageId,
+} from "@redlance/core";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { BasicsStep } from "@/components/onboarding/basics-step";
@@ -73,7 +78,13 @@ export default async function OnboardingStepPage(
             init={stepInit(state, user.userId, "rates")}
           />
         )}
-        {review?.ok && <ReviewStep data={review.data} email={user.email} />}
+        {review?.ok && (
+          <ReviewStep
+            data={review.data}
+            email={user.email}
+            subredditCount={ACTIVE_SUBREDDITS.length}
+          />
+        )}
       </div>
     </div>
   );

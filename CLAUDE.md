@@ -11,15 +11,15 @@ npm workspaces monorepo (Node ≥ 20.9). Run everything from the repo root.
 - `apps/web` — Next.js 16 (App Router, `src/`, TypeScript, Tailwind v4, React Compiler, shadcn/ui on Base UI). Next 16 differs from older versions: read `apps/web/AGENTS.md` and the bundled docs in `node_modules/next/dist/docs/` before writing Next code.
 - `packages/db` — `@redlance/db`: Drizzle schema, client and migrations (Postgres 17 + pgvector). Change the schema only via `npm run db:generate` + committed migrations.
 - Server-only code lives in `apps/web/src/server/`. Every API route is under `/api/v1` and wraps its handler in `apiRoute()` (session → origin → input → Redis rate limit). Settings come from env vars validated in `src/server/env.ts`; copy `apps/web/.env.example` to `.env.local`.
-- `brand/` — logo files and brand guide (`brand/README.md`). Brand colours are theme tokens in `apps/web/src/app/globals.css` (`flare-50…700`, `cream`, `ink`, `stone`, `bone`, `feed`, `danger`, `success`; shadcn's `primary` = `ink`, so buttons are near-black like Attio's). Fonts: `font-sans`/`font-heading` = Inter, `font-serif` = Fraunces (quotes only), `font-wordmark` = Bricolage Grotesque (logo only). The homepage follows the Attio teardown in `docs/research/attio-teardown.md`; the logo component is `apps/web/src/components/brand/logo.tsx`.
+- `brand/` — logo files and brand guide (`brand/README.md`). Brand colours are theme tokens in `apps/web/src/app/globals.css` (`flare-50…700`, `cream`, `ink`, `stone`, `bone`, `feed`, `danger`, `success`; shadcn's `primary` = `ink`, so buttons are near-black like Attio's). Fonts: `font-sans`/`font-heading` = Inter, `font-serif` = Fraunces (quotes only), `font-wordmark` = Bricolage Grotesque (logo only). The homepage follows the Attio teardown in `docs/homepage/attio-teardown.md`; the logo component is `apps/web/src/components/brand/logo.tsx`.
 - Verbatim copy (one-liner, core promise) lives in `apps/web/src/lib/site.ts` — import it, don't retype it.
-- `apps/worker` — `@redlance/worker`: one Node process for background jobs (resume and GitHub imports now, RSS ingestion next); copy `apps/worker/.env.example` to `.env.local`. `packages/core` — `@redlance/core` (pure: taxonomy, step schemas, suggestions). `packages/llm` — `@redlance/llm` (Gemini on Vertex AI). Later: shared `JobPost` types.
+- `apps/worker` — `@redlance/worker`: one Node process for background jobs (resume and GitHub imports; Reddit ingestion in `src/ingest/` and `src/sources/reddit-rss/`); copy `apps/worker/.env.example` to `.env.local`. `packages/core` — `@redlance/core` (pure: taxonomy, step schemas, suggestions, the shared `JobPost` shape, the subreddit catalogue). `packages/llm` — `@redlance/llm` (Gemini on Vertex AI).
 
 Commands: `npm run dev` (starts Docker db + cache, then Next and the worker together) · `npm test` · `npm run db:up|db:down|db:migrate|db:generate|db:reset` · `npm run build` · `npm run lint` · `npm run typecheck` · `npm run format`. Add shadcn components with `npx shadcn@latest add <name> -c apps/web`.
 
 ## Core loop
 
-Collect (RSS poll every 2–3 min) → Understand (LLM extracts skills, budget, paid/unpaid, remote, deadline) → Match (0–100 score + one-line reason) → Alert (Telegram) → Draft (comment + DM, in the user's voice) → **human sends** → Learn (edits and outcomes feed back).
+Collect (RSS: every hiring subreddit about every 5 min, in combined feeds of ~80) → Understand (LLM extracts skills, budget, paid/unpaid, remote, deadline) → Match (0–100 score + one-line reason) → Alert (Telegram) → Draft (comment + DM, in the user's voice) → **human sends** → Learn (edits and outcomes feed back).
 
 ## Planned stack
 
@@ -28,8 +28,8 @@ Collect (RSS poll every 2–3 min) → Understand (LLM extracts skills, budget, 
 - **Request path:** CloudFront (CDN) → WAF (managed rules + per-IP rate limit) → one EC2 server running the app in Docker (decided 2026-09-26 after the AWS Free Tier credits were lost). Add an ALB + ECS Fargate when a second server is needed; the app stays stateless so that's an infrastructure change only. Per-user rate limits run in the app against Redis. No AWS API Gateway until there are several backend services or a public API; routes live under `/api/v1`.
 - **Data:** Postgres 17 + pgvector runs as a Docker container, on the laptop and on the EC2 server (no RDS, to save cost), with a tested daily backup to S3. Redis: a Valkey 8 container locally, **Upstash** in production (no ElastiCache); only `REDIS_URL` differs, and Redis only holds rebuildable data. Frequent health checks must not touch Redis (Upstash bills per command). Redis is used from day one for per-user rate limits (token bucket), daily quotas and hot caches; S3 for static assets (and uploads if we ever keep files). **No SQS** (decided 2026-09-29): slow jobs go into a Postgres job table, and the worker picks them up. Add SQS only when there are several servers or far more jobs than Postgres can hand out.
 - **Auth:** Cognito (Essentials) with Google + email one-time code, no passwords. Tokens in httpOnly cookies, verified in the app on every request; our `users` table is keyed by the Cognito `sub`.
-- **Workflow:** build and test each feature locally first (Docker: Postgres + Valkey; a dev Cognito pool), then deploy. Specs live in `docs/superpowers/specs/`.
-- **Worker:** one Node process (`apps/worker`), run as a second Docker container on the same EC2 server as the web app; no separate AWS service for it. It runs RSS ingestion every 2–3 min and the background jobs from the Postgres job table. Web code starts work by adding a job row (or calling an API), not through SQS.
+- **Workflow:** build and test each feature locally first (Docker: Postgres + Valkey; a dev Cognito pool), then deploy. Docs are grouped by feature: `docs/<feature>/` holds its design, plans and research (index: `docs/README.md`).
+- **Worker:** one Node process (`apps/worker`), run as a second Docker container on the same EC2 server as the web app; no separate AWS service for it. It runs RSS ingestion (one poller system-wide, at least 65 s between Reddit requests), post analysis, and the background jobs from the Postgres job table. Web code starts work by adding a job row (or calling an API), not through SQS.
 - **AI:** Gemini, tiered by task: Flash-Lite for high-volume work (per-post extraction, scoring), Flash for drafts and onboarding imports. Calls go through our own interface so any task can switch model.
 - **Matching:** embeddings shortlist + rule filters, then LLM re-score with reasons
 - **Alerts:** Telegram Bot API (email/push later)
@@ -39,7 +39,7 @@ Core tables: `profiles`, `job_posts`, `matches`, `replies`, `outcomes`, `client_
 
 ## Product decisions (2026-09-25)
 
-- **Subreddits:** there is no subreddit step in onboarding. When onboarding finishes, Redlance connects the user to the right subreddits for their job types; users can add more later from the dashboard but don't have to pick any. Their posts arrive through normal ingestion (the worker, or an API call); nothing extra is queued per user. If the dashboard's subreddits page opens before that data has arrived, it shows a loader. Keep it simple.
+- **Subreddits (revised 2026-10-01):** users are **not** connected to subreddits. One central catalogue (`packages/core/src/subreddit-catalogue.ts`, about 238 active hiring subreddits from two research passes in `docs/ingestion/research/`) is polled for everyone, and each user's feed is filtered by what a post asks for, not where it was posted. There is no subreddit step in onboarding. Later, paid plans can add a subreddit (`user_subreddits`, `tier = 'custom'`).
 - **Trial:** the 5-day trial starts when onboarding finishes, not at sign-up.
 - **Portfolio:** no portfolio step (decided 2026-09-29). Onboarding asks for an optional GitHub link instead (optional for everyone, on the Import step).
 - **Voice:** no voice step at onboarding. Drafts start in a default short, plain style, and the user's voice is learned from their edits (store every AI draft and sent version from the first draft).
@@ -53,7 +53,7 @@ Core tables: `profiles`, `job_posts`, `matches`, `replies`, `outcomes`, `client_
 1. **Never auto-post.** No auto-posting, bulk DMs, or anything that sends from a user's Reddit account without them clicking send. The UI offers an edit box + "Open post" button; the user sends.
 2. **Source adapters.** Every data source (RSS now, Reddit API / HN / job boards later) goes through an adapter that emits one common `JobPost` shape. Matching, drafting and alerts must never depend on where a post came from.
 3. **Store everything from day one.** Every post, its extracted fields, the author username, and every reported outcome. V2 features (rate insights, client memory, analytics) depend on this history.
-4. **RSS limits.** Only title, body, author, link, timestamp are available — no comment counts or author reputation. Don't build features that need those until the licensed-API phase. Poll politely with a clear User-Agent; dedupe (each feed returns only ~25 latest posts).
+4. **RSS limits.** Only title, body, author, link, timestamp are available — no flair, comment counts or author reputation. Don't build features that need those until the licensed-API phase. Signed-out RSS allows **1 request a minute per IP**: keep **at least 65 s** between requests (sooner still got 429s). A request returns at most 100 posts (`?limit=100`); combined feeds (`/r/a+b/new/.rss`) and `after=` paging work. Poll politely with a clear User-Agent; dedupe.
 5. **Keep [Hiring], drop [For Hire].**
 6. **Drafts must sound human:** short, reference the client's specific problem, and link the user's work when they have some to show (their GitHub, or the most relevant repo; there is no portfolio step, decided 2026-09-29).
 7. **Client reports:** show counts, never labels like "scammer"; require several independent reports; reports expire; scope to hiring behaviour on job posts only.
@@ -93,6 +93,7 @@ Handover for the next chat. Update this section as things change.
 - `main`: homepage + local backend foundation, merged through PR #1 on 2026-09-28 (105 tests passing).
 - `feat/homepage`: kept on purpose (the user asked not to delete it); its work is already in `main`.
 - `feat/onboarding`: onboarding slices 1–3 built and reviewed (not merged or pushed yet). 471 tests passing (web 224, worker 145, core 47, db 31, llm 24).
+- `feat/ingestion` (cut from `feat/onboarding`, 2026-10-01; **not committed yet**): ingestion Phases 1–4 built from `docs/ingestion/plan.md` (see its "Build status"): subreddit catalogue, collector (poller, governor, feed planner, RSS adapter, gap catch-up), analyser (Flash-Lite, eval meets the bar at about $0.00025 a post), daily upkeep, `ingest:status` / `ingest:plan` / `eval:posts` scripts. Docs reorganised into one folder per feature (`docs/README.md`). 489 tests pass (core 82, db 51, llm 26, worker 104, web 226). Reviewed once by a fresh agent; all important findings fixed. Live run 2026-10-01 (25 min, real Reddit + Vertex): 580 posts, 312 analysed, $0.079, 0 rate-limited. Catalogue: 238 active subreddits after a second research pass; groups of 80 polled every 5 min.
 
 ### Built so far (in `main`)
 
@@ -131,14 +132,14 @@ Handover for the next chat. Update this section as things change.
   - The layout redirect hardcodes `next=/dashboard`.
   - The sign-in upsert conflicts only on `auth_sub`; revisit before Cognito.
 
-### Specs and plans (`docs/superpowers/`)
+### Specs and plans (`docs/`, one folder per feature; moved from `docs/superpowers/` on 2026-10-01)
 
-- `specs/2026-09-26-local-dev-foundation-design.md` and `plans/2026-09-26-local-dev-foundation.md`: done.
-- `specs/2026-09-26-cdn-waf-foundation-design.md` (Phases 0–2: CDK, Route 53, ACM, CloudFront, WAF): **partly outdated.** The static-export-to-S3 idea is replaced: CloudFront's origin is the EC2 server, with static assets still cached at the edge. It uses the CloudFront flat-rate **Free plan** (includes WAF + Route 53, 1M requests, 100 GB and 5 WAF rules a month; no VPC origins, so the server is locked to CloudFront by security group + secret header). The user hasn't explicitly confirmed the flat-rate plan.
+- `foundation/local-dev-design.md` and `foundation/local-dev-plan.md`: done.
+- `foundation/cdn-waf-design.md` (Phases 0–2: CDK, Route 53, ACM, CloudFront, WAF): **partly outdated.** The static-export-to-S3 idea is replaced: CloudFront's origin is the EC2 server, with static assets still cached at the edge. It uses the CloudFront flat-rate **Free plan** (includes WAF + Route 53, 1M requests, 100 GB and 5 WAF rules a month; no VPC origins, so the server is locked to CloudFront by security group + secret header). The user hasn't explicitly confirmed the flat-rate plan.
 
 ### Onboarding: slices 1–3 built on `feat/onboarding`
 
-Spec: `docs/superpowers/specs/2026-09-29-onboarding-design.md`. Plans: `docs/superpowers/plans/2026-09-29-onboarding-slice-1.md` (13 tasks) and `docs/superpowers/plans/2026-09-29-onboarding-slices-2-3.md` (10 tasks, built in parallel waves). Both built 2026-09-29 with subagent-driven development (an implementer and a review per task, then whole-branch reviews and one fix wave).
+Spec: `docs/onboarding/design.md`. Plans: `docs/onboarding/plan-slice-1.md` (13 tasks) and `docs/onboarding/plan-slices-2-3.md` (10 tasks, built in parallel waves). Both built 2026-09-29 with subagent-driven development (an implementer and a review per task, then whole-branch reviews and one fix wave).
 
 **Slices 2–3 (resume and GitHub import):**
 - **Queue:** `import_jobs` in Postgres (migration `0003_imports`), `LISTEN/NOTIFY` + 5 s poll, `FOR UPDATE SKIP LOCKED`, backoff, stale sweep; every write is fenced to the claim that owns it (`status='running' AND attempts=$claim`). `llm_usage` records every model attempt (tokens, cost, step, prompt version; never text).
@@ -198,8 +199,8 @@ Key decisions (2026-09-29):
 ### Open questions and next steps
 
 1. **Onboarding:** set up the Google Cloud project and run the eval against Vertex (`npm run eval -w @redlance/worker -- --baseline`); click through the whole flow in a browser; then merge `feat/onboarding` (user's call). The user still needs to look over the skill list and subreddit seed list. Vertex prices in `packages/llm/src/prices.ts` are from a third-party listing (gemini-3.8-flash introductory until 2026-12-31; flash-lite unverified) — confirm on the official pricing page.
-2. **Then:** RSS ingestion in the same worker (RSS adapters → `JobPost`), then matching and alerts, then deployment.
-3. **Subreddit list:** the seed list of hiring subreddits per job type needs checking against each subreddit's rules.
+2. **Ingestion (`feat/ingestion`):** commit (user's call), a 24 h soak run; plan checks 0.1 (AWS CloudShell reachability) and 0.4 (Reddit API application); 0.2 and 0.3 answered 2026-10-01 (120 subreddits per URL work, banned ones are skipped; flair search works); then matching and alerts, then deployment.
+3. **Subreddit list:** the catalogue comes from a study (`docs/ingestion/research/`); the user still has to review it, and the worker logs subreddits outside it that have hiring posts (weekly discovery).
 5. **Deployment spec:** EC2 + CloudFront + WAF with CDK. CloudFront must forward `Origin` and `CloudFront-Viewer-Address`. Run `/api/v1/health?deep=1` after every deploy. Check that Upstash supports `TIME` inside Lua. **Run migrations + `syncReferenceData()` before a new web build takes traffic** (a new skill in code but not yet in the `skills` table makes Finish fail on the `profile_skills` foreign key); `db:migrate` needs `tsx`, so ship a compiled migrate step. WAF: exempt `POST /api/v1/onboarding/imports/resume` from the 8 KB body rule. **Worker container:** needs `tsx` at runtime (the extraction thread starts with `--import tsx`; don't install with `--omit=dev`, or compile the worker), `stop_grace_period` ≥ 35 s, memory for up to 4 extraction threads (256 + 64 MB heap each) next to web and Postgres, non-root, read-only filesystem, network only to Postgres, Vertex AI and api.github.com. Google credentials on EC2: Workload Identity Federation from the AWS role (no key files). Set a Vertex request quota and a billing budget alert on the Google Cloud project.
 6. **Still undecided:**
    - which features go in which plan, and credit amounts;

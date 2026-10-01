@@ -8,7 +8,7 @@
 
 **Tech Stack:** Node 24 LTS · Next.js 16 route handlers · Postgres 17 + pgvector · Valkey 8 · Drizzle ORM 0.45 + `pg` 8 · drizzle-kit 0.31 · ioredis 6 (RESP2) · zod 4 · pino 10 · Vitest 5 · tsx 4
 
-**Spec:** `docs/superpowers/specs/2026-09-26-local-dev-foundation-design.md`
+**Spec:** `docs/foundation/local-dev-design.md`
 
 ## Global Constraints
 

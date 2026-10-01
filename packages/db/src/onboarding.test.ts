@@ -119,14 +119,20 @@ describe("skills reference data", () => {
     expect(await db.$count(subreddits)).toBe(SUBREDDITS.length);
   });
 
-  it("sync is idempotent and never deletes: it retires and deactivates instead", async () => {
+  it("sync is idempotent and never deletes: it retires and excludes instead", async () => {
     await db
       .insert(skills)
       .values({ id: "zz-old", name: "Old", category: "development" })
       .onConflictDoNothing();
     await db
       .insert(subreddits)
-      .values({ name: "zz_old", categories: [] })
+      .values({
+        name: "zz_old",
+        displayName: "zz_old",
+        categories: [],
+        tier: "core",
+        status: "active",
+      })
       .onConflictDoNothing();
     await syncReferenceData(db);
     await syncReferenceData(db);
@@ -136,10 +142,39 @@ describe("skills reference data", () => {
       .select()
       .from(subreddits)
       .where(eq(subreddits.name, "zz_old"));
-    expect(oldSub!.active).toBe(false);
+    expect(oldSub!.status).toBe("excluded");
     expect(await db.$count(skills, eq(skills.retired, false))).toBe(
       SKILLS.filter((s) => !s.retired).length,
     );
+  });
+
+  it("sync keeps the worker's stats and custom subreddits", async () => {
+    await db
+      .update(subreddits)
+      .set({ postsPerDay: 33, hiringShare: 0.14 })
+      .where(eq(subreddits.name, "forhire"));
+    await db
+      .insert(subreddits)
+      .values({
+        name: "zz_custom",
+        displayName: "zz_custom",
+        categories: [],
+        tier: "custom",
+        status: "active",
+      })
+      .onConflictDoNothing();
+    await syncReferenceData(db);
+    const [forhire] = await db
+      .select()
+      .from(subreddits)
+      .where(eq(subreddits.name, "forhire"));
+    expect(forhire!.postsPerDay).toBe(33);
+    const [custom] = await db
+      .select()
+      .from(subreddits)
+      .where(eq(subreddits.name, "zz_custom"));
+    expect(custom!.status).toBe("active");
+    await db.delete(subreddits).where(eq(subreddits.name, "zz_custom"));
   });
 
   it("profile_skills only accepts known skill ids", async () => {

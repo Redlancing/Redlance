@@ -96,7 +96,7 @@ export function BasicsStep({ init }: { init: StepFormInit<"basics"> }) {
 
         <FieldGroup
           legend="What kind of work do you want?"
-          hint="Pick up to 3. This decides which subreddits Redlance watches for you."
+          hint="Pick up to 3. This decides which jobs we show you."
           error={form.errorFor("categories")}
           errorKey="categories"
         >

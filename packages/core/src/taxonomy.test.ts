@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { COUNTRY_CODES, defaultCurrency } from "./countries";
-import { SUBREDDITS, subredditsFor } from "./subreddits";
+import { ACTIVE_SUBREDDITS, SUBREDDIT_NAME_RE, SUBREDDITS } from "./subreddits";
 import {
   CATEGORY_IDS,
   SKILLS,
@@ -78,17 +78,37 @@ describe("findSkill / searchSkills", () => {
 describe("subreddits", () => {
   it("uses lowercase names without r/ and known categories", () => {
     for (const s of SUBREDDITS) {
-      expect(s.name).toMatch(/^[a-z0-9_]{2,21}$/);
+      expect(s.name).toMatch(SUBREDDIT_NAME_RE);
       for (const c of s.categories) expect(CATEGORY_IDS).toContain(c);
     }
     expect(new Set(SUBREDDITS.map((s) => s.name)).size).toBe(SUBREDDITS.length);
   });
 
-  it("gives everyone the general boards plus the boards for their job types", () => {
-    const names = subredditsFor(["video"]);
-    expect(names).toContain("forhire");
-    expect(names).toContain("videoeditingrequests");
-    expect(names).not.toContain("hireawriter");
+  it("matches display names, and explains every subreddit it doesn't poll", () => {
+    for (const s of SUBREDDITS) {
+      expect(s.displayName.toLowerCase()).toBe(s.name);
+      if (s.status !== "active") expect(s.note, s.name).toBeTruthy();
+    }
+  });
+
+  it("polls the main boards and none of the excluded ones", () => {
+    const active = new Set(ACTIVE_SUBREDDITS.map((s) => s.name));
+    for (const name of [
+      "forhire",
+      "hiring",
+      "slavelabour",
+      "designjobs",
+      "photoshoprequest",
+    ])
+      expect(active).toContain(name);
+    for (const name of [
+      "jobboardsearch",
+      "freelance",
+      "homeworkhelp",
+      "chatterjobs",
+    ])
+      expect(active).not.toContain(name);
+    expect(ACTIVE_SUBREDDITS.length).toBeGreaterThan(150);
   });
 });
 

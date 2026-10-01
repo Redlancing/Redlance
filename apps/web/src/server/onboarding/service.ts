@@ -7,7 +7,6 @@ import {
   normalizeSkillName,
   pageIndex,
   resumeAt,
-  subredditsFor,
   toFieldErrors,
   type PageId,
   type StepData,
@@ -22,7 +21,6 @@ import {
   onboardingSteps,
   profileSkills,
   profiles,
-  userSubreddits,
   users,
 } from "@redlance/db";
 import { and, eq, sql } from "drizzle-orm";
@@ -279,18 +277,8 @@ export async function finishOnboarding(
         })),
       );
 
-    const boards = subredditsFor(basics.categories);
-    if (boards.length)
-      await tx
-        .insert(userSubreddits)
-        .values(
-          boards.map((subreddit) => ({
-            userId,
-            subreddit,
-            source: "auto" as const,
-          })),
-        )
-        .onConflictDoNothing();
+    // No subreddit rows: everyone's feed comes from the central catalogue, filtered by what
+    // each post asks for (docs/ingestion/plan.md).
 
     // The sign-in email is verified by the auth provider (Cognito's one-time code later;
     // dev sessions exist only locally).

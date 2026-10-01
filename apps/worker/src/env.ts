@@ -11,6 +11,18 @@ export type WorkerEnv = {
   VERTEX_MODEL_SMART: string;
   GITHUB_TOKEN?: string;
   WORKER_CONCURRENCY: number;
+  /** Poll Reddit (Phase 2). Only one worker polls at a time (advisory lock). */
+  INGEST_ENABLED: boolean;
+  /** Analyse collected posts with the model (Phase 3). */
+  ANALYSIS_ENABLED: boolean;
+  /** Daily cap on post-analysis spend, in USD (UTC day). */
+  ANALYSIS_DAILY_BUDGET_USD: number;
+  /** Subreddits per combined feed URL. */
+  INGEST_MAX_GROUP: number;
+  /** Floor between Reddit requests: 65 s minimum (1 a minute per IP; sooner still got 429s). */
+  INGEST_MIN_SPACING_MS: number;
+  /** Contact for the User-Agent (an email or u/name), so Reddit can reach us. */
+  REDDIT_UA_CONTACT?: string;
   /**
    * How the worker signs in to Vertex AI. "adc" = Application Default Credentials
    * (gcloud login locally, Workload Identity Federation on EC2). "service-account-key" =
@@ -42,6 +54,33 @@ const schema = z.object({
     empty,
     z.coerce.number().int().min(1).max(32).default(4),
   ),
+  INGEST_ENABLED: z.preprocess(
+    empty,
+    z.enum(["true", "false"]).default("true"),
+  ),
+  ANALYSIS_ENABLED: z.preprocess(
+    empty,
+    z.enum(["true", "false"]).default("true"),
+  ),
+  ANALYSIS_DAILY_BUDGET_USD: z.preprocess(
+    empty,
+    z.coerce.number().min(0).max(1000).default(2),
+  ),
+  INGEST_MAX_GROUP: z.preprocess(
+    empty,
+    z.coerce.number().int().min(1).max(120).default(80),
+  ),
+  INGEST_MIN_SPACING_MS: z.preprocess(
+    empty,
+    z.coerce.number().int().min(65_000).max(3_600_000).default(65_000),
+  ),
+  REDDIT_UA_CONTACT: z.preprocess(
+    empty,
+    z
+      .string()
+      .regex(/^[\w.+@/-]{3,80}$/, "an email or u/name, no spaces")
+      .optional(),
+  ),
 });
 
 export function parseWorkerEnv(
@@ -72,6 +111,16 @@ export function parseWorkerEnv(
     ) {
       problems.push("GITHUB_TOKEN is required outside local");
     }
+    if (
+      env.INGEST_ENABLED === "true" &&
+      !env.REDDIT_UA_CONTACT &&
+      env.APP_ENV !== "local" &&
+      env.APP_ENV !== "test"
+    ) {
+      problems.push(
+        "REDDIT_UA_CONTACT is required outside local when ingestion is on (Reddit asks for a contact)",
+      );
+    }
     const keyPath = env.GOOGLE_APPLICATION_CREDENTIALS;
     if (keyPath && !fileExists(keyPath)) {
       problems.push(
@@ -82,6 +131,8 @@ export function parseWorkerEnv(
       const { GOOGLE_APPLICATION_CREDENTIALS: _key, ...rest } = env;
       return {
         ...rest,
+        INGEST_ENABLED: env.INGEST_ENABLED === "true",
+        ANALYSIS_ENABLED: env.ANALYSIS_ENABLED === "true",
         credentials: keyPath
           ? { kind: "service-account-key", path: keyPath }
           : { kind: "adc" },
@@ -89,4 +140,12 @@ export function parseWorkerEnv(
     }
   }
   throw new Error(`Invalid worker environment:\n- ${problems.join("\n- ")}`);
+}
+
+/** Reddit asks for a descriptive User-Agent with a way to reach the operator. */
+export function redditUserAgent(
+  env: Pick<WorkerEnv, "REDDIT_UA_CONTACT">,
+): string {
+  const contact = env.REDDIT_UA_CONTACT ? `; ${env.REDDIT_UA_CONTACT}` : "";
+  return `web:app.redlance.ingest:v1 (+https://redlance.app${contact})`;
 }

@@ -8,7 +8,7 @@
 
 **Tech Stack:** Next.js 16 (App Router, React Compiler) · zod 4 · Drizzle ORM 0.45 + drizzle-kit 0.31 · Postgres 17 · uuid 14 (v7) · Vitest 5 · shadcn/ui on Base UI
 
-**Spec:** `docs/superpowers/specs/2026-09-29-onboarding-design.md` (this plan covers "Build order" slice 1; slices 2 and 3 get their own plans once this lands).
+**Spec:** `docs/onboarding/design.md` (this plan covers "Build order" slice 1; slices 2 and 3 get their own plans once this lands).
 
 ## Global Constraints
 

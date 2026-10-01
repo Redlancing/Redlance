@@ -1,8 +1,11 @@
 import { statSync } from "node:fs";
 import { basename } from "node:path";
-import { createDb } from "@redlance/db";
-import { createPgListener } from "./db";
-import { parseWorkerEnv } from "./env";
+import { JOB_POSTS_CHANNEL, createDb } from "@redlance/db";
+import { acquireSessionLock, createPgListener } from "./db";
+import { parseWorkerEnv, redditUserAgent } from "./env";
+import { createAnalyser } from "./ingest/analyser";
+import { createPoller } from "./ingest/poller";
+import { UPKEEP_INTERVAL_MS, runUpkeep } from "./ingest/upkeep";
 import { handlers } from "./jobs";
 import { createLlmFromEnv } from "./llm";
 import { createLogger } from "./logger";
@@ -39,7 +42,8 @@ async function main() {
     }
   }
   const { db, pool } = createDb(env.DATABASE_URL, {
-    max: env.WORKER_CONCURRENCY + 2,
+    // import jobs + post analysis + the poller and upkeep
+    max: env.WORKER_CONCURRENCY * 2 + 3,
     onError: (err) =>
       log.error({ err: err.message }, "postgres idle client error"),
   });
@@ -53,12 +57,40 @@ async function main() {
     llm,
   });
 
+  const poller = env.INGEST_ENABLED
+    ? createPoller({
+        db,
+        log: log.child({ part: "poller" }),
+        userAgent: redditUserAgent(env),
+        minSpacingMs: env.INGEST_MIN_SPACING_MS,
+        acquireLock: () =>
+          acquireSessionLock(env.DATABASE_URL, "redlance:reddit-poller", log),
+        upkeep: () =>
+          runUpkeep(db, log.child({ part: "upkeep" }), {
+            maxGroupSize: env.INGEST_MAX_GROUP,
+          }),
+        upkeepIntervalMs: UPKEEP_INTERVAL_MS,
+      })
+    : null;
+  const analyser = env.ANALYSIS_ENABLED
+    ? createAnalyser({
+        db,
+        llm,
+        log: log.child({ part: "analyser" }),
+        model: env.VERTEX_MODEL_FAST,
+        dailyBudgetMicros: Math.round(env.ANALYSIS_DAILY_BUDGET_USD * 1e6),
+        concurrency: env.WORKER_CONCURRENCY,
+        listen: () =>
+          createPgListener(env.DATABASE_URL, log, JOB_POSTS_CHANNEL),
+      })
+    : null;
+
   let shuttingDown = false;
   const shutdown = async (signal: string) => {
     if (shuttingDown) return;
     shuttingDown = true;
     log.info({ signal }, "worker stopping");
-    await runner.stop();
+    await Promise.all([runner.stop(), poller?.stop(), analyser?.stop()]);
     await Promise.race([
       pool.end().catch(() => {}),
       new Promise((r) => setTimeout(r, 5000)),
@@ -69,6 +101,8 @@ async function main() {
   process.on("SIGINT", () => void shutdown("SIGINT"));
 
   await runner.start();
+  poller?.start();
+  await analyser?.start();
   log.info(
     {
       appEnv: env.APP_ENV,
@@ -76,6 +110,8 @@ async function main() {
       modelFast: env.VERTEX_MODEL_FAST,
       modelSmart: env.VERTEX_MODEL_SMART,
       concurrency: env.WORKER_CONCURRENCY,
+      ingest: env.INGEST_ENABLED,
+      analysis: env.ANALYSIS_ENABLED,
     },
     "worker started",
   );

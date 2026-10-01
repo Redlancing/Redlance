@@ -1,6 +1,6 @@
 "use client";
 
-import { CATEGORIES, SKILL_BY_ID, subredditsFor } from "@redlance/core";
+import { CATEGORIES, SKILL_BY_ID } from "@redlance/core";
 import { LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -58,9 +58,12 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 export function ReviewStep({
   data,
   email,
+  subredditCount,
 }: {
   data: ReviewData;
   email: string;
+  /** Passed from the server so the catalogue isn't shipped to the browser. */
+  subredditCount: number;
 }) {
   const router = useRouter();
   const countries = useCountryOptions();
@@ -83,7 +86,6 @@ export function ReviewStep({
   ];
   const core = named.filter((s) => s.level === "core").map((s) => s.name);
   const others = named.filter((s) => s.level !== "core").map((s) => s.name);
-  const subreddits = subredditsFor(basics.categories);
 
   async function finish() {
     if (pending) return;
@@ -177,8 +179,8 @@ export function ReviewStep({
           What happens next
         </h2>
         <p className="mt-2">
-          Redlance will watch {subreddits.length} subreddits for your job types:{" "}
-          {subreddits.map((s) => `r/${s}`).join(", ")}.
+          Redlance watches {subredditCount} hiring subreddits and shows you the
+          posts that match your skills.
         </p>
         <p className="mt-2">
           New matches are emailed to {email}. You can add Telegram later from

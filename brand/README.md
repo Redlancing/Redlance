@@ -25,7 +25,7 @@ Logo: **Feed pick**. Three feed lines; the middle one is orange and pointed, the
 
 ## Colours
 
-The look (modelled on Attio's layout, see `docs/research/attio-teardown.md`): white page, cream feature sections, ink dark sections, near-black buttons, and orange used sparingly for the one thing that matters.
+The look (modelled on Attio's layout, see `docs/homepage/attio-teardown.md`): white page, cream feature sections, ink dark sections, near-black buttons, and orange used sparingly for the one thing that matters.
 
 | Token | Hex | Use |
 |---|---|---|

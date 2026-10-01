@@ -4,11 +4,14 @@ import {
   boolean,
   check,
   customType,
+  date,
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   unique,
@@ -57,7 +60,15 @@ export const PROFILE_CURRENCIES = ["USD", "GBP", "EUR", "INR"] as const;
 export const PROFILE_RATE_TYPES = ["hourly", "fixed", "either"] as const;
 export const SKILL_LEVEL_VALUES = ["core", "secondary"] as const;
 export const SKILL_SOURCE_VALUES = ["manual", "resume", "github"] as const;
-export const SUBREDDIT_SOURCES = ["auto", "user"] as const;
+// Only subreddits a paying user adds (later). Everyone's feed comes from the central catalogue.
+export const SUBREDDIT_SOURCES = ["user"] as const;
+export const SUBREDDIT_TIERS = ["core", "low", "regional", "custom"] as const;
+export const SUBREDDIT_STATUSES = [
+  "active",
+  "excluded",
+  "dead",
+  "gone",
+] as const;
 export const ALERT_KINDS = ["email", "telegram"] as const;
 
 const sqlList = (values: readonly string[]) =>
@@ -82,14 +93,42 @@ export const skills = pgTable("skills", {
   retired: boolean("retired").notNull().default(false),
 });
 
+// The catalogue (seeded from @redlance/core). Stats columns are filled by the worker's nightly
+// job from our own posts, and never overwritten by the seed sync. No foreign key to users on
+// purpose: who added a custom subreddit lives in user_subreddits.
 export const subreddits = pgTable(
   "subreddits",
   {
     name: text("name").primaryKey(),
+    displayName: text("display_name").notNull(),
     categories: text("categories").array().notNull(),
-    active: boolean("active").notNull().default(true),
+    tier: text("tier", { enum: SUBREDDIT_TIERS }).notNull(),
+    status: text("status", { enum: SUBREDDIT_STATUSES }).notNull(),
+    note: text("note"),
+    postsPerDay: real("posts_per_day"),
+    hiringShare: real("hiring_share"),
+    lastPostAt: timestamp("last_post_at", { withTimezone: true }),
+    statsAt: timestamp("stats_at", { withTimezone: true }),
+    /** Set by the worker after 30 days without posts: polled rarely until posts come back. */
+    dormantSince: timestamp("dormant_since", { withTimezone: true }),
+    /** Last successful poll of a feed containing this subreddit (gap detection survives re-plans). */
+    lastPolledAt: timestamp("last_polled_at", { withTimezone: true }),
+    /** Set when Reddit refuses this subreddit on its own (banned, private, renamed). */
+    unreachableSince: timestamp("unreachable_since", { withTimezone: true }),
+    unreachableReason: text("unreachable_reason"),
+    createdAt: createdAt(),
   },
-  (t) => [check("subreddits_name_check", sql`${t.name} ~ '^[a-z0-9_]{2,21}$'`)],
+  (t) => [
+    check("subreddits_name_check", sql`${t.name} ~ '^[a-z0-9_]{2,21}$'`),
+    check(
+      "subreddits_tier_check",
+      sql`${t.tier} in (${sqlList(SUBREDDIT_TIERS)})`,
+    ),
+    check(
+      "subreddits_status_check",
+      sql`${t.status} in (${sqlList(SUBREDDIT_STATUSES)})`,
+    ),
+  ],
 );
 
 export const onboardingSteps = pgTable(
@@ -274,7 +313,12 @@ export const IMPORT_STAGES = [
 ] as const;
 export type ImportStage = (typeof IMPORT_STAGES)[number];
 export const IMPORT_FILE_TYPES = ["pdf", "docx"] as const;
-export const LLM_OUTCOMES = ["ok", "timeout", "error", "invalid_output"] as const;
+export const LLM_OUTCOMES = [
+  "ok",
+  "timeout",
+  "error",
+  "invalid_output",
+] as const;
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
   dataType() {
@@ -288,7 +332,9 @@ export const importJobs = pgTable(
     id: v7Id(),
     userId: userId(),
     kind: text("kind", { enum: IMPORT_KINDS }).notNull(),
-    status: text("status", { enum: IMPORT_STATUSES }).notNull().default("queued"),
+    status: text("status", { enum: IMPORT_STATUSES })
+      .notNull()
+      .default("queued"),
     stage: text("stage", { enum: IMPORT_STAGES }).notNull().default("queued"),
     fileBytes: bytea("file_bytes"),
     fileType: text("file_type", { enum: IMPORT_FILE_TYPES }),
@@ -340,8 +386,13 @@ export const llmUsage = pgTable(
   "llm_usage",
   {
     id: v7Id(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     importJobId: uuid("import_job_id").references(() => importJobs.id, {
+      onDelete: "set null",
+    }),
+    jobPostId: uuid("job_post_id").references(() => jobPosts.id, {
       onDelete: "set null",
     }),
     task: text("task").notNull(),
@@ -365,3 +416,247 @@ export const llmUsage = pgTable(
     index("llm_usage_created_idx").on(t.createdAt),
   ],
 );
+
+// ---- Ingestion (docs/ingestion/plan.md) ----
+// Literal lists mirror @redlance/core's job-post.ts (checked by ingest.test.ts).
+
+export const POST_SOURCES = ["reddit"] as const;
+export const FETCHED_VIA = ["rss", "api"] as const;
+export const PRE_KINDS = ["hiring", "for_hire", "unknown"] as const;
+export const ANALYSIS_STATUSES = [
+  "pending",
+  "running",
+  "done",
+  "skipped",
+  "failed",
+] as const;
+export type AnalysisStatus = (typeof ANALYSIS_STATUSES)[number];
+export const POST_KINDS = ["hiring", "for_hire", "other"] as const;
+export const EMPLOYMENT_TYPES = [
+  "freelance",
+  "contract",
+  "part_time",
+  "full_time",
+  "unknown",
+] as const;
+export const PAY_TYPES = [
+  "paid",
+  "commission_only",
+  "revshare",
+  "unpaid",
+  "unknown",
+] as const;
+export const REMOTE_TYPES = ["remote", "onsite", "hybrid", "unknown"] as const;
+export const BUDGET_UNITS = [
+  "fixed",
+  "hour",
+  "day",
+  "week",
+  "month",
+  "per_item",
+] as const;
+export const FEED_KINDS = ["subreddits", "search"] as const;
+export const FEED_STATUSES = ["active", "retired"] as const;
+
+/** One row per post, kept forever (rule 3). Raw facts only; analysis is in job_post_analyses. */
+export const jobPosts = pgTable(
+  "job_posts",
+  {
+    id: v7Id(),
+    source: text("source", { enum: POST_SOURCES }).notNull(),
+    externalId: text("external_id").notNull(),
+    fetchedVia: text("fetched_via", { enum: FETCHED_VIA }).notNull(),
+    community: text("community").notNull(),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    author: text("author"),
+    postedAt: timestamp("posted_at", { withTimezone: true }).notNull(),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    firstSeenFeedId: uuid("first_seen_feed_id").references(() => feeds.id, {
+      onDelete: "set null",
+    }),
+    preKind: text("pre_kind", { enum: PRE_KINDS }).notNull(),
+    analysisStatus: text("analysis_status", { enum: ANALYSIS_STATUSES })
+      .notNull()
+      .default("pending"),
+    analysisAttempts: integer("analysis_attempts").notNull().default(0),
+    analysisRunAfter: timestamp("analysis_run_after", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    analysisLockedAt: timestamp("analysis_locked_at", { withTimezone: true }),
+    analysisError: text("analysis_error"),
+  },
+  (t) => [
+    unique("job_posts_source_external_unique").on(t.source, t.externalId),
+    check(
+      "job_posts_source_check",
+      sql`${t.source} in (${sqlList(POST_SOURCES)})`,
+    ),
+    check(
+      "job_posts_fetched_via_check",
+      sql`${t.fetchedVia} in (${sqlList(FETCHED_VIA)})`,
+    ),
+    check(
+      "job_posts_pre_kind_check",
+      sql`${t.preKind} in (${sqlList(PRE_KINDS)})`,
+    ),
+    check(
+      "job_posts_analysis_status_check",
+      sql`${t.analysisStatus} in (${sqlList(ANALYSIS_STATUSES)})`,
+    ),
+    index("job_posts_analysis_queue_idx")
+      .on(t.analysisRunAfter)
+      .where(sql`${t.analysisStatus} = 'pending'`),
+    index("job_posts_analysis_running_idx")
+      .on(t.analysisLockedAt)
+      .where(sql`${t.analysisStatus} = 'running'`),
+    index("job_posts_community_posted_idx").on(t.community, t.postedAt),
+    index("job_posts_posted_idx").on(t.postedAt),
+    index("job_posts_author_idx").on(t.author),
+  ],
+);
+
+export type JobPostRow = typeof jobPosts.$inferSelect;
+
+/** The polling plan: rebuilt by the planner, state survives restarts. */
+export const feeds = pgTable(
+  "feeds",
+  {
+    id: v7Id(),
+    kind: text("kind", { enum: FEED_KINDS }).notNull(),
+    /** Sorted names, for kind = subreddits. */
+    subreddits: text("subreddits").array(),
+    /** For kind = search, e.g. "title:hiring". */
+    query: text("query"),
+    /** How often to poll. Under load every feed slips equally: the poller takes the most overdue. */
+    intervalSeconds: integer("interval_seconds").notNull(),
+    status: text("status", { enum: FEED_STATUSES }).notNull().default("active"),
+    lastPolledAt: timestamp("last_polled_at", { withTimezone: true }),
+    nextPollAt: timestamp("next_poll_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /** Set when a poll found only new posts (a gap): page backwards from this id. */
+    catchUpAfter: text("catch_up_after"),
+    catchUpPagesLeft: integer("catch_up_pages_left").notNull().default(0),
+    /** Keep paging back until posts are older than this (the previous successful poll). */
+    catchUpUntil: timestamp("catch_up_until", { withTimezone: true }),
+    consecutiveErrors: integer("consecutive_errors").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check("feeds_kind_check", sql`${t.kind} in (${sqlList(FEED_KINDS)})`),
+    check("feeds_interval_check", sql`${t.intervalSeconds} >= 60`),
+    check(
+      "feeds_status_check",
+      sql`${t.status} in (${sqlList(FEED_STATUSES)})`,
+    ),
+    check(
+      "feeds_shape_check",
+      sql`(${t.kind} = 'subreddits' and cardinality(${t.subreddits}) > 0 and ${t.query} is null)
+        or (${t.kind} = 'search' and ${t.query} is not null and ${t.subreddits} is null)`,
+    ),
+    index("feeds_due_idx")
+      .on(t.nextPollAt)
+      .where(sql`${t.status} = 'active'`),
+  ],
+);
+
+export type Feed = typeof feeds.$inferSelect;
+
+/** One row per request. Operational log, pruned after 30 days. */
+export const feedPolls = pgTable(
+  "feed_polls",
+  {
+    id: v7Id(),
+    feedId: uuid("feed_id").references(() => feeds.id, {
+      onDelete: "set null",
+    }),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    httpStatus: integer("http_status"),
+    entries: integer("entries").notNull().default(0),
+    newPosts: integer("new_posts").notNull().default(0),
+    /** 0 = newest page; > 0 = a catch-up page. */
+    page: integer("page").notNull().default(0),
+    rateLimitRemaining: real("rate_limit_remaining"),
+    rateLimitReset: integer("rate_limit_reset"),
+    errorCode: text("error_code"),
+  },
+  (t) => [index("feed_polls_started_idx").on(t.startedAt)],
+);
+
+export type FeedPoll = typeof feedPolls.$inferSelect;
+
+/** The latest analysis of each post. Bump pipeline_version to re-analyse. */
+export const jobPostAnalyses = pgTable(
+  "job_post_analyses",
+  {
+    jobPostId: uuid("job_post_id")
+      .primaryKey()
+      .references(() => jobPosts.id, { onDelete: "cascade" }),
+    pipelineVersion: text("pipeline_version").notNull(),
+    kind: text("kind", { enum: POST_KINDS }).notNull(),
+    employmentType: text("employment_type", {
+      enum: EMPLOYMENT_TYPES,
+    }).notNull(),
+    payType: text("pay_type", { enum: PAY_TYPES }).notNull(),
+    categories: text("categories").array().notNull(),
+    skillIds: text("skill_ids").array().notNull(),
+    budgetMin: numeric("budget_min", {
+      precision: 12,
+      scale: 2,
+      mode: "number",
+    }),
+    budgetMax: numeric("budget_max", {
+      precision: 12,
+      scale: 2,
+      mode: "number",
+    }),
+    currency: text("currency"),
+    budgetUnit: text("budget_unit", { enum: BUDGET_UNITS }),
+    remote: text("remote", { enum: REMOTE_TYPES }).notNull(),
+    location: text("location"),
+    deadline: date("deadline", { mode: "string" }),
+    redFlags: text("red_flags").array().notNull(),
+    summary: text("summary").notNull(),
+    model: text("model").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check(
+      "job_post_analyses_kind_check",
+      sql`${t.kind} in (${sqlList(POST_KINDS)})`,
+    ),
+    check(
+      "job_post_analyses_employment_check",
+      sql`${t.employmentType} in (${sqlList(EMPLOYMENT_TYPES)})`,
+    ),
+    check(
+      "job_post_analyses_pay_check",
+      sql`${t.payType} in (${sqlList(PAY_TYPES)})`,
+    ),
+    check(
+      "job_post_analyses_remote_check",
+      sql`${t.remote} in (${sqlList(REMOTE_TYPES)})`,
+    ),
+    check(
+      "job_post_analyses_budget_unit_check",
+      sql`${t.budgetUnit} is null or ${t.budgetUnit} in (${sqlList(BUDGET_UNITS)})`,
+    ),
+    check(
+      "job_post_analyses_budget_check",
+      sql`${t.budgetMin} is null or ${t.budgetMax} is null or ${t.budgetMin} <= ${t.budgetMax}`,
+    ),
+    check(
+      "job_post_analyses_currency_check",
+      sql`${t.currency} is null or ${t.currency} ~ '^[A-Z]{3}$'`,
+    ),
+    index("job_post_analyses_kind_idx").on(t.kind, t.createdAt),
+  ],
+);
+
+export type JobPostAnalysis = typeof jobPostAnalyses.$inferSelect;

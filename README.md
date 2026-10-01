@@ -23,4 +23,4 @@ Layout:
 - `apps/web` — Next.js marketing site and web app; server-only code in `src/server/`
 - `packages/db` — database schema, client and migrations
 - `brand/` — logo files and brand guide
-- `docs/PROJECT.md` — product spec; `docs/superpowers/` — design specs and plans
+- `docs/` — product spec (`PROJECT.md`) and one folder per feature with its design, plans and research; see `docs/README.md`

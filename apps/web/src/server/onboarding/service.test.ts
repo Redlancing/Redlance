@@ -2,7 +2,6 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { VALID } from "../../../test/onboarding-fixtures";
 import { closeAll, resetState } from "../../../test/helpers";
 import { signInDevUser } from "../session";
-import { subredditsFor } from "@redlance/core";
 import {
   alertChannels,
   customSkills,
@@ -198,14 +197,10 @@ describe("finishOnboarding", () => {
       nameNormalized: "descript",
     });
 
-    const subs = await db
-      .select()
-      .from(userSubreddits)
-      .where(eq(userSubreddits.userId, id));
-    expect(subs.map((s) => s.subreddit).sort()).toEqual(
-      [...subredditsFor(["video"])].sort(),
+    // Users aren't connected to subreddits: the feed uses the whole catalogue.
+    expect(await db.$count(userSubreddits, eq(userSubreddits.userId, id))).toBe(
+      0,
     );
-    expect(subs.every((s) => s.source === "auto")).toBe(true);
 
     const [alert] = await db
       .select()

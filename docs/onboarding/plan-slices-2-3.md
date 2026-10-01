@@ -8,7 +8,7 @@
 
 **Tech Stack:** Node 24 · Next.js 16 · Postgres 17 (LISTEN/NOTIFY, SKIP LOCKED) · Drizzle 0.45 · zod 4 · `@google/genai` 2.24 with `vertexai: true` · unpdf 1.8 · mammoth 1.13 · fflate 0.8 · pino 10 · Vitest 5 · langsmith (eval only)
 
-**Spec:** `docs/superpowers/specs/2026-09-29-onboarding-design.md` — sections "Import pipeline", "Queue", "Worker", "Resume job", "Resume analysis pipeline (slice 2)", "GitHub job", "Suggestions", "Pre-fill rule", "API", "Pages", "Settings", "Security and privacy".
+**Spec:** `docs/onboarding/design.md` — sections "Import pipeline", "Queue", "Worker", "Resume job", "Resume analysis pipeline (slice 2)", "GitHub job", "Suggestions", "Pre-fill rule", "API", "Pages", "Settings", "Security and privacy".
 
 ## Global Constraints
 
