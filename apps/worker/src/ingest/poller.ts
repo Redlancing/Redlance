@@ -32,6 +32,8 @@ export type PollerDeps = {
   acquireLock: () => Promise<SessionLock | null>;
   fetch?: typeof fetch;
   minSpacingMs?: number;
+  /** Cross-post detection settings, passed to every poll. */
+  dedupe?: { windowHours: number; similarity: number };
   now?: () => number;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
   /** Called after every request (tests, the status line). */
@@ -190,6 +192,7 @@ export function createPoller(deps: PollerDeps) {
           db: deps.db,
           userAgent: deps.userAgent,
           catalogue,
+          dedupe: deps.dedupe,
           lastPolledAt: (names) => subredditsLastPolledAt(deps.db, names),
           fetch: deps.fetch,
           signal: stop.signal,
@@ -215,6 +218,7 @@ export function createPoller(deps: PollerDeps) {
         errorCode: outcome.fetch.errorCode,
         entries: outcome.entries,
         newPosts: outcome.newPosts,
+        duplicates: outcome.duplicates,
         malformed: outcome.malformed,
         profilePosts: outcome.profilePosts,
       };

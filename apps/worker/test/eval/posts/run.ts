@@ -59,6 +59,7 @@ const row = (p: LabelledPost, i: number): JobPostRow => ({
   analysisRunAfter: new Date(),
   analysisLockedAt: new Date(),
   analysisError: null,
+  duplicateOf: null,
 });
 
 console.log(

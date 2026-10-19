@@ -21,6 +21,26 @@ describe("parseWorkerEnv", () => {
     expect(env.ANALYSIS_DAILY_BUDGET_USD).toBe(2);
     expect(env.INGEST_MAX_GROUP).toBe(80);
     expect(env.INGEST_MIN_SPACING_MS).toBe(65_000);
+    expect(env.DEDUPE_SIMILARITY).toBe(0.8);
+    expect(env.DEDUPE_WINDOW_HOURS).toBe(72);
+  });
+
+  it("parses and bounds the dedupe settings", () => {
+    const env = parseWorkerEnv({
+      ...base,
+      DEDUPE_SIMILARITY: "0.7",
+      DEDUPE_WINDOW_HOURS: "24",
+    });
+    expect(env.DEDUPE_SIMILARITY).toBe(0.7);
+    expect(env.DEDUPE_WINDOW_HOURS).toBe(24);
+    for (const v of ["0.2", "1.5"])
+      expect(() => parseWorkerEnv({ ...base, DEDUPE_SIMILARITY: v })).toThrow(
+        /DEDUPE_SIMILARITY/,
+      );
+    for (const v of ["0", "400", "1.5"])
+      expect(() => parseWorkerEnv({ ...base, DEDUPE_WINDOW_HOURS: v })).toThrow(
+        /DEDUPE_WINDOW_HOURS/,
+      );
   });
 
   it("always requires project and location for Vertex", () => {

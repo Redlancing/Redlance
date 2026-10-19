@@ -21,6 +21,10 @@ export type WorkerEnv = {
   INGEST_MAX_GROUP: number;
   /** Floor between Reddit requests: 65 s minimum (1 a minute per IP; sooner still got 429s). */
   INGEST_MIN_SPACING_MS: number;
+  /** A new post is a cross-post when a same-author post this similar (pg_trgm, 0–1) is recent. */
+  DEDUPE_SIMILARITY: number;
+  /** How far back (hours) an earlier post by the same author can be a duplicate's original. */
+  DEDUPE_WINDOW_HOURS: number;
   /** Contact for the User-Agent (an email or u/name), so Reddit can reach us. */
   REDDIT_UA_CONTACT?: string;
   /**
@@ -73,6 +77,14 @@ const schema = z.object({
   INGEST_MIN_SPACING_MS: z.preprocess(
     empty,
     z.coerce.number().int().min(65_000).max(3_600_000).default(65_000),
+  ),
+  DEDUPE_SIMILARITY: z.preprocess(
+    empty,
+    z.coerce.number().min(0.3).max(0.95).default(0.8),
+  ),
+  DEDUPE_WINDOW_HOURS: z.preprocess(
+    empty,
+    z.coerce.number().int().min(1).max(336).default(72),
   ),
   REDDIT_UA_CONTACT: z.preprocess(
     empty,

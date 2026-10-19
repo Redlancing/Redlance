@@ -75,6 +75,7 @@ const row = (over: Partial<JobPostRow> = {}): JobPostRow => ({
   analysisRunAfter: new Date(),
   analysisLockedAt: new Date(),
   analysisError: null,
+  duplicateOf: null,
   ...over,
 });
 

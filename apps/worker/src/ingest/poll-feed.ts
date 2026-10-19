@@ -42,6 +42,8 @@ export type Catalogue = Map<string, SubredditStatus>;
 export type PollDeps = {
   db: Database;
   userAgent: string;
+  /** Cross-post detection (see saveJobPosts); omit to skip it. */
+  dedupe?: { windowHours: number; similarity: number };
   /** Subreddit name → status, for filtering search results. */
   catalogue: () => Promise<Catalogue>;
   /** When these subreddits were last covered by a successful poll (gap detection). */
@@ -64,6 +66,8 @@ export type PollOutcome = {
   page: number;
   entries: number;
   newPosts: number;
+  /** Of the new posts, copies of an earlier post by the same author (never analysed). */
+  duplicates: number;
   malformed: number;
   /** Entries posted on user profiles (u/name), skipped. */
   profilePosts: number;
@@ -125,6 +129,7 @@ export async function pollFeed(
 
   let entries = 0;
   let newPosts = 0;
+  let duplicates = 0;
   let malformed = 0;
   let profilePosts = 0;
   let errorCode: string | null = res.ok ? null : res.errorCode;
@@ -154,7 +159,11 @@ export async function pollFeed(
       if (malformed > 0 && posts.length === 0)
         throw new PollError("ALL_MALFORMED");
       const keep = selectPosts(feed, posts, await deps.catalogue());
-      newPosts = (await saveJobPosts(deps.db, keep, feed.id)).length;
+      const saved = await saveJobPosts(deps.db, keep, feed.id, {
+        dedupe: deps.dedupe,
+      });
+      newPosts = saved.newIds.length;
+      duplicates = saved.duplicateIds.length;
 
       // Gap: a (nearly) full page whose oldest post is newer than the last time these
       // subreddits were covered means posts in between may have been missed (downtime, or a
@@ -271,6 +280,7 @@ export async function pollFeed(
     page,
     entries,
     newPosts,
+    duplicates,
     malformed,
     profilePosts,
     catchUpPagesLeft,

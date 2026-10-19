@@ -63,6 +63,10 @@ async function main() {
         log: log.child({ part: "poller" }),
         userAgent: redditUserAgent(env),
         minSpacingMs: env.INGEST_MIN_SPACING_MS,
+        dedupe: {
+          windowHours: env.DEDUPE_WINDOW_HOURS,
+          similarity: env.DEDUPE_SIMILARITY,
+        },
         acquireLock: () =>
           acquireSessionLock(env.DATABASE_URL, "redlance:reddit-poller", log),
         upkeep: () =>

@@ -143,6 +143,96 @@ describe("pollFeed", () => {
     );
   });
 
+  const crossPosts = () => {
+    const at = new Date(Date.now() - 2 * HOUR);
+    const body =
+      "Need a Next.js dev for my bakery site, budget $400, three weeks.";
+    return [
+      {
+        id: "x2",
+        sub: "hiring",
+        title: "[Hiring] Next.js dev for a bakery site",
+        body,
+        user: "baker",
+        publishedAt: new Date(at.getTime() + 60_000),
+      },
+      {
+        id: "x1",
+        sub: "forhire",
+        title: "[Hiring] Next.js dev for a bakery site",
+        body,
+        user: "baker",
+        publishedAt: at,
+      },
+    ];
+  };
+  const dedupe = { windowHours: 72, similarity: 0.6 };
+
+  it("counts cross-posts as duplicates and doesn't queue them for analysis", async () => {
+    const feed = await oneFeed(["forhire", "hiring"]);
+    const out = await pollFeed(
+      feed,
+      { catchUp: false },
+      deps(
+        fakeFetch(() => ok(atomFeed(crossPosts()))),
+        { dedupe },
+      ),
+    );
+    expect(out).toMatchObject({ newPosts: 2, duplicates: 1 });
+    const rows = await db.select().from(jobPosts);
+    const by = Object.fromEntries(rows.map((r) => [r.externalId, r]));
+    // The feed lists newest first, so x2 is stored first and is the original.
+    expect(by.t3_x1).toMatchObject({
+      duplicateOf: by.t3_x2!.id,
+      analysisStatus: "skipped",
+    });
+    expect(by.t3_x2!.analysisStatus).toBe("pending");
+  });
+
+  it("puts the duplicate count in the poller's log line", async () => {
+    await applyFeedPlan(db, [
+      {
+        kind: "subreddits",
+        subreddits: ["forhire", "hiring"],
+        intervalSeconds: 480,
+      },
+    ]);
+    const lines: string[] = [];
+    const capture = pino(
+      { level: "info" },
+      { write: (l: string) => void lines.push(l) },
+    );
+    let poller!: ReturnType<typeof createPoller>;
+    let polled = 0;
+    poller = createPoller({
+      db,
+      log: capture,
+      userAgent: UA,
+      dedupe,
+      acquireLock: async () => ({
+        lost: new Promise(() => {}),
+        release: async () => {},
+      }),
+      fetch: fakeFetch(() => ok(atomFeed(crossPosts()))),
+      minSpacingMs: 65_000,
+      sleep: async () => {},
+      onPoll: () => {
+        polled++;
+        void poller.stop();
+      },
+    });
+    poller.start();
+    await new Promise<void>((r) => {
+      const check = () => (polled > 0 ? r() : setTimeout(check, 10));
+      check();
+    });
+    await poller.stop();
+    const line = lines
+      .map((l) => JSON.parse(l))
+      .find((l) => l.msg === "feed polled");
+    expect(line).toMatchObject({ newPosts: 2, duplicates: 1 });
+  });
+
   it("ignores posts from subreddits outside the feed", async () => {
     const feed = await oneFeed(["forhire"]);
     const out = await pollFeed(

@@ -647,6 +647,11 @@ export const jobPosts = pgTable(
       .defaultNow(),
     analysisLockedAt: timestamp("analysis_locked_at", { withTimezone: true }),
     analysisError: text("analysis_error"),
+    /** The earlier cross-post this is a copy of (never itself a duplicate); null for originals. */
+    duplicateOf: uuid("duplicate_of").references(
+      (): AnyPgColumn => jobPosts.id,
+      { onDelete: "set null" },
+    ),
   },
   (t) => [
     unique("job_posts_source_external_unique").on(t.source, t.externalId),
@@ -675,6 +680,10 @@ export const jobPosts = pgTable(
     index("job_posts_community_posted_idx").on(t.community, t.postedAt),
     index("job_posts_posted_idx").on(t.postedAt),
     index("job_posts_author_idx").on(t.author),
+    index("job_posts_author_posted_idx").on(t.author, t.postedAt),
+    index("job_posts_duplicate_of_idx")
+      .on(t.duplicateOf)
+      .where(sql`${t.duplicateOf} is not null`),
   ],
 );
 

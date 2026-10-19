@@ -70,12 +70,14 @@ try {
              count(*) filter (where analysis_status = 'pending') as pending,
              count(*) filter (where analysis_status = 'running') as running,
              count(*) filter (where analysis_status = 'failed') as failed,
-             count(*) filter (where pre_kind = 'hiring' and first_seen_at > now() - interval '24 hours') as hiring_tagged_day
+             count(*) filter (where pre_kind = 'hiring' and first_seen_at > now() - interval '24 hours') as hiring_tagged_day,
+             count(*) filter (where duplicate_of is not null and first_seen_at > now() - interval '24 hours') as duplicates_day
       from job_posts`)
   ).rows;
   console.log(
     `Posts: ${posts!.last_hour} in the last hour, ${posts!.last_day} in 24 h (${posts!.hiring_tagged_day} tagged hiring), ${posts!.total} stored`,
   );
+  console.log(`Duplicates (24 h): ${posts!.duplicates_day}`);
   console.log(
     `Analysis: ${posts!.pending} waiting, ${posts!.running} running, ${posts!.failed} failed`,
   );

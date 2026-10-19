@@ -41,6 +41,8 @@ import {
   requeuePostsForAnalysis,
   requeueStalePostAnalyses,
   saveJobPosts,
+  duplicateCommunities,
+  markDuplicates,
   subreddits,
   syncReferenceData,
   uncataloguedCommunities,
@@ -127,11 +129,14 @@ describe("saveJobPosts", () => {
   it("dedupes on source + external id and returns only new ids", async () => {
     const a = post();
     const b = post();
-    expect(await saveJobPosts(db, [a, b], null)).toEqual(
+    const first = await saveJobPosts(db, [a, b], null);
+    expect(first.newIds).toEqual(
       expect.arrayContaining([a.externalId, b.externalId]),
     );
+    expect(first.duplicateIds).toEqual([]);
     expect(
-      await saveJobPosts(db, [a, post({ externalId: b.externalId })], null),
+      (await saveJobPosts(db, [a, post({ externalId: b.externalId })], null))
+        .newIds,
     ).toEqual([]);
     expect(await db.$count(jobPosts)).toBe(2);
   });
@@ -158,6 +163,378 @@ describe("saveJobPosts", () => {
     await new Promise((r) => setTimeout(r, 200));
     await listener.end();
     expect(got).toEqual([JOB_POSTS_CHANNEL]);
+  });
+});
+
+const DEDUPE = { windowHours: 72, similarity: 0.8 };
+const HOUR = 3_600_000;
+const T0 = Date.now() - 200 * HOUR;
+const GIG = "Need a Next.js dev for my bakery site, $400";
+const GIG_BODY =
+  "I run a small bakery in Leeds and need a simple website with an online ordering page built in Next.js. Budget is $400, deadline in three weeks.";
+
+function gig(over: Partial<NewJobPost> = {}): NewJobPost {
+  return post({
+    author: "u1",
+    title: GIG,
+    body: GIG_BODY,
+    postedAt: new Date(T0),
+    ...over,
+  });
+}
+const rowOf = async (p: NewJobPost) =>
+  (
+    await db
+      .select()
+      .from(jobPosts)
+      .where(eq(jobPosts.externalId, p.externalId))
+  )[0]!;
+
+async function notifications(run: () => Promise<unknown>): Promise<number> {
+  const listener = new pg.Client({ connectionString: url });
+  await listener.connect();
+  let n = 0;
+  listener.on("notification", () => n++);
+  await listener.query(`LISTEN ${JOB_POSTS_CHANNEL}`);
+  await run();
+  await new Promise((r) => setTimeout(r, 200));
+  await listener.end();
+  return n;
+}
+
+describe("dedupe", () => {
+  const save = (posts: NewJobPost[]) =>
+    saveJobPosts(db, posts, null, { dedupe: DEDUPE });
+
+  it("marks a same-author cross-post as a duplicate of the first", async () => {
+    const a = gig({ community: "forhire" });
+    const b = gig({ community: "hiring", postedAt: new Date(T0 + 2 * HOUR) });
+    await save([a]);
+    const res = await save([b]);
+    expect(res.duplicateIds).toEqual([b.externalId]);
+    const [ra, rb] = [await rowOf(a), await rowOf(b)];
+    expect(rb.duplicateOf).toBe(ra.id);
+    expect(rb.analysisStatus).toBe("skipped");
+    expect(rb.analysisError).toBe("DUPLICATE");
+    expect(ra.duplicateOf).toBeNull();
+    expect(ra.analysisStatus).toBe("pending");
+  });
+
+  it("still matches when the body is lightly edited", async () => {
+    const a = gig();
+    const b = gig({
+      body: GIG_BODY + " Happy to chat, thanks! 🙏",
+      postedAt: new Date(T0 + HOUR),
+    });
+    await save([a, b]);
+    expect((await rowOf(b)).duplicateOf).toBe((await rowOf(a)).id);
+  });
+
+  it("keeps different gigs by one author apart", async () => {
+    const a = gig({
+      title: "React dev needed",
+      body: "Dashboard for a logistics company, charts and a login, two months, $3000.",
+    });
+    const b = gig({
+      title: "React Native dev needed",
+      body: "Mobile app for a gym with class booking and push notifications. Equity possible.",
+      postedAt: new Date(T0 + HOUR),
+    });
+    await save([a, b]);
+    expect((await rowOf(b)).duplicateOf).toBeNull();
+  });
+
+  it("needs the same author", async () => {
+    const a = gig({ author: "u1" });
+    const b = gig({ author: "u2", postedAt: new Date(T0 + HOUR) });
+    await save([a, b]);
+    expect((await rowOf(b)).duplicateOf).toBeNull();
+  });
+
+  it("ignores copies outside the window", async () => {
+    const a = gig();
+    const b = gig({ postedAt: new Date(T0 + 80 * HOUR) });
+    await save([a]);
+    await save([b]);
+    expect((await rowOf(b)).duplicateOf).toBeNull();
+  });
+
+  it("never dedupes posts without an author", async () => {
+    const a = gig({ author: null });
+    const b = gig({ author: null, postedAt: new Date(T0 + HOUR) });
+    await save([a]);
+    await save([b]);
+    expect((await rowOf(b)).duplicateOf).toBeNull();
+  });
+
+  it("points every copy at the original, not at another copy", async () => {
+    const a = gig();
+    const b = gig({ postedAt: new Date(T0 + HOUR) });
+    const c = gig({ postedAt: new Date(T0 + 2 * HOUR) });
+    await save([a]);
+    await save([b]);
+    await save([c]);
+    const id = (await rowOf(a)).id;
+    expect((await rowOf(b)).duplicateOf).toBe(id);
+    expect((await rowOf(c)).duplicateOf).toBe(id);
+  });
+
+  it("handles an original and its copy in the same batch", async () => {
+    const a = gig();
+    const b = gig({ postedAt: new Date(T0 + HOUR) });
+    // Listed copy-first: the one stored first is the original, whatever posted_at says.
+    await save([b, a]);
+    expect((await rowOf(a)).duplicateOf).toBe((await rowOf(b)).id);
+    expect((await rowOf(b)).duplicateOf).toBeNull();
+  });
+
+  it("never chains duplicates inside one batch", async () => {
+    // Each row is similar only to its neighbour (titles differ by one number-free word).
+    const base = "Need a video editor for YouTube channel";
+    const body = (extra: string) =>
+      `I run a travel channel and need long videos cut with captions and music. ${extra}`;
+    const rows = [
+      gig({ title: base + " alpha", body: body("Deliver within one week.") }),
+      gig({
+        title: base + " alpha",
+        body: body("Deliver within one week, paid per video."),
+        postedAt: new Date(T0 + HOUR),
+      }),
+      gig({
+        title: base + " alpha",
+        body: body(
+          "Paid per video, long term work with a retainer afterwards.",
+        ),
+        postedAt: new Date(T0 + 2 * HOUR),
+      }),
+      gig({
+        title: base + " alpha",
+        body: body(
+          "Long term retainer, bonus for fast turnaround and quality.",
+        ),
+        postedAt: new Date(T0 + 3 * HOUR),
+      }),
+    ];
+    await save(rows);
+    const stored = await Promise.all(rows.map(rowOf));
+    const dupIds = new Set(
+      stored.filter((r) => r.duplicateOf).map((r) => r.id),
+    );
+    for (const r of stored)
+      if (r.duplicateOf) expect(dupIds.has(r.duplicateOf)).toBe(false);
+    // The first row is always an original; its neighbours are the only ones it can absorb.
+    expect(stored[0]!.duplicateOf).toBeNull();
+  });
+
+  it("does not merge A and C through B when only neighbours are similar", async () => {
+    const sims = async (a: string, b: string) =>
+      (
+        await db.execute<{ s: number }>(
+          sql`select similarity(${a}::text, ${b}::text) as s`,
+        )
+      ).rows[0]!.s;
+    // Build bodies where A~B and B~C pass 0.8 but A~C does not.
+    const w = (n: number) =>
+      Array.from(
+        { length: n },
+        (_, i) => `word${String.fromCharCode(97 + (i % 26))}${i}`,
+      );
+    const A = w(40).join(" ");
+    const B = [...w(40).slice(0, 36), "q1x", "q2x", "q3x", "q4x"].join(" ");
+    const C = [
+      ...w(40).slice(0, 32),
+      "q1x",
+      "q2x",
+      "q3x",
+      "q4x",
+      "r1x",
+      "r2x",
+      "r3x",
+      "r4x",
+    ].join(" ");
+    const [ab, bc, ac] = [await sims(A, B), await sims(B, C), await sims(A, C)];
+    // Only meaningful if the fixture really has the shape; assert it so it cannot rot.
+    expect(ab).toBeGreaterThanOrEqual(0.8);
+    expect(bc).toBeGreaterThanOrEqual(0.8);
+    expect(ac).toBeLessThan(0.8);
+    const rows = [A, B, C].map((b, i) =>
+      gig({ title: "Same title", body: b, postedAt: new Date(T0 + i * HOUR) }),
+    );
+    await save(rows);
+    const [ra, rb, rc] = await Promise.all(rows.map(rowOf));
+    expect(ra!.duplicateOf).toBeNull();
+    expect(rb!.duplicateOf).toBe(ra!.id);
+    // C is similar only to B, which is a copy: it must not point at B, nor merge with A.
+    expect(rc!.duplicateOf).toBeNull();
+  });
+
+  it("keeps an agency template with different roles apart", async () => {
+    const blurb =
+      "We are Northwind Studio, a remote-first agency of 40 people helping startups ship products fast. Apply with your portfolio and rates.";
+    const a = gig({ title: "Shopify developer wanted", body: blurb });
+    const b = gig({
+      title: "Video editor wanted",
+      body: blurb,
+      postedAt: new Date(T0 + HOUR),
+    });
+    await save([a, b]);
+    expect((await rowOf(b)).duplicateOf).toBeNull();
+  });
+
+  it("does not merge titles whose numbers differ", async () => {
+    const a = gig({ title: "[Task] Transcribe 10 min audio - $10", body: "" });
+    const b = gig({
+      title: "[Task] Transcribe 20 min audio - $20",
+      body: "",
+      postedAt: new Date(T0 + HOUR),
+    });
+    await save([a, b]);
+    expect((await rowOf(b)).duplicateOf).toBeNull();
+  });
+
+  it("does not merge near-identical titles with empty bodies", async () => {
+    const a = gig({ title: "React developer needed - $500", body: "" });
+    const b = gig({
+      title: "React Native developer needed - $500",
+      body: "",
+      postedAt: new Date(T0 + HOUR),
+    });
+    await save([a, b]);
+    expect((await rowOf(b)).duplicateOf).toBeNull();
+  });
+
+  it("merges identical titles with empty bodies, but not when only one body is empty", async () => {
+    const a = gig({ title: "Logo for my bakery $50", body: "" });
+    const b = gig({
+      title: "Logo for my bakery $50",
+      body: "",
+      postedAt: new Date(T0 + HOUR),
+    });
+    const c = gig({
+      title: "Logo for my bakery $50",
+      body: "Warm colours please, send examples.",
+      postedAt: new Date(T0 + 2 * HOUR),
+    });
+    await save([a, b, c]);
+    expect((await rowOf(b)).duplicateOf).toBe((await rowOf(a)).id);
+    expect((await rowOf(c)).duplicateOf).toBeNull();
+  });
+
+  it("does not merge near-identical titles that differ by a key word", async () => {
+    const body = "Simple flat logo, two colours, vector files, by Friday.";
+    const a = gig({ title: "Logo for my bakery", body });
+    const b = gig({
+      title: "Logo for my cafe",
+      body,
+      postedAt: new Date(T0 + HOUR),
+    });
+    await save([a, b]);
+    expect((await rowOf(b)).duplicateOf).toBeNull();
+  });
+
+  it("normalises case, emoji and spacing in titles", async () => {
+    const a = gig({ title: "NEED a Next.js dev for my bakery site, $400" });
+    const b = gig({
+      title: "Need a  Next.js dev for my bakery site, $400 \u{1F680}",
+      postedAt: new Date(T0 + HOUR),
+    });
+    await save([a, b]);
+    expect((await rowOf(b)).duplicateOf).toBe((await rowOf(a)).id);
+  });
+
+  it("catches an out-of-order cross-post: the copy stored second is the duplicate", async () => {
+    const earlier = gig({ community: "forhire", postedAt: new Date(T0) });
+    const later = gig({
+      community: "hiring",
+      postedAt: new Date(T0 + 30_000),
+    });
+    await save([later]);
+    await save([earlier]);
+    const [rl, re] = [await rowOf(later), await rowOf(earlier)];
+    expect(rl.duplicateOf).toBeNull();
+    expect(re.duplicateOf).toBe(rl.id);
+  });
+
+  it("never uses a never-analysed row as the original", async () => {
+    const skipped = gig({ community: "unknownsub", analyse: false });
+    const real = gig({ community: "forhire", postedAt: new Date(T0 + HOUR) });
+    await save([skipped]);
+    await save([real]);
+    const r = await rowOf(real);
+    expect(r.duplicateOf).toBeNull();
+    expect(r.analysisStatus).toBe("pending");
+    expect((await rowOf(skipped)).duplicateOf).toBeNull();
+  });
+
+  it("sends no wake-up when every new row is a duplicate", async () => {
+    await save([gig()]);
+    const n = await notifications(() =>
+      save([gig({ postedAt: new Date(T0 + HOUR) })]),
+    );
+    expect(n).toBe(0);
+  });
+
+  it("sends one wake-up for a batch with an original and a duplicate", async () => {
+    await save([gig()]);
+    const n = await notifications(() =>
+      save([
+        gig({ postedAt: new Date(T0 + HOUR) }),
+        post({ author: "other", postedAt: new Date(T0 + HOUR) }),
+      ]),
+    );
+    expect(n).toBe(1);
+  });
+
+  it("lists the communities of an original's copies, sorted", async () => {
+    const a = gig({ community: "forhire" });
+    const b = gig({ community: "jobbit", postedAt: new Date(T0 + HOUR) });
+    const c = gig({ community: "hiring", postedAt: new Date(T0 + 2 * HOUR) });
+    const d = gig({ community: "hiring", postedAt: new Date(T0 + 3 * HOUR) });
+    await save([a]);
+    await save([b]);
+    await save([c]);
+    await save([d]);
+    const id = (await rowOf(a)).id;
+    const map = await duplicateCommunities(db, [id, (await rowOf(b)).id]);
+    expect(map.get(id)).toEqual(["hiring", "jobbit"]);
+    expect(map.size).toBe(1);
+  });
+
+  it("does nothing without dedupe options", async () => {
+    const a = gig();
+    const b = gig({ postedAt: new Date(T0 + HOUR) });
+    const res = await saveJobPosts(db, [a, b], null);
+    expect(res.duplicateIds).toEqual([]);
+    expect((await rowOf(b)).duplicateOf).toBeNull();
+  });
+
+  it("uses the similarity threshold it is given", async () => {
+    const a = gig();
+    const b = gig({
+      body:
+        GIG_BODY + " Please send your rates and a few examples of past work.",
+      postedAt: new Date(T0 + HOUR),
+    });
+    const ids = (await saveJobPosts(db, [a, b], null)).newIds;
+    expect(ids).toHaveLength(2);
+    const bId = (await rowOf(b)).id;
+    await db.transaction(async (tx) => {
+      expect(
+        await markDuplicates(tx, [bId], { windowHours: 72, similarity: 0.95 }),
+      ).toEqual([]);
+    });
+    expect((await rowOf(b)).duplicateOf).toBeNull();
+    expect(
+      await markDuplicates(db, [bId], { windowHours: 72, similarity: 0.6 }),
+    ).toEqual([bId]);
+  });
+
+  it("never hands a duplicate to the analyser", async () => {
+    await save([gig()]);
+    await save([gig({ postedAt: new Date(T0 + HOUR) })]);
+    const claimed = await claimPostsForAnalysis(db, 10);
+    expect(claimed).toHaveLength(1);
+    expect(claimed[0]!.duplicateOf).toBeNull();
   });
 });
 

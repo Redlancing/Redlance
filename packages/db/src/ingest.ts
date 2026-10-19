@@ -25,16 +25,27 @@ export type NewJobPost = JobPost & {
   analyse: boolean;
 };
 
+const uuidList = (ids: string[]) =>
+  sql.join(
+    ids.map((id) => sql`${id}::uuid`),
+    sql`, `,
+  );
+
+export type DedupeOptions = { windowHours: number; similarity: number };
+
 /**
- * Inserts posts we haven't seen (dedupe on source + external id) and wakes the analyser.
- * Returns the external ids that were new.
+ * Inserts posts we haven't seen (dedupe on source + external id), marks cross-posts, and wakes
+ * the analyser if anything is left to analyse. `newIds` are the external ids of every new row;
+ * `duplicateIds` is the subset marked as copies of an earlier post (see `markDuplicates`).
+ * Without `opts.dedupe` nothing is marked.
  */
 export async function saveJobPosts(
   db: Database,
   posts: NewJobPost[],
   feedId: string | null,
-): Promise<string[]> {
-  if (posts.length === 0) return [];
+  opts: { dedupe?: DedupeOptions } = {},
+): Promise<{ newIds: string[]; duplicateIds: string[] }> {
+  if (posts.length === 0) return { newIds: [], duplicateIds: [] };
   return db.transaction(async (tx) => {
     const rows = await tx
       .insert(jobPosts)
@@ -59,13 +70,150 @@ export async function saveJobPosts(
       )
       .onConflictDoNothing({ target: [jobPosts.source, jobPosts.externalId] })
       .returning({
+        id: jobPosts.id,
         externalId: jobPosts.externalId,
         status: jobPosts.analysisStatus,
       });
-    if (rows.some((r) => r.status === "pending"))
+    const dupes = new Set(
+      opts.dedupe
+        ? await markDuplicates(
+            tx,
+            rows.map((r) => r.id),
+            opts.dedupe,
+          )
+        : [],
+    );
+    if (rows.some((r) => r.status === "pending" && !dupes.has(r.id)))
       await tx.execute(sql`select pg_notify(${JOB_POSTS_CHANNEL}, '')`);
-    return rows.map((r) => r.externalId);
+    return {
+      newIds: rows.map((r) => r.externalId),
+      duplicateIds: rows
+        .filter((r) => dupes.has(r.id))
+        .map((r) => r.externalId),
+    };
   });
+}
+
+/** Titles must be at least this similar (after `normalizeTitle`) for a post to be a copy. */
+export const DEDUPE_TITLE_SIMILARITY = 0.9;
+
+/** Lower-case, NFKC, drop emoji and symbols except letters, digits and `$£€₹.`, collapse spaces. */
+export function normalizeTitle(title: string): string {
+  return title
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}$£€₹.\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** The numbers in a title, commas removed, sorted (so order does not matter). */
+function numberTokens(title: string): string {
+  const found = title.normalize("NFKC").match(/\d+(?:[.,]\d+)?/g) ?? [];
+  return found
+    .map((n) => n.replace(/,/g, ""))
+    .sort()
+    .join("|");
+}
+
+/**
+ * Marks which of the given posts are copies of an earlier-stored post by the same author
+ * (cross-posts). Strict rule, all of: same non-null author; posted within `windowHours` either
+ * way (feed groups can store the later copy first); the original is analysable (not a `skipped`
+ * row that was never going to be analysed) and is not itself a copy; normalised titles at least
+ * `DEDUPE_TITLE_SIMILARITY` similar (pg_trgm); every number in the title matches; bodies: both
+ * filled -> `similarity(left(body, 2000))` at least `similarity`, both empty -> titles identical,
+ * one empty -> never a copy. The original is the one stored first (`first_seen_at`, then id).
+ * Rows are handled in the order given, and each only picks an original that is not a copy, so
+ * chains cannot form. A copy gets `duplicate_of`, status `skipped` and error `DUPLICATE`.
+ * Returns the ids marked. Run it inside the insert's transaction.
+ */
+export async function markDuplicates(
+  db: Pick<Database, "execute">,
+  ids: string[],
+  { windowHours, similarity }: DedupeOptions,
+): Promise<string[]> {
+  const marked: string[] = [];
+  for (const [i, id] of ids.entries()) {
+    const res = await db.execute<{
+      id: string;
+      title: string;
+      body: string;
+      p_title: string;
+      p_body: string;
+    }>(sql`
+      select o.id, o.title, o.body, p.title as p_title, p.body as p_body
+      from job_posts p
+      join job_posts o on o.author = p.author
+        and o.id <> p.id
+        and o.duplicate_of is null
+        and o.analysis_status <> 'skipped'
+        and o.posted_at between p.posted_at - make_interval(hours => ${windowHours})
+                            and p.posted_at + make_interval(hours => ${windowHours})
+        and (o.first_seen_at < p.first_seen_at
+          or (o.first_seen_at = p.first_seen_at and o.id < p.id
+              and o.id not in (${uuidList(ids)}))
+          ${i > 0 ? sql`or o.id in (${uuidList(ids.slice(0, i))})` : sql``})
+      where p.id = ${id}::uuid and p.author is not null
+      order by o.first_seen_at, o.id`);
+    if (res.rows.length === 0) continue;
+    const pTitle = normalizeTitle(res.rows[0]!.p_title);
+    const pNumbers = numberTokens(res.rows[0]!.p_title);
+    const pBody = res.rows[0]!.p_body.trim();
+    const cands = res.rows.filter((o) => {
+      const oTitle = normalizeTitle(o.title);
+      const oBody = o.body.trim();
+      if (numberTokens(o.title) !== pNumbers) return false;
+      if ((oBody === "") !== (pBody === "")) return false;
+      return oBody !== "" || oTitle === pTitle;
+    });
+    if (cands.length === 0) continue;
+    // Similarity is computed by the database (pg_trgm) over the exact normalised strings.
+    const pairs = sql.join(
+      cands.map(
+        (o, n) =>
+          sql`(${n}::int, ${normalizeTitle(o.title)}::text, ${o.body.trim().slice(0, 2000)}::text)`,
+      ),
+      sql`, `,
+    );
+    const sims = await db.execute<{ n: number; t: number; b: number }>(sql`
+      select v.n, similarity(v.t, ${pTitle}::text) as t,
+             similarity(v.b, ${pBody.slice(0, 2000)}::text) as b
+      from (values ${pairs}) as v(n, t, b)`);
+    const ok = new Set(
+      sims.rows
+        .filter(
+          (r) =>
+            r.t >= DEDUPE_TITLE_SIMILARITY &&
+            (pBody === "" || r.b >= similarity),
+        )
+        .map((r) => Number(r.n)),
+    );
+    const original = cands.find((_, n) => ok.has(n));
+    if (!original) continue;
+    await db.execute(sql`
+      update job_posts set duplicate_of = ${original.id}::uuid,
+        analysis_status = 'skipped', analysis_error = 'DUPLICATE'
+      where id = ${id}::uuid`);
+    marked.push(id);
+  }
+  return marked;
+}
+
+/** The communities each original was also posted in (its copies'), distinct and sorted. */
+export async function duplicateCommunities(
+  db: Pick<Database, "execute">,
+  originalIds: string[],
+): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  if (originalIds.length === 0) return out;
+  const res = await db.execute<{ original: string; communities: string[] }>(sql`
+    select duplicate_of as original, array_agg(distinct community order by community) as communities
+    from job_posts
+    where duplicate_of in (${uuidList(originalIds)})
+    group by duplicate_of`);
+  for (const r of res.rows) out.set(r.original, r.communities);
+  return out;
 }
 
 // ---- Feeds ----
