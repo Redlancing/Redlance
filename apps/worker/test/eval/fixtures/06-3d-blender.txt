@@ -1,0 +1,13 @@
+SOFIA ARANDA | 3D Artist
+Madrid, Spain | sofia.aranda@example.com
+
+Hard-surface and product 3D artist. 6 years of experience creating models, textures and turntable renders for e-commerce and small hardware startups.
+
+EXPERIENCE
+Freelance 3D Artist - 2020 to present
+Product renders and animations of gadgets and furniture in Blender (Cycles). Substance Painter texturing. Some rigging for simple mechanical animations.
+3D Generalist, Formline Studio - 2018 to 2020
+Architectural visualisation of apartment interiors; CAD cleanup from customer files; models prepared for 3D printing.
+
+SOFTWARE
+Blender, ZBrush, Substance Painter, AutoCAD, Marmoset Toolbag

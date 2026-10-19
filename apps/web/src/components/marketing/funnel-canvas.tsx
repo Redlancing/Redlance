@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 /*
  * The "match feed" funnel: a small 3D renderer modelled on the funnel scene in
- * Attio's Signals block (measured 2026-09-25, see docs/research/attio-teardown.md).
+ * Attio's Signals block (measured 2026-09-25, see docs/homepage/attio-teardown.md).
  *
  * A gravity-well surface is sampled into rings and spokes, projected through a
  * perspective camera, depth-faded, and drawn back to front with the surface

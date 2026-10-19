@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
-import { proxy } from "./proxy";
+import { config, proxy } from "./proxy";
 import { SESSION_COOKIE } from "./server/session-cookie";
 
 const request = (path: string, cookie?: string) =>
@@ -22,5 +22,13 @@ describe("proxy", () => {
     const res = proxy(request("/dashboard", `${SESSION_COOKIE}=anything`));
     expect(res.headers.get("location")).toBeNull();
     expect(res.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("protects onboarding pages too", () => {
+    const res = proxy(request("/onboarding/skills"));
+    const location = new URL(res.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("next")).toBe("/onboarding/skills");
+    expect(config.matcher).toContain("/onboarding/:path*");
   });
 });

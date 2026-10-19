@@ -1,4 +1,5 @@
 import "server-only";
+import { ApiError } from "./errors";
 
 export function json(
   status: number,
@@ -47,4 +48,34 @@ export function clientIp(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) return validIp(forwarded.split(",").at(-1)) ?? "unknown";
   return validIp(request.headers.get("x-real-ip") ?? undefined) ?? "unknown";
+}
+
+const tooLarge = () =>
+  new ApiError("PAYLOAD_TOO_LARGE", "That's too much data to send at once.");
+
+/**
+ * Reads a request body, refusing anything over `limit` bytes with 413: first by the declared
+ * Content-Length (without reading), then by counting the stream (chunked or lying clients).
+ */
+export async function readBody(
+  request: Request,
+  limit: number,
+): Promise<Buffer> {
+  const declared = request.headers.get("content-length");
+  if (declared !== null && Number(declared) > limit) throw tooLarge();
+  if (!request.body) return Buffer.alloc(0);
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > limit) {
+      await reader.cancel().catch(() => {});
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
 }

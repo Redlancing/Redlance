@@ -9,7 +9,7 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "docker compose up -d --wait && npm run dev -w @redlance/web",
+    "dev": "docker compose up -d --wait && concurrently -k -n web,worker -c blue,magenta \"npm run dev -w @redlance/web\" \"npm run dev -w @redlance/worker\"",
     "build": "npm run build -w @redlance/web",
     "start": "npm run start -w @redlance/web",
     "lint": "npm run lint --workspaces --if-present",
@@ -24,6 +24,7 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "concurrently": "^10.0.5",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1"
   }

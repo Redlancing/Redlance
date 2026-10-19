@@ -1,0 +1,16 @@
+RYAN CALLOWAY
+Web developer and video editor | Toronto, Canada | ryan.c@example.com
+
+I build marketing websites for small businesses and I edit their promo videos, so clients get both from one person.
+
+Development (3 years)
+- WordPress and Shopify themes, WooCommerce customisation, some PHP.
+- Landing pages in HTML, CSS and JavaScript; a few React components.
+
+Video (2 years)
+- Promo videos, testimonial edits and social clips in DaVinci Resolve and Premiere Pro.
+- Simple motion graphics in After Effects; captions and subtitles.
+
+Experience
+Freelance, 2022 - present
+Junior Web Developer, Pinewood Agency, 2021 - 2022

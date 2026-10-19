@@ -1,0 +1,4262 @@
+{
+  "generated": "from docs/ingestion/research/data by scratchpad catalogue.py",
+  "subreddits": [
+    {
+      "name": "2danimation",
+      "displayName": "2DAnimation",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "Hiring flair",
+      "postsPerDay": 6.4
+    },
+    {
+      "name": "3danimation",
+      "displayName": "3danimation",
+      "categories": ["games", "3d"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 4.7
+    },
+    {
+      "name": "3dmodels",
+      "displayName": "3dmodels",
+      "categories": ["3d"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 8.5
+    },
+    {
+      "name": "3dprintmything",
+      "displayName": "3Dprintmything",
+      "categories": ["3d"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair SEEKING",
+      "postsPerDay": 7.3
+    },
+    {
+      "name": "3drequests",
+      "displayName": "3drequests",
+      "categories": ["3d"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 4.0
+    },
+    {
+      "name": "aiautomations",
+      "displayName": "AiAutomations",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring] $",
+      "postsPerDay": 35.8
+    },
+    {
+      "name": "aidatatrainingjobs",
+      "displayName": "aidatatrainingjobs",
+      "categories": ["data"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 6.3
+    },
+    {
+      "name": "aijobs",
+      "displayName": "AIJobs",
+      "categories": ["data", "development"],
+      "tier": "core",
+      "status": "active",
+      "note": "scam-prone",
+      "postsPerDay": 0.4
+    },
+    {
+      "name": "algerianfreelancers",
+      "displayName": "algerianfreelancers",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 0.3
+    },
+    {
+      "name": "animationjobs",
+      "displayName": "AnimationJobs",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": "[HIRING]",
+      "postsPerDay": 2.9
+    },
+    {
+      "name": "animators",
+      "displayName": "Animators",
+      "categories": ["art", "video"],
+      "tier": "core",
+      "status": "active",
+      "note": "Hiring flair",
+      "postsPerDay": 10.0
+    },
+    {
+      "name": "animecommission",
+      "displayName": "AnimeCommission",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "For Hire/Hiring",
+      "postsPerDay": 8.2
+    },
+    {
+      "name": "appointmentsetter",
+      "displayName": "appointmentsetter",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": "mostly commission-only setter roles; analyser marks pay type",
+      "postsPerDay": 16.6
+    },
+    {
+      "name": "artcommission",
+      "displayName": "artcommission",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "mostly for hire",
+      "postsPerDay": 48.7
+    },
+    {
+      "name": "artcommissions",
+      "displayName": "artcommissions",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring] + Patron flair",
+      "postsPerDay": 78.6
+    },
+    {
+      "name": "artcommissionsph",
+      "displayName": "artcommissionsph",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 25.5
+    },
+    {
+      "name": "artistforhire",
+      "displayName": "artistforhire",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "mixed",
+      "postsPerDay": 24.8
+    },
+    {
+      "name": "artistsforhire",
+      "displayName": "Artistsforhire",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "[BUYING]/[SELLING]",
+      "postsPerDay": 63.7
+    },
+    {
+      "name": "artrequest",
+      "displayName": "artrequest",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 64.1
+    },
+    {
+      "name": "artrequests",
+      "displayName": "artrequests",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 0.7
+    },
+    {
+      "name": "artsale",
+      "displayName": "ArtSale",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "mostly for hire",
+      "postsPerDay": 53.7
+    },
+    {
+      "name": "b2bforhire",
+      "displayName": "B2BForHire",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring]/[For Hire]",
+      "postsPerDay": 69.9
+    },
+    {
+      "name": "bigdatajobs",
+      "displayName": "BigDataJobs",
+      "categories": ["data"],
+      "tier": "core",
+      "status": "active",
+      "note": "[HIRING]",
+      "postsPerDay": 0.9
+    },
+    {
+      "name": "bookcovers",
+      "displayName": "BookCovers",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "[HIRING]",
+      "postsPerDay": 10.6
+    },
+    {
+      "name": "bookdesign",
+      "displayName": "bookdesign",
+      "categories": ["design"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 1.4
+    },
+    {
+      "name": "brandscreators",
+      "displayName": "brandscreators",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 13.4
+    },
+    {
+      "name": "brushforhire",
+      "displayName": "brushforhire",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "clients hire mini painters",
+      "postsPerDay": 1.8
+    },
+    {
+      "name": "bubbleio",
+      "displayName": "Bubbleio",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "Help Wanted",
+      "postsPerDay": 0.3
+    },
+    {
+      "name": "codingjobs",
+      "displayName": "CodingJobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "mixed",
+      "postsPerDay": 6.8
+    },
+    {
+      "name": "cofounderhunt",
+      "displayName": "cofounderhunt",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "mostly equity-only; only \"Paid Role\" posts are gigs",
+      "postsPerDay": 47.0
+    },
+    {
+      "name": "comicbookcollabs",
+      "displayName": "ComicBookCollabs",
+      "categories": ["art", "writing"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair \"Looking for Artist - Paid\" vs Unpaid",
+      "postsPerDay": 22.4
+    },
+    {
+      "name": "contentwritingjobs",
+      "displayName": "ContentWritingJobs",
+      "categories": ["writing"],
+      "tier": "core",
+      "status": "active",
+      "note": "hiring",
+      "postsPerDay": 6.1
+    },
+    {
+      "name": "creatorservices",
+      "displayName": "CreatorServices",
+      "categories": ["audio", "design", "video"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair \"Looking For Paid Services\" = client",
+      "postsPerDay": 34.4
+    },
+    {
+      "name": "cryptojobslist",
+      "displayName": "CryptoJobsList",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "[HIRING]",
+      "postsPerDay": 0.7
+    },
+    {
+      "name": "dataengineeringjobs",
+      "displayName": "dataengineeringjobs",
+      "categories": ["data"],
+      "tier": "core",
+      "status": "active",
+      "note": "mostly FT",
+      "postsPerDay": 7.8
+    },
+    {
+      "name": "dataentry_offers",
+      "displayName": "Dataentry_Offers",
+      "categories": ["admin"],
+      "tier": "core",
+      "status": "active",
+      "note": "mostly for hire",
+      "postsPerDay": 7.9
+    },
+    {
+      "name": "datasciencejobs",
+      "displayName": "DataScienceJobs",
+      "categories": ["data"],
+      "tier": "core",
+      "status": "active",
+      "note": "mixed",
+      "postsPerDay": 4.3
+    },
+    {
+      "name": "designindia",
+      "displayName": "designindia",
+      "categories": ["design"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 7.7
+    },
+    {
+      "name": "designjobs",
+      "displayName": "DesignJobs",
+      "categories": ["design"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring]/[For Hire]; $20/h floor",
+      "postsPerDay": 10.9
+    },
+    {
+      "name": "dev",
+      "displayName": "dev",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "hiring topic",
+      "postsPerDay": 2.6
+    },
+    {
+      "name": "developer",
+      "displayName": "developer",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "job posts welcome",
+      "postsPerDay": 1.3
+    },
+    {
+      "name": "developerjobs",
+      "displayName": "DeveloperJobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "job listings",
+      "postsPerDay": 20.4
+    },
+    {
+      "name": "developers_hire",
+      "displayName": "developers_hire",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 16.8
+    },
+    {
+      "name": "devopsjobs",
+      "displayName": "devopsjobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "mostly FT",
+      "postsPerDay": 12.1
+    },
+    {
+      "name": "devsforhire",
+      "displayName": "devsforhire",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 8.1
+    },
+    {
+      "name": "discord_bots",
+      "displayName": "Discord_Bots",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair \"Bot Request [Paid]\"",
+      "postsPerDay": 1.8
+    },
+    {
+      "name": "dndcommissions",
+      "displayName": "dndcommissions",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "clients use the LFC flair (not in RSS)",
+      "postsPerDay": 58.9
+    },
+    {
+      "name": "donedirtcheap",
+      "displayName": "DoneDirtCheap",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "TASK/OFFER",
+      "postsPerDay": 11.6
+    },
+    {
+      "name": "dotnetjobs",
+      "displayName": "dotnetjobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 3.1
+    },
+    {
+      "name": "drawforme",
+      "displayName": "DrawForMe",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair \"Paid Request\"",
+      "postsPerDay": 23.8
+    },
+    {
+      "name": "drawmytattoo",
+      "displayName": "DrawMyTattoo",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair \"Drawing Request (Paid)\"",
+      "postsPerDay": 4.6
+    },
+    {
+      "name": "editingvideo",
+      "displayName": "EditingVideo",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": "untagged hiring",
+      "postsPerDay": 1.6
+    },
+    {
+      "name": "estoration",
+      "displayName": "estoration",
+      "categories": ["photo"],
+      "tier": "core",
+      "status": "active",
+      "note": "paid vs free is flair-only (not in RSS)",
+      "postsPerDay": 5.6
+    },
+    {
+      "name": "findvideoeditors",
+      "displayName": "FindVideoEditors",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": "[HIRING]/[Paid]",
+      "postsPerDay": 15.1
+    },
+    {
+      "name": "forhire",
+      "displayName": "forhire",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring]/[For Hire] title tags; rate floor $15/h",
+      "postsPerDay": 33.0
+    },
+    {
+      "name": "forhire2",
+      "displayName": "forhire2",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "[HIRING]/[FOR HIRE]",
+      "postsPerDay": 2.4
+    },
+    {
+      "name": "forhirefreelance",
+      "displayName": "ForHireFreelance",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "flair only",
+      "postsPerDay": 33.7
+    },
+    {
+      "name": "freelanceindia",
+      "displayName": "FreelanceIndia",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "flair only",
+      "postsPerDay": 23.2
+    },
+    {
+      "name": "freelanceprogramming",
+      "displayName": "FreelanceProgramming",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "mixed",
+      "postsPerDay": 5.9
+    },
+    {
+      "name": "freelancer_hire",
+      "displayName": "freelancer_hire",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 5.4
+    },
+    {
+      "name": "freelances_forhire",
+      "displayName": "freelances_forhire",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 10.9
+    },
+    {
+      "name": "gamedevclassifieds",
+      "displayName": "gameDevClassifieds",
+      "categories": ["3d", "art", "audio", "games"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair PAID - <role>",
+      "postsPerDay": 28.2
+    },
+    {
+      "name": "gamedevelopersofindia",
+      "displayName": "gamedevelopersofindia",
+      "categories": ["games"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 7.7
+    },
+    {
+      "name": "gamedevjobs",
+      "displayName": "gameDevJobs",
+      "categories": ["games"],
+      "tier": "core",
+      "status": "active",
+      "note": "paid only",
+      "postsPerDay": 22.9
+    },
+    {
+      "name": "ghostwriterscommunity",
+      "displayName": "ghostwriterscommunity",
+      "categories": ["writing"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 9.4
+    },
+    {
+      "name": "graphicdesignjobs",
+      "displayName": "GraphicDesignJobs",
+      "categories": ["design"],
+      "tier": "core",
+      "status": "active",
+      "note": "[HIRING]/[FOR HIRE]",
+      "postsPerDay": 17.0
+    },
+    {
+      "name": "graphicdesignph",
+      "displayName": "graphicdesignph",
+      "categories": ["design"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 3.8
+    },
+    {
+      "name": "graphicdesignservices",
+      "displayName": "GraphicDesignServices",
+      "categories": ["design"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring]/[For Hire]",
+      "postsPerDay": 17.9
+    },
+    {
+      "name": "highticket_sales",
+      "displayName": "highticket_sales",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": "mostly commission-only closers; analyser marks pay type",
+      "postsPerDay": 20.4
+    },
+    {
+      "name": "hireabookeditor",
+      "displayName": "HireABookEditor",
+      "categories": ["writing"],
+      "tier": "core",
+      "status": "active",
+      "note": "client posts",
+      "postsPerDay": 1.4
+    },
+    {
+      "name": "hireaneditor",
+      "displayName": "HireAnEditor",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring]/[For Hire]",
+      "postsPerDay": 47.7
+    },
+    {
+      "name": "hireawriter",
+      "displayName": "HireaWriter",
+      "categories": ["writing"],
+      "tier": "core",
+      "status": "active",
+      "note": "Hiring/Hire Me flair",
+      "postsPerDay": 2.8
+    },
+    {
+      "name": "hireforgigs",
+      "displayName": "hireforgigs",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 6.9
+    },
+    {
+      "name": "hiring",
+      "displayName": "hiring",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "[HIRING]/[FOR HIRE]",
+      "postsPerDay": 20.4
+    },
+    {
+      "name": "hiring_recruiting",
+      "displayName": "hiring_recruiting",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 2.3
+    },
+    {
+      "name": "hungryartists",
+      "displayName": "HungryArtists",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring]/[For Hire]; $30 min",
+      "postsPerDay": 53.1
+    },
+    {
+      "name": "illustratorsforhire",
+      "displayName": "IllustratorsForHire",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "[HIRING]",
+      "postsPerDay": 1.2
+    },
+    {
+      "name": "inat",
+      "displayName": "INAT",
+      "categories": ["games"],
+      "tier": "core",
+      "status": "active",
+      "note": "keep [Paid] only; drop [RevShare]/[Hobby]",
+      "postsPerDay": 24.7
+    },
+    {
+      "name": "indiananimation",
+      "displayName": "indiananimation",
+      "categories": ["games", "3d"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 1.8
+    },
+    {
+      "name": "indiandevelopers",
+      "displayName": "indiandevelopers",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 13.8
+    },
+    {
+      "name": "ineedalogo",
+      "displayName": "ineedalogo",
+      "categories": ["design"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 0.3
+    },
+    {
+      "name": "javascriptjobs",
+      "displayName": "javascriptjobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 4.6
+    },
+    {
+      "name": "jobs4bitcoins",
+      "displayName": "Jobs4Bitcoins",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring]/[For Hire]; crypto pay",
+      "postsPerDay": 2.7
+    },
+    {
+      "name": "jobs4crypto",
+      "displayName": "Jobs4Crypto",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "hire/for hire",
+      "postsPerDay": 0.7
+    },
+    {
+      "name": "leadgenmarketplace",
+      "displayName": "leadgenmarketplace",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 4.5
+    },
+    {
+      "name": "machinelearningjobs",
+      "displayName": "MachineLearningJobs",
+      "categories": ["data"],
+      "tier": "core",
+      "status": "active",
+      "note": "mostly FT",
+      "postsPerDay": 7.9
+    },
+    {
+      "name": "makemoneyindia",
+      "displayName": "makemoneyindia",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 45.4
+    },
+    {
+      "name": "mangaartistforhire",
+      "displayName": "mangaartistforhire",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 15.0
+    },
+    {
+      "name": "marketingjobs",
+      "displayName": "MarketingJobs",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": "hiring",
+      "postsPerDay": 12.3
+    },
+    {
+      "name": "mcstaff",
+      "displayName": "mcstaff",
+      "categories": ["games"],
+      "tier": "core",
+      "status": "active",
+      "note": "paid dev/builder roles",
+      "postsPerDay": 7.9
+    },
+    {
+      "name": "minecraftdev",
+      "displayName": "minecraftdev",
+      "categories": ["development", "games"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 0.4
+    },
+    {
+      "name": "mixingmastering",
+      "displayName": "mixingmastering",
+      "categories": ["audio"],
+      "tier": "core",
+      "status": "active",
+      "note": "Service Request flair",
+      "postsPerDay": 1.0
+    },
+    {
+      "name": "mljobs",
+      "displayName": "mljobs",
+      "categories": ["data"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 10.9
+    },
+    {
+      "name": "n8n",
+      "displayName": "n8n",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "Now Hiring flair",
+      "postsPerDay": 4.5
+    },
+    {
+      "name": "naijaremote",
+      "displayName": "naijaremote",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 0.7
+    },
+    {
+      "name": "nophoneremotejobs",
+      "displayName": "nophoneremotejobs",
+      "categories": ["admin"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 4.3
+    },
+    {
+      "name": "onlinehiringtips",
+      "displayName": "onlinehiringtips",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 2.5
+    },
+    {
+      "name": "onlineservicesph",
+      "displayName": "onlineservicesPH",
+      "categories": ["admin"],
+      "tier": "core",
+      "status": "active",
+      "note": "mostly for hire",
+      "postsPerDay": 10.7
+    },
+    {
+      "name": "photographyjobs",
+      "displayName": "PhotographyJobs",
+      "categories": ["photo"],
+      "tier": "core",
+      "status": "active",
+      "note": "local shoots",
+      "postsPerDay": 7.1
+    },
+    {
+      "name": "photoshoprequest",
+      "displayName": "PhotoshopRequest",
+      "categories": ["photo"],
+      "tier": "core",
+      "status": "active",
+      "note": "paid vs free is flair-only (not in RSS)",
+      "postsPerDay": 65.8
+    },
+    {
+      "name": "photoshoprequests",
+      "displayName": "PhotoshopRequests",
+      "categories": ["photo"],
+      "tier": "core",
+      "status": "active",
+      "note": "$ flairs",
+      "postsPerDay": 3.1
+    },
+    {
+      "name": "phwork",
+      "displayName": "phwork",
+      "categories": ["admin"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 0.5
+    },
+    {
+      "name": "picrequests",
+      "displayName": "picrequests",
+      "categories": ["photo"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair \"Request a PRO\"",
+      "postsPerDay": 1.7
+    },
+    {
+      "name": "programmers_forhire",
+      "displayName": "Programmers_forhire",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "mixed",
+      "postsPerDay": 12.1
+    },
+    {
+      "name": "pythonjobs",
+      "displayName": "PythonJobs",
+      "categories": ["data", "development"],
+      "tier": "core",
+      "status": "active",
+      "note": "mixed",
+      "postsPerDay": 6.2
+    },
+    {
+      "name": "recordthis",
+      "displayName": "recordthis",
+      "categories": ["audio"],
+      "tier": "core",
+      "status": "active",
+      "note": "[PAID]",
+      "postsPerDay": 1.2
+    },
+    {
+      "name": "recruitmenthub",
+      "displayName": "recruitmenthub",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 6.7
+    },
+    {
+      "name": "redditjobboard",
+      "displayName": "RedditJobBoard",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "curated",
+      "postsPerDay": 7.1
+    },
+    {
+      "name": "remotebackendjobs",
+      "displayName": "remotebackendjobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 2.5
+    },
+    {
+      "name": "remotejobs",
+      "displayName": "RemoteJobs",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "mostly FT",
+      "postsPerDay": 10.1
+    },
+    {
+      "name": "remotejs",
+      "displayName": "remotejs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "hiring",
+      "postsPerDay": 0.7
+    },
+    {
+      "name": "remoteprogrammingjobs",
+      "displayName": "remoteprogrammingjobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 2.1
+    },
+    {
+      "name": "remotepython",
+      "displayName": "remotepython",
+      "categories": ["data", "development"],
+      "tier": "core",
+      "status": "active",
+      "note": "jobs",
+      "postsPerDay": 3.4
+    },
+    {
+      "name": "remoteworking",
+      "displayName": "remoteworking",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "flair [Hiring Contractor (1099)]",
+      "postsPerDay": 1.1
+    },
+    {
+      "name": "remoteworks",
+      "displayName": "remoteworks",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "scam-prone",
+      "postsPerDay": 4.5
+    },
+    {
+      "name": "robloxanimation",
+      "displayName": "robloxanimation",
+      "categories": ["games", "3d"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 7.3
+    },
+    {
+      "name": "robloxdevelopers",
+      "displayName": "RobloxDevelopers",
+      "categories": ["games"],
+      "tier": "core",
+      "status": "active",
+      "note": "Advertising flair",
+      "postsPerDay": 40.5
+    },
+    {
+      "name": "robloxgamedev",
+      "displayName": "robloxgamedev",
+      "categories": ["games"],
+      "tier": "core",
+      "status": "active",
+      "note": "clients use the \"Looking For Devs (Paid)\" flair (not in RSS)",
+      "postsPerDay": 59.9
+    },
+    {
+      "name": "robloxstudio",
+      "displayName": "robloxstudio",
+      "categories": ["games", "3d"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 26.4
+    },
+    {
+      "name": "scrapingtheweb",
+      "displayName": "scrapingtheweb",
+      "categories": ["data", "development"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 2.2
+    },
+    {
+      "name": "seojobs",
+      "displayName": "seojobs",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": "job listings",
+      "postsPerDay": 11.4
+    },
+    {
+      "name": "sidehustleindia",
+      "displayName": "sidehustleIndia",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "flair only",
+      "postsPerDay": 30.8
+    },
+    {
+      "name": "sidehustlepaglu",
+      "displayName": "sidehustlepaglu",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 9.6
+    },
+    {
+      "name": "sidehustlesindia",
+      "displayName": "sidehustlesindia",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 3.0
+    },
+    {
+      "name": "slavelabour",
+      "displayName": "slavelabour",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "[TASK] = hiring, [OFFER] = for hire; low budgets",
+      "postsPerDay": null
+    },
+    {
+      "name": "solidity",
+      "displayName": "solidity",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "hiring posts",
+      "postsPerDay": 0.5
+    },
+    {
+      "name": "sysadminjobs",
+      "displayName": "sysadminjobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "mostly FT",
+      "postsPerDay": 1.6
+    },
+    {
+      "name": "tabletopgamedesign",
+      "displayName": "tabletopgamedesign",
+      "categories": ["art", "games"],
+      "tier": "core",
+      "status": "active",
+      "note": "Hiring Artist (Paid)",
+      "postsPerDay": 9.3
+    },
+    {
+      "name": "techjobs",
+      "displayName": "techjobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "Contract flair",
+      "postsPerDay": 6.2
+    },
+    {
+      "name": "techsalesjobs",
+      "displayName": "techsalesjobs",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 19.3
+    },
+    {
+      "name": "techugc",
+      "displayName": "techugc",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 6.2
+    },
+    {
+      "name": "thumbnails",
+      "displayName": "Thumbnails",
+      "categories": ["design"],
+      "tier": "core",
+      "status": "active",
+      "note": "HIRING: titles",
+      "postsPerDay": 18.8
+    },
+    {
+      "name": "ugc_forhire",
+      "displayName": "ugc_forhire",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 25.6
+    },
+    {
+      "name": "ugcconnect",
+      "displayName": "UGCconnect",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair Paid gig",
+      "postsPerDay": 10.5
+    },
+    {
+      "name": "ugccreators",
+      "displayName": "UGCcreators",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": "(PAID) brand posts",
+      "postsPerDay": 21.4
+    },
+    {
+      "name": "ugcfortech",
+      "displayName": "ugcfortech",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 20.8
+    },
+    {
+      "name": "ugcs",
+      "displayName": "ugcs",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 6.9
+    },
+    {
+      "name": "ugcsidehustle",
+      "displayName": "ugcsidehustle",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 6.0
+    },
+    {
+      "name": "ugcuniversity",
+      "displayName": "ugcuniversity",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 6.4
+    },
+    {
+      "name": "vajobsph",
+      "displayName": "vajobsph",
+      "categories": ["admin"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 10.4
+    },
+    {
+      "name": "vettedcutseditors",
+      "displayName": "vettedcutseditors",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 0.4
+    },
+    {
+      "name": "videoeditingconnect",
+      "displayName": "videoeditingconnect",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 1.0
+    },
+    {
+      "name": "videoeditingindia",
+      "displayName": "videoeditingindia",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 27.5
+    },
+    {
+      "name": "videoeditingjobs",
+      "displayName": "VideoEditingJobs",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": "[HIRING]",
+      "postsPerDay": 15.1
+    },
+    {
+      "name": "videoeditingrequests",
+      "displayName": "VideoEditingRequests",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair \"[HIRING] Paid\" vs \"Free\"",
+      "postsPerDay": 4.7
+    },
+    {
+      "name": "videoeditor_forhire",
+      "displayName": "VideoEditor_forhire",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring]/[For Hire]",
+      "postsPerDay": 2.3
+    },
+    {
+      "name": "videoeditors",
+      "displayName": "videoeditors",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 11.2
+    },
+    {
+      "name": "videoeditors_forhire",
+      "displayName": "VideoEditors_forhire",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring]/[For Hire]",
+      "postsPerDay": 35.0
+    },
+    {
+      "name": "videoeditors_hiring",
+      "displayName": "videoeditors_hiring",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 14.6
+    },
+    {
+      "name": "virtualassistant",
+      "displayName": "VirtualAssistant",
+      "categories": ["admin"],
+      "tier": "core",
+      "status": "active",
+      "note": "[HIRING] titles",
+      "postsPerDay": 14.8
+    },
+    {
+      "name": "virtualassistantph",
+      "displayName": "VirtualAssistantPH",
+      "categories": ["admin"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair only (CLIENT vs VA)",
+      "postsPerDay": 8.7
+    },
+    {
+      "name": "virtualassistantphil",
+      "displayName": "virtualassistantphil",
+      "categories": ["admin"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 29.9
+    },
+    {
+      "name": "vndevs",
+      "displayName": "vndevs",
+      "categories": ["art", "games", "writing"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair Recruiting",
+      "postsPerDay": 1.5
+    },
+    {
+      "name": "voiceacting",
+      "displayName": "VoiceActing",
+      "categories": ["audio"],
+      "tier": "core",
+      "status": "active",
+      "note": "PAID flair",
+      "postsPerDay": 10.5
+    },
+    {
+      "name": "voiceover",
+      "displayName": "voiceover",
+      "categories": ["audio"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 1.5
+    },
+    {
+      "name": "voicework",
+      "displayName": "VoiceWork",
+      "categories": ["audio"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring] flairs",
+      "postsPerDay": 1.9
+    },
+    {
+      "name": "vtubercommission",
+      "displayName": "VtuberCommission",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "active",
+      "note": "mixed",
+      "postsPerDay": 1.9
+    },
+    {
+      "name": "we_hiring",
+      "displayName": "we_hiring",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 0.9
+    },
+    {
+      "name": "webdeveloperjobs",
+      "displayName": "WebDeveloperJobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "HIRING flair",
+      "postsPerDay": 6.8
+    },
+    {
+      "name": "webdevjobs",
+      "displayName": "WebDevJobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "paid only",
+      "postsPerDay": 4.5
+    },
+    {
+      "name": "webflow",
+      "displayName": "webflow",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": "Need project help",
+      "postsPerDay": 4.6
+    },
+    {
+      "name": "webscraping",
+      "displayName": "webscraping",
+      "categories": ["data", "development"],
+      "tier": "core",
+      "status": "active",
+      "note": "Hiring flair",
+      "postsPerDay": 2.7
+    },
+    {
+      "name": "weddingvideography",
+      "displayName": "weddingvideography",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring] flair",
+      "postsPerDay": 4.1
+    },
+    {
+      "name": "wfhjobs",
+      "displayName": "WFHJobs",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": "scam-prone",
+      "postsPerDay": 10.1
+    },
+    {
+      "name": "wordpressjobs",
+      "displayName": "wordpressjobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 9.4
+    },
+    {
+      "name": "workonlineindia",
+      "displayName": "workonlineindia",
+      "categories": [],
+      "tier": "core",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 8.6
+    },
+    {
+      "name": "youtubeeditorforhire",
+      "displayName": "YouTubeEditorForHire",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring]/[For Hire]",
+      "postsPerDay": 13.1
+    },
+    {
+      "name": "youtubeeditorsforhire",
+      "displayName": "YouTubeEditorsForHire",
+      "categories": ["video"],
+      "tier": "core",
+      "status": "active",
+      "note": "[Hiring]/[For Hire]",
+      "postsPerDay": 31.4
+    },
+    {
+      "name": "youtubethumbnailhub",
+      "displayName": "YouTubeThumbnailHub",
+      "categories": ["design"],
+      "tier": "core",
+      "status": "active",
+      "note": "flair Hiring",
+      "postsPerDay": 9.8
+    },
+    {
+      "name": "artstore",
+      "displayName": "artstore",
+      "categories": ["art"],
+      "tier": "low",
+      "status": "active",
+      "note": "[Commission]",
+      "postsPerDay": 15.2
+    },
+    {
+      "name": "b2bsales",
+      "displayName": "b2bsales",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 8.4
+    },
+    {
+      "name": "commissionart",
+      "displayName": "commissionart",
+      "categories": ["art"],
+      "tier": "low",
+      "status": "active",
+      "note": "mostly for hire",
+      "postsPerDay": 6.9
+    },
+    {
+      "name": "commissions",
+      "displayName": "commissions",
+      "categories": ["art"],
+      "tier": "low",
+      "status": "active",
+      "note": "mostly for hire",
+      "postsPerDay": 54.8
+    },
+    {
+      "name": "designers_forhire",
+      "displayName": "designers_forhire",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 0.5
+    },
+    {
+      "name": "devjobs",
+      "displayName": "devjobs",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 9.0
+    },
+    {
+      "name": "ecommerceindia",
+      "displayName": "ecommerceindia",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 10.3
+    },
+    {
+      "name": "fantasyartists",
+      "displayName": "fantasyartists",
+      "categories": ["art"],
+      "tier": "low",
+      "status": "active",
+      "note": "flair Client",
+      "postsPerDay": 0.5
+    },
+    {
+      "name": "freelancewriting",
+      "displayName": "freelancewriting",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 5.4
+    },
+    {
+      "name": "fullstackdevelopers",
+      "displayName": "fullstackdevelopers",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 7.2
+    },
+    {
+      "name": "hireanartisthub",
+      "displayName": "HireanArtistHub",
+      "categories": ["art"],
+      "tier": "low",
+      "status": "active",
+      "note": "mostly for hire",
+      "postsPerDay": 12.4
+    },
+    {
+      "name": "hireawritercommunity",
+      "displayName": "hireawritercommunity",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 6.5
+    },
+    {
+      "name": "hiringpakistan",
+      "displayName": "hiringpakistan",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 33.9
+    },
+    {
+      "name": "indianfilmmakers",
+      "displayName": "indianfilmmakers",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 10.5
+    },
+    {
+      "name": "indiansidehustle",
+      "displayName": "indiansidehustle",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 9.2
+    },
+    {
+      "name": "indianstartups",
+      "displayName": "indianstartups",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": "hiring flair",
+      "postsPerDay": 48.0
+    },
+    {
+      "name": "live2d",
+      "displayName": "Live2D",
+      "categories": ["3d", "art"],
+      "tier": "low",
+      "status": "active",
+      "note": "mostly for hire",
+      "postsPerDay": 9.1
+    },
+    {
+      "name": "mcbuildersforhire",
+      "displayName": "mcbuildersforhire",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 0.8
+    },
+    {
+      "name": "pakfreelancers",
+      "displayName": "pakfreelancers",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 5.1
+    },
+    {
+      "name": "robloxart",
+      "displayName": "RobloxArt",
+      "categories": ["art"],
+      "tier": "low",
+      "status": "active",
+      "note": "Request flair",
+      "postsPerDay": 0.3
+    },
+    {
+      "name": "robloxcommissions",
+      "displayName": "robloxcommissions",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 20.3
+    },
+    {
+      "name": "startupindia",
+      "displayName": "StartUpIndia",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": "hiring flair",
+      "postsPerDay": 40.0
+    },
+    {
+      "name": "starvingartists",
+      "displayName": "starvingartists",
+      "categories": ["art"],
+      "tier": "low",
+      "status": "active",
+      "note": "mostly for hire",
+      "postsPerDay": 38.1
+    },
+    {
+      "name": "tabletopartists",
+      "displayName": "tabletopartists",
+      "categories": [],
+      "tier": "low",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 26.5
+    },
+    {
+      "name": "abudhabijobs",
+      "displayName": "abudhabijobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 7.1
+    },
+    {
+      "name": "atljobs",
+      "displayName": "atljobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 2.6
+    },
+    {
+      "name": "austinjobs",
+      "displayName": "austinjobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 4.5
+    },
+    {
+      "name": "bangalorejob",
+      "displayName": "bangalorejob",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 35.7
+    },
+    {
+      "name": "careerstartindia",
+      "displayName": "careerstartindia",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 4.9
+    },
+    {
+      "name": "chennaihiring",
+      "displayName": "chennaihiring",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 9.2
+    },
+    {
+      "name": "chicagojobs",
+      "displayName": "chicagojobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 5.5
+    },
+    {
+      "name": "classifiedsph",
+      "displayName": "classifiedsph",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 43.5
+    },
+    {
+      "name": "colombiaempleo",
+      "displayName": "colombiaempleo",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 6.1
+    },
+    {
+      "name": "denverjobs",
+      "displayName": "denverjobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 2.0
+    },
+    {
+      "name": "dubaijobs",
+      "displayName": "DubaiJobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": "mixed",
+      "postsPerDay": 1.5
+    },
+    {
+      "name": "firstjobindia",
+      "displayName": "firstjobindia",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 12.9
+    },
+    {
+      "name": "freshertechjobsindia",
+      "displayName": "freshertechjobsindia",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 29.5
+    },
+    {
+      "name": "hiringph",
+      "displayName": "HiringPH",
+      "categories": ["admin"],
+      "tier": "regional",
+      "status": "active",
+      "note": "mostly employment",
+      "postsPerDay": 3.6
+    },
+    {
+      "name": "hiringphilippinesph",
+      "displayName": "hiringphilippinesph",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 51.2
+    },
+    {
+      "name": "indiafreshers",
+      "displayName": "indiafreshers",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 22.6
+    },
+    {
+      "name": "indiajobs",
+      "displayName": "Indiajobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": "mostly FT",
+      "postsPerDay": 65.6
+    },
+    {
+      "name": "jobhuntph",
+      "displayName": "jobhuntph",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 4.4
+    },
+    {
+      "name": "jobph",
+      "displayName": "jobph",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 67.8
+    },
+    {
+      "name": "jobphilippines",
+      "displayName": "jobphilippines",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 9.4
+    },
+    {
+      "name": "jobsfordevelopers",
+      "displayName": "jobsfordevelopers",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 6.0
+    },
+    {
+      "name": "jobsindubaiuae",
+      "displayName": "jobsindubaiuae",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 14.1
+    },
+    {
+      "name": "jobsphilippines",
+      "displayName": "jobsphilippines",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 61.8
+    },
+    {
+      "name": "karir",
+      "displayName": "karir",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 6.7
+    },
+    {
+      "name": "keralacareers",
+      "displayName": "keralacareers",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 7.2
+    },
+    {
+      "name": "menajobs",
+      "displayName": "menajobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 75.6
+    },
+    {
+      "name": "mumbaijobsopenings",
+      "displayName": "mumbaijobsopenings",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 3.7
+    },
+    {
+      "name": "nycjobs",
+      "displayName": "NYCjobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": "[Hiring]/[For Hire]",
+      "postsPerDay": 15.7
+    },
+    {
+      "name": "pakistantechjobs",
+      "displayName": "pakistantechjobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 3.8
+    },
+    {
+      "name": "philippinesjobs",
+      "displayName": "philippinesjobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 65.3
+    },
+    {
+      "name": "phjobs",
+      "displayName": "phjobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 19.2
+    },
+    {
+      "name": "recruitinghiringph",
+      "displayName": "recruitinghiringph",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 8.4
+    },
+    {
+      "name": "remotegamejobs",
+      "displayName": "remotegamejobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 1.8
+    },
+    {
+      "name": "sales_india",
+      "displayName": "sales_india",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 8.9
+    },
+    {
+      "name": "saudiarabiajobs",
+      "displayName": "saudiarabiajobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 6.8
+    },
+    {
+      "name": "seajobs",
+      "displayName": "seajobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 0.8
+    },
+    {
+      "name": "sfbayjobs",
+      "displayName": "sfbayjobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 1.2
+    },
+    {
+      "name": "singaporejobs",
+      "displayName": "singaporejobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 51.0
+    },
+    {
+      "name": "startupindiajobs",
+      "displayName": "startupindiajobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 7.1
+    },
+    {
+      "name": "technepal",
+      "displayName": "technepal",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 68.0
+    },
+    {
+      "name": "torontojobs",
+      "displayName": "torontoJobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": "FT",
+      "postsPerDay": 6.4
+    },
+    {
+      "name": "trianglejobs",
+      "displayName": "trianglejobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 1.8
+    },
+    {
+      "name": "uaejobseekers",
+      "displayName": "uaejobseekers",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 24.4
+    },
+    {
+      "name": "vancouverjobs",
+      "displayName": "vancouverjobs",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 7.0
+    },
+    {
+      "name": "workingstudentph",
+      "displayName": "workingstudentph",
+      "categories": [],
+      "tier": "regional",
+      "status": "active",
+      "note": null,
+      "postsPerDay": 54.1
+    },
+    {
+      "name": "3dprintindia",
+      "displayName": "3dprintindia",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "hobby discussion",
+      "postsPerDay": 10.8
+    },
+    {
+      "name": "addu",
+      "displayName": "addu",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "university sub",
+      "postsPerDay": 16.2
+    },
+    {
+      "name": "ahmedabadclassifieds",
+      "displayName": "ahmedabadclassifieds",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "classifieds",
+      "postsPerDay": 2.7
+    },
+    {
+      "name": "ai_ugc_marketing",
+      "displayName": "ai_ugc_marketing",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "discussion",
+      "postsPerDay": 7.5
+    },
+    {
+      "name": "algeria",
+      "displayName": "algeria",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "country sub",
+      "postsPerDay": 13.0
+    },
+    {
+      "name": "algeriawork",
+      "displayName": "algeriawork",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "discussion",
+      "postsPerDay": 5.4
+    },
+    {
+      "name": "amdavadclassifieds",
+      "displayName": "amdavadclassifieds",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "classifieds",
+      "postsPerDay": 12.4
+    },
+    {
+      "name": "assignmenthelp",
+      "displayName": "assignmenthelp",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "homework help",
+      "postsPerDay": null
+    },
+    {
+      "name": "bangalorestartups",
+      "displayName": "bangalorestartups",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "startup discussion",
+      "postsPerDay": 35.1
+    },
+    {
+      "name": "beermoney",
+      "displayName": "beermoney",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "surveys, not client work",
+      "postsPerDay": null
+    },
+    {
+      "name": "bpoinph",
+      "displayName": "bpoinph",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "call-centre employment, 3% hiring",
+      "postsPerDay": 199.4
+    },
+    {
+      "name": "canadajobs",
+      "displayName": "canadajobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "discussion",
+      "postsPerDay": 4.8
+    },
+    {
+      "name": "captureone",
+      "displayName": "captureone",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "software",
+      "postsPerDay": 1.5
+    },
+    {
+      "name": "chatterjobs",
+      "displayName": "chatterjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "OnlyFans \"chatter\" jobs (adult industry); excluded by default 2026-10-01",
+      "postsPerDay": 85.9
+    },
+    {
+      "name": "chennaicity",
+      "displayName": "chennaicity",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "city sub",
+      "postsPerDay": 43.9
+    },
+    {
+      "name": "chinajobs",
+      "displayName": "chinajobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "job seekers",
+      "postsPerDay": 1.0
+    },
+    {
+      "name": "christianjobs",
+      "displayName": "christianjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "full-time reposts",
+      "postsPerDay": 1.1
+    },
+    {
+      "name": "christiantechjobs",
+      "displayName": "christiantechjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "full-time reposts",
+      "postsPerDay": 1.6
+    },
+    {
+      "name": "cofounder",
+      "displayName": "cofounder",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "equity only",
+      "postsPerDay": null
+    },
+    {
+      "name": "college_homework",
+      "displayName": "college_homework",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "homework help",
+      "postsPerDay": null
+    },
+    {
+      "name": "computervision",
+      "displayName": "computervision",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "research discussion",
+      "postsPerDay": 11.6
+    },
+    {
+      "name": "counterstrike2",
+      "displayName": "counterstrike2",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "game discussion",
+      "postsPerDay": 49.3
+    },
+    {
+      "name": "cybersecurityjobs",
+      "displayName": "cybersecurityjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "career discussion",
+      "postsPerDay": 3.3
+    },
+    {
+      "name": "daily_techjobs_india",
+      "displayName": "daily_techjobs_india",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "full-time tech jobs, seekers",
+      "postsPerDay": 18.4
+    },
+    {
+      "name": "delhimarketplace",
+      "displayName": "delhimarketplace",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "buy/sell marketplace",
+      "postsPerDay": 138.9
+    },
+    {
+      "name": "dhaka",
+      "displayName": "dhaka",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "city sub",
+      "postsPerDay": 27.4
+    },
+    {
+      "name": "domyprogramming",
+      "displayName": "domyprogramming",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "homework/essay mill",
+      "postsPerDay": null
+    },
+    {
+      "name": "dubaiclassifieds",
+      "displayName": "dubaiclassifieds",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "buy/sell classifieds",
+      "postsPerDay": 57.0
+    },
+    {
+      "name": "empleos_ar",
+      "displayName": "empleos_ar",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "3% hiring of 42 posts a day",
+      "postsPerDay": 41.9
+    },
+    {
+      "name": "favors",
+      "displayName": "favors",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "unpaid",
+      "postsPerDay": null
+    },
+    {
+      "name": "fiverr",
+      "displayName": "fiverr",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "discussion only",
+      "postsPerDay": null
+    },
+    {
+      "name": "freelance",
+      "displayName": "freelance",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "hiring posts banned",
+      "postsPerDay": null
+    },
+    {
+      "name": "freelancing",
+      "displayName": "freelancing",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "discussion",
+      "postsPerDay": 3.0
+    },
+    {
+      "name": "furrycommissions",
+      "displayName": "FurryCommissions",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "excluded",
+      "note": "furry commissions, many posts NSFW; excluded by default 2026-10-01",
+      "postsPerDay": 49.6
+    },
+    {
+      "name": "fusion360",
+      "displayName": "fusion360",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "software help",
+      "postsPerDay": 12.0
+    },
+    {
+      "name": "hireahacker",
+      "displayName": "hireahacker",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "scam and illegal",
+      "postsPerDay": null
+    },
+    {
+      "name": "homeworkhelp",
+      "displayName": "homeworkhelp",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "homework help",
+      "postsPerDay": null
+    },
+    {
+      "name": "homeworkhelpny",
+      "displayName": "homeworkhelpny",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "essay mill",
+      "postsPerDay": null
+    },
+    {
+      "name": "hyderabad",
+      "displayName": "hyderabad",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "city sub; 4% hiring of 130 posts a day",
+      "postsPerDay": 130.3
+    },
+    {
+      "name": "hyderabadstartups",
+      "displayName": "hyderabadstartups",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "startup discussion",
+      "postsPerDay": 10.8
+    },
+    {
+      "name": "indiacontentcreators",
+      "displayName": "indiacontentcreators",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "creator chat",
+      "postsPerDay": 5.1
+    },
+    {
+      "name": "indiajobseeker",
+      "displayName": "indiajobseeker",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "job seekers",
+      "postsPerDay": 1.9
+    },
+    {
+      "name": "indian_architects",
+      "displayName": "indian_architects",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "discussion",
+      "postsPerDay": 4.8
+    },
+    {
+      "name": "indoreclassifieds",
+      "displayName": "indoreclassifieds",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "classifieds",
+      "postsPerDay": 0.9
+    },
+    {
+      "name": "informatikkarriere",
+      "displayName": "informatikkarriere",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "career discussion",
+      "postsPerDay": 10.0
+    },
+    {
+      "name": "interiordesignsindia",
+      "displayName": "interiordesignsindia",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "discussion",
+      "postsPerDay": 16.2
+    },
+    {
+      "name": "javaprogramming",
+      "displayName": "javaprogramming",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "programming help",
+      "postsPerDay": 4.7
+    },
+    {
+      "name": "jobboardsearch",
+      "displayName": "jobboardsearch",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "bot reposting full-time job-board listings (~1,600 posts a day)",
+      "postsPerDay": 1593.8
+    },
+    {
+      "name": "jobminglrjobs",
+      "displayName": "jobminglrjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "daily digest of full-time openings",
+      "postsPerDay": 3.9
+    },
+    {
+      "name": "jobsindata",
+      "displayName": "jobsindata",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "digest of full-time roles",
+      "postsPerDay": 0.8
+    },
+    {
+      "name": "kurnool_city",
+      "displayName": "kurnool_city",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "city sub",
+      "postsPerDay": 3.1
+    },
+    {
+      "name": "logodesign",
+      "displayName": "logodesign",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "offers and requests banned",
+      "postsPerDay": null
+    },
+    {
+      "name": "marketing",
+      "displayName": "marketing",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "self-promotion banned",
+      "postsPerDay": null
+    },
+    {
+      "name": "minecraftserver",
+      "displayName": "minecraftserver",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "Minecraft server ads, no hiring",
+      "postsPerDay": 155.4
+    },
+    {
+      "name": "nagpur",
+      "displayName": "nagpur",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "city sub",
+      "postsPerDay": 56.0
+    },
+    {
+      "name": "nepalsocial",
+      "displayName": "nepalsocial",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "city/social chat",
+      "postsPerDay": 577.8
+    },
+    {
+      "name": "networkingjobs",
+      "displayName": "networkingjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "career discussion",
+      "postsPerDay": 2.6
+    },
+    {
+      "name": "newtubers",
+      "displayName": "newtubers",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "services go to r/CreatorServices",
+      "postsPerDay": null
+    },
+    {
+      "name": "pakistanidevs",
+      "displayName": "pakistanidevs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "discussion",
+      "postsPerDay": 7.8
+    },
+    {
+      "name": "phclassifieds",
+      "displayName": "phclassifieds",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "buy/sell classifieds",
+      "postsPerDay": 75.6
+    },
+    {
+      "name": "photorestore",
+      "displayName": "photorestore",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "free only",
+      "postsPerDay": null
+    },
+    {
+      "name": "photoshop",
+      "displayName": "photoshop",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "editing requests banned",
+      "postsPerDay": null
+    },
+    {
+      "name": "productdesignjobs",
+      "displayName": "productdesignjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "bot reposting ~240 full-time listings a day",
+      "postsPerDay": 242.7
+    },
+    {
+      "name": "productmanagementjobs",
+      "displayName": "productmanagementjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "bot reposting ~240 full-time listings a day",
+      "postsPerDay": 7.8
+    },
+    {
+      "name": "programmingbuddies",
+      "displayName": "programmingbuddies",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "unpaid",
+      "postsPerDay": null
+    },
+    {
+      "name": "programminghomework",
+      "displayName": "programminghomework",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "homework help",
+      "postsPerDay": null
+    },
+    {
+      "name": "proofreading",
+      "displayName": "proofreading",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "paid proofreading banned",
+      "postsPerDay": null
+    },
+    {
+      "name": "punejobs",
+      "displayName": "punejobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "0% hiring",
+      "postsPerDay": 10.9
+    },
+    {
+      "name": "qatarcareers",
+      "displayName": "qatarcareers",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "job seekers",
+      "postsPerDay": 16.3
+    },
+    {
+      "name": "recordthisforfree",
+      "displayName": "recordthisforfree",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "unpaid by design",
+      "postsPerDay": null
+    },
+    {
+      "name": "remoteaccountingroles",
+      "displayName": "remoteaccountingroles",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "full-time jobs reposted from job boards",
+      "postsPerDay": 27.5
+    },
+    {
+      "name": "remotefrontendjobs",
+      "displayName": "remotefrontendjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "discussion",
+      "postsPerDay": 0.3
+    },
+    {
+      "name": "remotelegaljobs",
+      "displayName": "remotelegaljobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "full-time jobs reposted from job boards",
+      "postsPerDay": 23.5
+    },
+    {
+      "name": "remotivejobs",
+      "displayName": "remotivejobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "full-time reposts from remotive.com",
+      "postsPerDay": 1.8
+    },
+    {
+      "name": "retouching",
+      "displayName": "retouching",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "requests banned",
+      "postsPerDay": null
+    },
+    {
+      "name": "rishikesh",
+      "displayName": "rishikesh",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "city sub",
+      "postsPerDay": 7.3
+    },
+    {
+      "name": "sidehustlegold",
+      "displayName": "sidehustlegold",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "side-hustle discussion",
+      "postsPerDay": 42.2
+    },
+    {
+      "name": "softwareengineerjobs",
+      "displayName": "softwareengineerjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "full-time jobs and career advice",
+      "postsPerDay": 31.3
+    },
+    {
+      "name": "startups",
+      "displayName": "startups",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "hiring posts banned",
+      "postsPerDay": null
+    },
+    {
+      "name": "technicalwriting",
+      "displayName": "technicalwriting",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "discussion",
+      "postsPerDay": 2.9
+    },
+    {
+      "name": "testmyapp",
+      "displayName": "testmyapp",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "unpaid test swaps",
+      "postsPerDay": null
+    },
+    {
+      "name": "translator",
+      "displayName": "translator",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "free translation requests",
+      "postsPerDay": null
+    },
+    {
+      "name": "ukjobs",
+      "displayName": "ukjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "\"not a jobs board\"",
+      "postsPerDay": null
+    },
+    {
+      "name": "upwork",
+      "displayName": "upwork",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "discussion only",
+      "postsPerDay": null
+    },
+    {
+      "name": "voiceautomationai",
+      "displayName": "voiceautomationai",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "product chat",
+      "postsPerDay": 6.2
+    },
+    {
+      "name": "webtooncanvas",
+      "displayName": "webtooncanvas",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "discussion",
+      "postsPerDay": 6.5
+    },
+    {
+      "name": "workonline",
+      "displayName": "workonline",
+      "categories": [],
+      "tier": "core",
+      "status": "excluded",
+      "note": "bans for-hire posts; advice only",
+      "postsPerDay": null
+    },
+    {
+      "name": "3designrequests",
+      "displayName": "3designrequests",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-23, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "3dpaidrequests",
+      "displayName": "3dpaidrequests",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-05-18, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "3dprintmythings",
+      "displayName": "3dprintmythings",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-01-15, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "ai_writing_jobs",
+      "displayName": "ai_writing_jobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2022-12-23, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "aitraininggigs",
+      "displayName": "aitraininggigs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-29, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "animatorsforhire",
+      "displayName": "animatorsforhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2023-02-25, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "appcommissions",
+      "displayName": "appcommissions",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2015-12-26, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "art4hire",
+      "displayName": "art4hire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2020-12-26, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "artists_forhire",
+      "displayName": "artists_forhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2023-04-30, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "baltimoreforhire",
+      "displayName": "baltimoreforhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2022-04-07, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "bookcoverdesign",
+      "displayName": "bookcoverdesign",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-12-12, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "bountygigs",
+      "displayName": "bountygigs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-08-23, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "colorizationrequests",
+      "displayName": "colorizationrequests",
+      "categories": ["photo"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-26, 0.2 posts a day (2026-09-30)",
+      "postsPerDay": 0.2
+    },
+    {
+      "name": "contentwriter_forhire",
+      "displayName": "ContentWriter_forhire",
+      "categories": ["writing"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-25, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "cryptodevjobs",
+      "displayName": "cryptodevjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2023-10-21, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "cryptofreelance",
+      "displayName": "cryptofreelance",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2022-01-25, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "cryptogigs",
+      "displayName": "cryptogigs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2019-12-02, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "customart",
+      "displayName": "customart",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2020-11-07, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "cyberhire",
+      "displayName": "cyberhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-07-12, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "datajoblist",
+      "displayName": "datajoblist",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-07-14, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "datavizrequests",
+      "displayName": "datavizrequests",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-07-10, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "designrequests",
+      "displayName": "designrequests",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-08-30, 0.2 posts a day (2026-09-30)",
+      "postsPerDay": 0.2
+    },
+    {
+      "name": "designwork",
+      "displayName": "designwork",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-08-31, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "developer_for_hire",
+      "displayName": "developer_for_hire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-02-22, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "djangojobs",
+      "displayName": "djangojobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2023-07-25, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "dmforhire",
+      "displayName": "dmforhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-02-19, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "dnwork",
+      "displayName": "dnwork",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-03-21, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "editorhiring",
+      "displayName": "editorhiring",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-04-14, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "emotecommissions",
+      "displayName": "emotecommissions",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-08, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "esportsdesigners",
+      "displayName": "esportsdesigners",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-07-08, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "esportsjobs",
+      "displayName": "esportsjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-06-29, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "europe_forhire",
+      "displayName": "europe_forhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-03-17, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "excelwork",
+      "displayName": "excelwork",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2022-10-20, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "for_hire",
+      "displayName": "for_hire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-02-14, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "forhireafrica",
+      "displayName": "forhireafrica",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2023-10-16, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "forhirebitcoin",
+      "displayName": "forhirebitcoin",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-09-12, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "forhireuk",
+      "displayName": "forhireuk",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2020-10-07, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "freelance_forhere",
+      "displayName": "freelance_forhere",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-09-21, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "freelanceartist",
+      "displayName": "freelanceartist",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2021-06-17, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "freelancedesigners",
+      "displayName": "freelancedesigners",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-11-11, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "freelanceeditors",
+      "displayName": "FreelanceEditors",
+      "categories": ["writing"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-01-06, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "freelanceindiaa",
+      "displayName": "freelanceindiaa",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-10-01, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "freelancejobs",
+      "displayName": "freelancejobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-08, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "freelanceph",
+      "displayName": "freelanceph",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-10-29, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "freelanceproject",
+      "displayName": "freelanceproject",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-05-29, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "freelanceva",
+      "displayName": "freelanceva",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-05-10, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "freelancingjobs",
+      "displayName": "freelancingjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2022-11-29, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "gamingjobs",
+      "displayName": "gamingjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-03-03, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "gigindia",
+      "displayName": "gigindia",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-06-15, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "gigjobs",
+      "displayName": "gigjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-23, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "gigs254",
+      "displayName": "gigs254",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-30, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "gigs_hiring",
+      "displayName": "gigs_hiring",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-05, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "gigsforcash",
+      "displayName": "gigsforcash",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2023-05-27, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "gigsph",
+      "displayName": "gigsph",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-29, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "gisjobs",
+      "displayName": "gisjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-20, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "graphicdesignrequest",
+      "displayName": "graphicdesignrequest",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-06-05, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "hireacoder",
+      "displayName": "hireacoder",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-06-17, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "hireadeveloper",
+      "displayName": "hireadeveloper",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-07-24, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "hireaiartist",
+      "displayName": "hireaiartist",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-03-18, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "hireanartist",
+      "displayName": "hireanartist",
+      "categories": ["art"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-08-15, 2.0 posts a day (2026-09-30)",
+      "postsPerDay": 2.0
+    },
+    {
+      "name": "hireaprogrammer",
+      "displayName": "hireaprogrammer",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-07-21, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "hireatranslator",
+      "displayName": "hireatranslator",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-04-27, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "hireatutor",
+      "displayName": "hireatutor",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-09-16, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "hireavirtualassistant",
+      "displayName": "hireavirtualassistant",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2020-04-15, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "hiringartists",
+      "displayName": "hiringartists",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2023-07-30, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "hiringvideoeditor",
+      "displayName": "hiringvideoeditor",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-10-01, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "hongkong_forhire",
+      "displayName": "hongkong_forhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2021-05-07, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "icanmodelthat",
+      "displayName": "icanmodelthat",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-24, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "influencerjobs",
+      "displayName": "influencerjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2023-01-30, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "irishdevjobs",
+      "displayName": "irishdevjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-08-18, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "jamstack_jobs",
+      "displayName": "jamstack_jobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2021-08-14, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "jobbit",
+      "displayName": "jobbit",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-30, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "jobs4cryptos",
+      "displayName": "jobs4cryptos",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-14, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "jobsweb3",
+      "displayName": "jobsweb3",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-05-25, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "juniorwebdevjobs",
+      "displayName": "juniorwebdevjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2021-01-20, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "lajobs",
+      "displayName": "lajobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-30, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "likeremote",
+      "displayName": "likeremote",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-07-21, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "logoforhire",
+      "displayName": "logoforhire",
+      "categories": ["design"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-14, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "logorequest",
+      "displayName": "logorequest",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2020-09-19, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "london_forhire",
+      "displayName": "london_forhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-05-20, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "londonjobs",
+      "displayName": "londonjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-29, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "marketerforhire",
+      "displayName": "marketerforhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-06-05, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "marketersforhire",
+      "displayName": "MarketersForHire",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2022-02-23, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "marketingjobshub",
+      "displayName": "marketingjobshub",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-11-18, 0.2 posts a day (2026-09-30)",
+      "postsPerDay": 0.2
+    },
+    {
+      "name": "microtasks",
+      "displayName": "microtasks",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-06-19, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "musicservices",
+      "displayName": "musicservices",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-15, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "needawriter",
+      "displayName": "needawriter",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2023-07-26, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "onlinejobsph",
+      "displayName": "onlinejobsph",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-06-07, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "onlineteachingjobs",
+      "displayName": "onlineteachingjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-03-27, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "onlytasks",
+      "displayName": "onlytasks",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2022-08-07, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "paiddesign",
+      "displayName": "paiddesign",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-01, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "paidremotejobs",
+      "displayName": "paidremotejobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-10-21, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "pakgigshub",
+      "displayName": "pakgigshub",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-27, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "pakistanifreelancers",
+      "displayName": "pakistanifreelancers",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-05-20, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "photoshoprequestspro",
+      "displayName": "photoshoprequestspro",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-04-19, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "photshop_request",
+      "displayName": "photshop_request",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2023-01-06, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "podcastediting",
+      "displayName": "podcastediting",
+      "categories": ["audio"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-05-15, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "ppcjobs",
+      "displayName": "ppcjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-23, 0.2 posts a day (2026-09-30)",
+      "postsPerDay": 0.2
+    },
+    {
+      "name": "producersandartists",
+      "displayName": "Producersandartists",
+      "categories": ["audio"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-07-13, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "progigs",
+      "displayName": "progigs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-23, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "programmersforhire",
+      "displayName": "programmersforhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-03-12, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "programmingtasks",
+      "displayName": "programmingtasks",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-10-09, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "quickfreelancers",
+      "displayName": "quickfreelancers",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-08-04, 0.2 posts a day (2026-09-30)",
+      "postsPerDay": 0.2
+    },
+    {
+      "name": "railsjobs",
+      "displayName": "railsjobs",
+      "categories": ["development"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2022-01-03, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "remote_pm_jobs",
+      "displayName": "remote_pm_jobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-24, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "remotegig",
+      "displayName": "remotegig",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-12-21, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "remotephp",
+      "displayName": "remotephp",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2020-02-12, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "remotesoftwareengjobs",
+      "displayName": "remotesoftwareengjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-04-25, 0.2 posts a day (2026-09-30)",
+      "postsPerDay": 0.2
+    },
+    {
+      "name": "remoteworkhiring",
+      "displayName": "remoteworkhiring",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-07-07, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "remoteworklatam",
+      "displayName": "remoteworklatam",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-06-25, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "remotewritingjobs",
+      "displayName": "remotewritingjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-14, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "requestalogo",
+      "displayName": "requestalogo",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2021-02-03, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "robloxdevjobs",
+      "displayName": "robloxdevjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-05-20, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "salesjobs",
+      "displayName": "salesjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-06-25, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "sgfreelancers",
+      "displayName": "sgfreelancers",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-30, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "sidehustleph",
+      "displayName": "sidehustlePH",
+      "categories": ["admin"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-05-13, 0.4 posts a day (2026-09-30)",
+      "postsPerDay": 0.4
+    },
+    {
+      "name": "socialmediajobs",
+      "displayName": "socialmediajobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2019-10-16, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "swiftjobs",
+      "displayName": "swiftjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2022-12-06, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "tasksforcash",
+      "displayName": "tasksforcash",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2019-11-21, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "tasksformoney",
+      "displayName": "tasksformoney",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-08-15, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "torontojobpostings",
+      "displayName": "torontojobpostings",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2020-09-16, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "transcriptionjobs",
+      "displayName": "TranscriptionJobs",
+      "categories": ["admin", "writing"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-09-05, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "uaejobsalert",
+      "displayName": "uaejobsalert",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-28, 0.2 posts a day (2026-09-30)",
+      "postsPerDay": 0.2
+    },
+    {
+      "name": "vaphilippines",
+      "displayName": "vaphilippines",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-29, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "vegasjobs",
+      "displayName": "vegasjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-23, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "videoeditingforhire",
+      "displayName": "videoeditingforhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-19, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "videoeditorforhiring",
+      "displayName": "videoeditorforhiring",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-01, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "virtualassistants",
+      "displayName": "virtualassistants",
+      "categories": ["admin"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-06-12, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "voiceactors",
+      "displayName": "voiceactors",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-06-09, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "voiceoverrequests",
+      "displayName": "voiceoverrequests",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-30, 0.2 posts a day (2026-09-30)",
+      "postsPerDay": 0.2
+    },
+    {
+      "name": "vtuberartcommissions",
+      "displayName": "vtuberartcommissions",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-07-30, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "vtuberartists",
+      "displayName": "vtuberartists",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-03-17, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "vuejobs",
+      "displayName": "vuejobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2024-10-08, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "web3job",
+      "displayName": "web3job",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2022-08-18, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "webdesignjobs",
+      "displayName": "webdesignjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2023-02-13, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "webforhire",
+      "displayName": "webforhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2021-05-10, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "webtoon_canvas_collab",
+      "displayName": "webtoon_canvas_collab",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2025-01-22, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "workforhire",
+      "displayName": "workforhire",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-26, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "workwithindies",
+      "displayName": "workwithindies",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-02-14, 0.1 posts a day (2026-09-30)",
+      "postsPerDay": 0.1
+    },
+    {
+      "name": "writersforhire",
+      "displayName": "writersforhire",
+      "categories": ["writing"],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2026-09-03, 0.2 posts a day (2026-09-30)",
+      "postsPerDay": 0.2
+    },
+    {
+      "name": "writingcommissions",
+      "displayName": "writingcommissions",
+      "categories": [],
+      "tier": "core",
+      "status": "dead",
+      "note": "newest post 2020-10-27, 0.0 posts a day (2026-09-30)",
+      "postsPerDay": null
+    },
+    {
+      "name": "contractjobs",
+      "displayName": "contractjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "gone",
+      "note": "returned no posts (dead/private/renamed) on 2026-09-30",
+      "postsPerDay": null
+    },
+    {
+      "name": "freelance_forhire",
+      "displayName": "freelance_forhire",
+      "categories": [],
+      "tier": "core",
+      "status": "gone",
+      "note": "returned http 404 on 2026-09-30",
+      "postsPerDay": null
+    },
+    {
+      "name": "indiajobsopenings",
+      "displayName": "IndiaJobsOpenings",
+      "categories": [],
+      "tier": "core",
+      "status": "gone",
+      "note": "returned http 404 on 2026-09-30",
+      "postsPerDay": null
+    },
+    {
+      "name": "remotemarketingjobs",
+      "displayName": "remotemarketingjobs",
+      "categories": [],
+      "tier": "core",
+      "status": "gone",
+      "note": "returned no posts (dead/private/renamed) on 2026-09-30",
+      "postsPerDay": null
+    },
+    {
+      "name": "seo_marketing_offers",
+      "displayName": "SEO_Marketing_Offers",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "gone",
+      "note": "returned http 404 on 2026-09-30",
+      "postsPerDay": null
+    },
+    {
+      "name": "sidejob",
+      "displayName": "sidejob",
+      "categories": [],
+      "tier": "core",
+      "status": "gone",
+      "note": "returned no posts (dead/private/renamed) on 2026-09-30",
+      "postsPerDay": null
+    },
+    {
+      "name": "ugcforbrands",
+      "displayName": "UGCForBrands",
+      "categories": ["marketing"],
+      "tier": "core",
+      "status": "gone",
+      "note": "returned http 404 on 2026-09-30",
+      "postsPerDay": null
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { runMigrations } from "./migrate";
+import { prepareDatabase } from "./migrate";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -7,5 +7,5 @@ if (!url) {
   );
   process.exit(1);
 }
-await runMigrations(url);
-console.log("Migrations applied.");
+await prepareDatabase(url);
+console.log("Migrations applied and reference data synced.");

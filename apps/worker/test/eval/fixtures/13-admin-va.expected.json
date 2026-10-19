@@ -1,0 +1,12 @@
+{
+  "categories": ["admin"],
+  "experienceLevel": "beginner",
+  "mustSkills": [
+    "virtual-assistant",
+    "data-entry",
+    "appointment-setting",
+    "research"
+  ],
+  "maySkills": ["customer-support"],
+  "mustNotSkills": ["python", "react", "blender"]
+}

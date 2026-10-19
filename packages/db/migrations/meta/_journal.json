@@ -15,6 +15,76 @@
       "when": 1790412540701,
       "tag": "0001_init",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790627717017,
+      "tag": "0002_onboarding",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790686524909,
+      "tag": "0003_imports",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790699908601,
+      "tag": "0004_drop_blocked_words",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790802352286,
+      "tag": "0005_subreddit_catalogue",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790802352850,
+      "tag": "0006_drop_subreddit_active",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790823560143,
+      "tag": "0007_ingestion",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792251608547,
+      "tag": "0008_projects_experience",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792258399397,
+      "tag": "0009_dedupe",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792258918330,
+      "tag": "0010_matching",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792262227481,
+      "tag": "0011_matching_fixes",
+      "breakpoints": true
     }
   ]
 }

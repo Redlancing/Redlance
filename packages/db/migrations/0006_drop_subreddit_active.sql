@@ -1,0 +1,1 @@
+ALTER TABLE "subreddits" DROP COLUMN "active";

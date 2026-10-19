@@ -1,0 +1,18 @@
+{
+  "categories": ["marketing"],
+  "experienceLevel": "intermediate",
+  "mustSkills": [
+    "paid-ads",
+    "seo",
+    "email-marketing",
+    "analytics-tracking",
+    "lead-generation"
+  ],
+  "maySkills": [
+    "marketing-strategy",
+    "dashboards",
+    "pr-outreach",
+    "content-marketing"
+  ],
+  "mustNotSkills": ["unity", "blender", "voice-over"]
+}

@@ -1,0 +1,18 @@
+{
+  "categories": ["development"],
+  "experienceLevel": "experienced",
+  "mustSkills": [
+    "typescript",
+    "react",
+    "nextjs",
+    "nodejs",
+    "postgresql",
+    "payments",
+    "aws",
+    "docker",
+    "python",
+    "django"
+  ],
+  "maySkills": ["javascript", "tailwind", "rest-api", "qa-testing", "devops"],
+  "mustNotSkills": ["unity", "photoshop", "copywriting"]
+}

@@ -14,12 +14,12 @@ export const faq = [
   {
     question: "Which subreddits does Redlance watch?",
     answer:
-      "When you sign up, Redlance connects you to the hiring subreddits that match your skills, such as r/forhire, r/hiring, r/DesignJobs or r/HireaWriter, and you can add any others. It keeps posts tagged [Hiring] and skips [For Hire] posts, so your feed only shows clients looking to hire.",
+      "Redlance watches more than 150 hiring subreddits, from r/forhire and r/hiring to r/DesignJobs and r/HireaWriter, so you don't have to pick any. It shows you only the posts that match your skills, keeps posts where clients are hiring, and skips [For Hire] ads from other freelancers.",
   },
   {
     question: "How fast are the alerts?",
     answer:
-      "On the Pro plan, a good match reaches you on Telegram within minutes of being posted, because Redlance checks each subreddit every two to three minutes. On the Free plan, alerts arrive 30 to 60 minutes after posting. Speed matters on Reddit, where clients often hire one of the first people to reply.",
+      "On the Pro plan, a good match reaches you on Telegram within minutes of being posted, because Redlance checks every hiring subreddit every few minutes. On the Free plan, alerts arrive 30 to 60 minutes after posting. Speed matters on Reddit, where clients often hire one of the first people to reply.",
   },
   {
     question: "Will my replies sound like AI?",

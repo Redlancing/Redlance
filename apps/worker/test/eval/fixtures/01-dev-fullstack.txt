@@ -1,0 +1,21 @@
+MARA VOSS
+Full-stack developer | Lisbon, Portugal | mara.voss@example.com | github.com/example-mara
+
+SUMMARY
+Full-stack engineer with 9 years of experience building SaaS products and internal tools for startups. I mostly work with TypeScript, React and Node, and I like owning a feature from database to UI.
+
+EXPERIENCE
+Senior Software Engineer, Brightlane (Remote) - Jan 2021 to Present
+- Built the customer dashboard in Next.js and React; cut page load time by 40%.
+- Designed a REST API in Node.js with PostgreSQL; added Stripe subscription billing.
+- Set up Docker builds and AWS deployments (ECS, RDS, S3).
+
+Software Engineer, Tidewater Labs - Mar 2017 to Dec 2020
+- Wrote a Django and Python back office for warehouse staff.
+- Wrote end-to-end tests with Playwright.
+
+SKILLS
+TypeScript, JavaScript, React, Next.js, Node.js, PostgreSQL, Stripe, AWS, Docker, Python, Django, Tailwind CSS
+
+EDUCATION
+BSc Computer Science, University of Porto, 2016

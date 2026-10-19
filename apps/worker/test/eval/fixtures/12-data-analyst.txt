@@ -1,0 +1,15 @@
+Wei Zhang - Data analyst and ML engineer
+Singapore | wei.zhang@example.com
+
+Data professional with 7 years of experience in analytics and applied machine learning.
+
+Experience
+Senior Data Analyst, Meridian Retail (2021 - 2026)
+- Wrote SQL against a Snowflake warehouse; built Tableau and Power BI dashboards used by 60 store managers.
+- Built a churn model in Python (scikit-learn, pandas); AUC 0.83.
+- Automated weekly Excel reporting with Python scripts.
+Data Analyst, Lumen Insurance (2019 - 2021)
+- A/B test analysis and statistical modelling.
+- Scraped competitor prices with Scrapy.
+
+Skills: Python, SQL, pandas, scikit-learn, Tableau, Power BI, Excel, statistics, web scraping

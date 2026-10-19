@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clientIp, readCookie } from "./http";
+import { clientIp, readBody, readCookie } from "./http";
 
 const withHeaders = (headers: Record<string, string>) =>
   new Request("http://localhost:3000/x", { headers });
@@ -58,5 +58,30 @@ describe("clientIp", () => {
   });
   it("falls back to unknown", () => {
     expect(clientIp(withHeaders({}))).toBe("unknown");
+  });
+});
+
+describe("readBody", () => {
+  const body = (size: number, headers: Record<string, string> = {}) =>
+    new Request("http://localhost/x", {
+      method: "POST",
+      body: "x".repeat(size),
+      headers,
+    });
+
+  it("returns the bytes under the limit", async () => {
+    expect((await readBody(body(10), 10)).length).toBe(10);
+  });
+
+  it("413s when Content-Length is over the limit, before reading", async () => {
+    await expect(
+      readBody(body(5, { "content-length": "11" }), 10),
+    ).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
+  });
+
+  it("413s when the stream is longer than the limit (no or lying Content-Length)", async () => {
+    await expect(readBody(body(11), 10)).rejects.toMatchObject({
+      code: "PAYLOAD_TOO_LARGE",
+    });
   });
 });

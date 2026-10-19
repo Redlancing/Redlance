@@ -1,0 +1,13 @@
+{
+  "categories": ["art"],
+  "experienceLevel": "beginner",
+  "mustSkills": [
+    "anime-art",
+    "vtuber-art",
+    "emotes",
+    "procreate",
+    "digital-art"
+  ],
+  "maySkills": ["character-design", "illustration"],
+  "mustNotSkills": ["blender", "logo-design", "python"]
+}

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
+    "@redlance/core": "*",
     "@redlance/db": "*",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",

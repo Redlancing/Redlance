@@ -147,3 +147,38 @@ describe("apiRoute", () => {
     expect(text).not.toContain("secret");
   });
 });
+
+const withParams = apiRoute({
+  params: z.object({ step: z.enum(["basics", "skills"]) }),
+  handler: async ({ params }) => json(200, { step: params.step }),
+});
+
+describe("apiRoute params and body size", () => {
+  it("passes validated route params to the handler", async () => {
+    const cookie = await cookieFor();
+    const res = await withParams(
+      req("/api/v1/x/basics", { headers: { cookie } }),
+      { params: Promise.resolve({ step: "basics" }) },
+    );
+    expect(await res.json()).toEqual({ step: "basics" });
+  });
+
+  it("404s params that fail the schema", async () => {
+    const cookie = await cookieFor();
+    const res = await withParams(
+      req("/api/v1/x/nope", { headers: { cookie } }),
+      { params: Promise.resolve({ step: "nope" }) },
+    );
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe("NOT_FOUND");
+  });
+
+  it("413s a JSON body over 256 KB", async () => {
+    const cookie = await cookieFor();
+    const res = await echo(
+      post(cookie, JSON.stringify({ name: "x".repeat(300_000) })),
+    );
+    expect(res.status).toBe(413);
+    expect((await res.json()).error.code).toBe("PAYLOAD_TOO_LARGE");
+  });
+});
