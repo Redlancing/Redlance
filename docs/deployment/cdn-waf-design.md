@@ -2,6 +2,14 @@
 
 Date: 2026-09-26 · Status: draft for review
 
+> **Not built, and partly out of date (2026-10-17).** Nothing here exists yet: no `infra/`, no Dockerfile, no CI. Since this was written:
+> - CloudFront's origin is **one EC2 server** running the app (web + worker) in Docker. The "static export to S3" setup in Phase 1 is replaced, though static assets are still cached at the edge.
+> - Postgres runs in Docker on that server (no RDS) and Redis is Upstash (no ElastiCache), replacing the "ALB → Fargate → RDS / Valkey" path.
+> - The CloudFront flat-rate Free plan has no VPC origins, so the server is locked to CloudFront by its security group and a secret header. The flat-rate plan itself hasn't been confirmed yet.
+> - The checklist for the deployment spec is in `CLAUDE.md` ("Deployment spec").
+>
+> Still valid: Route 53 + ACM + budgets (Phase 0) and the WAF rules (Phase 2). Rewrite this file as `docs/deployment/design.md` when deployment starts.
+
 ## Goal
 
 Put the marketing site live at `https://redlance.app`, served from AWS CloudFront and protected by AWS WAF, with every AWS resource defined in code. This is the first slice of the production request path agreed for Redlance:

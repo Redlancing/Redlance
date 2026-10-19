@@ -1,8 +1,8 @@
 # Ingestion: collect Reddit hiring posts and understand them. Phased plan
 
-Date: 2026-10-01 · Status: **Phases 1–4 built on `feat/ingestion`** (not committed yet); Phase 0 items 0.1, 0.3, 0.4 still open. See "Build status" at the end for what was built and how it differs from the text below.
+Date: 2026-10-01 · Status: **Phases 1–4 built and committed on `feat/ingestion`** (commit `3f424f9`); Phase 0 items 0.1 and 0.4 still open. See "Build status" at the end for what was built and how it differs from the text below. **For how it works now, read `conclusion.md`** (it is checked against the code and wins where the two differ).
 
-Research behind this plan: `research/subreddits-2026-09-30.md` (223 subreddits checked live, with raw data in `research/data/`).
+Research behind this plan: `research/subreddits-2026-09-30.md` (223 subreddits checked live in the first pass, 223 more in the second; the decisions are in `research/data/catalogue.json`).
 
 ## Goal
 
@@ -276,7 +276,7 @@ Each phase is built test-first and reviewed before the next starts. `feat/onboar
 
 ## Build status (2026-10-01)
 
-Built test-first; 489 tests pass across the workspaces (core 82, db 51, llm 26, worker 104, web 226), typecheck and lint clean. Reviewed by a fresh agent; all important findings fixed. Nothing is committed.
+Built test-first; 489 tests pass across the workspaces (core 82, db 51, llm 26, worker 104, web 226), typecheck and lint clean. Reviewed by a fresh agent; all important findings fixed. Committed on 2026-10-02 (`3f424f9`). On 2026-10-17, after the worker tests deleted in `5645aeb` were restored, 601 tests pass (web 226, worker 216, core 82, db 51, llm 26).
 
 **Defaults taken for the open questions** (easy to change):
 - r/chatterjobs and r/FurryCommissions are **excluded**. r/appointmentsetter, r/highticket_sales and r/cofounderhunt stay; the analyser marks commission-only and equity-only posts.
@@ -313,7 +313,7 @@ Built test-first; 489 tests pass across the workspaces (core 82, db 51, llm 26, 
 - **Operations:**
   - Upkeep runs inside the poller (only the worker holding the poller lock): when it takes the lock, then every 24 h.
   - `npm run ingest:status` and `npm run ingest:plan` (both `-w @redlance/worker`).
-  - New env vars: `INGEST_ENABLED`, `ANALYSIS_ENABLED`, `ANALYSIS_DAILY_BUDGET_USD` (2), `INGEST_MAX_GROUP` (80), `INGEST_MIN_SPACING_MS` (65000, floor 60000), `REDDIT_UA_CONTACT`.
+  - New env vars: `INGEST_ENABLED`, `ANALYSIS_ENABLED`, `ANALYSIS_DAILY_BUDGET_USD` (2), `INGEST_MAX_GROUP` (80), `INGEST_MIN_SPACING_MS` (65000, also the floor), `REDDIT_UA_CONTACT`.
 
 **Live run (2026-10-01, local, ~25 min, real Reddit and Vertex):**
 - 15 requests, all at least 67 s apart, 0 rate-limited, 0 blocked. One network drop was retried after 2× the spacing.

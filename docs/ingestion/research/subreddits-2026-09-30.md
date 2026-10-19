@@ -1,6 +1,6 @@
 # Hiring subreddits: research and live check (2026-09-30, second pass 2026-10-01)
 
-What this is: every subreddit we found where clients post paid freelance work, checked live against Reddit on 2026-09-30. It replaces the 16-subreddit seed list in `packages/core/src/subreddits.ts` (that file changes in the ingestion build, after review). Raw numbers: `data/subreddits-measured-2026-09-30.json` and `data/subreddit-discovery-2026-09-30.json`.
+What this is: every subreddit we found where clients post paid freelance work, checked live against Reddit on 2026-09-30. It replaces the 16-subreddit seed list in `packages/core/src/subreddits.ts` (that file changes in the ingestion build, after review). Raw numbers (with sample post titles) were in `data/subreddits-measured-2026-09-30.json` and `data/subreddit-discovery-2026-09-30.json`, removed 2026-10-17 and kept in git history; `data/catalogue.json` holds the decisions.
 
 ## How it was found
 
@@ -354,7 +354,7 @@ Mostly local employment (US, UK, India, Philippines, Middle East, Canada, Singap
 
 ## Second pass (2026-10-01)
 
-The first list came from research and one month of post searches, so it could miss boards nobody writes about. The second pass looked three more ways, then checked every candidate live the same way. Raw numbers: `data/subreddits-added.json`; decisions are applied in `data/catalogue.json` and `packages/core/src/subreddit-catalogue.ts`.
+The first list came from research and one month of post searches, so it could miss boards nobody writes about. The second pass looked three more ways, then checked every candidate live the same way. Raw numbers were in `data/subreddits-added.json` (removed 2026-10-17, in git history); decisions are applied in `data/catalogue.json` and `packages/core/src/subreddit-catalogue.ts`.
 
 1. **Reddit's subreddit search:** 72 queries (`hire`, `commission`, `gigs`, `ugc`, `voice actor`, `freelance philippines`, `vagas`, `empleo freelance`, …) returned 3,635 subreddits, of which 962 mention hiring words. They were triaged by hand: dropped fan, game, adult and discussion subreddits, kept 158.
 2. **Post search over a year:** 30 queries for niche roles (tattoo, VTuber, pixel art, FiveM, Godot, Discord bot, Excel, cold caller…) added 65 subreddits with 2+ hiring-tagged posts.
