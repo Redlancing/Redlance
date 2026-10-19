@@ -192,3 +192,80 @@ describe("service-account key (temporary fallback)", () => {
     );
   });
 });
+
+describe("drafting budget settings", () => {
+  it("defaults to alert at $40 and pause at $80", () => {
+    const env = parseWorkerEnv(base);
+    expect(env.DRAFT_BUDGET_ALERT_USD).toBe(40);
+    expect(env.DRAFT_BUDGET_PAUSE_USD).toBe(80);
+  });
+
+  it("parses and bounds the values (0 to 10,000; alert not above pause)", () => {
+    const env = parseWorkerEnv({
+      ...base,
+      DRAFT_BUDGET_ALERT_USD: "10",
+      DRAFT_BUDGET_PAUSE_USD: "20",
+    });
+    expect(env.DRAFT_BUDGET_ALERT_USD).toBe(10);
+    expect(env.DRAFT_BUDGET_PAUSE_USD).toBe(20);
+    for (const v of ["-1", "10001"])
+      expect(() =>
+        parseWorkerEnv({ ...base, DRAFT_BUDGET_PAUSE_USD: v }),
+      ).toThrow(/DRAFT_BUDGET_PAUSE_USD/);
+    expect(() =>
+      parseWorkerEnv({
+        ...base,
+        DRAFT_BUDGET_ALERT_USD: "90",
+        DRAFT_BUDGET_PAUSE_USD: "80",
+      }),
+    ).toThrow(/DRAFT_BUDGET_ALERT_USD/);
+  });
+});
+
+describe("drafting settings", () => {
+  it("21: defaults: on, Flash for drafts, Flash-Lite for rewrites, 4 at a time", () => {
+    const env = parseWorkerEnv(base);
+    expect(env.DRAFTS_ENABLED).toBe(true);
+    expect(env.VOICE_ENABLED).toBe(true);
+    expect(env.DRAFT_MODEL).toBe("gemini-3.8-flash");
+    expect(env.REWRITE_MODEL).toBe("gemini-3.5-flash-lite");
+    expect(env.DRAFT_CONCURRENCY).toBe(4);
+  });
+
+  it("21: the models default to whatever VERTEX_MODEL_SMART / _FAST are", () => {
+    const env = parseWorkerEnv({
+      ...base,
+      VERTEX_MODEL_SMART: "smart-x",
+      VERTEX_MODEL_FAST: "fast-x",
+    });
+    expect(env.DRAFT_MODEL).toBe("smart-x");
+    expect(env.REWRITE_MODEL).toBe("fast-x");
+    const own = parseWorkerEnv({
+      ...base,
+      DRAFT_MODEL: "d",
+      REWRITE_MODEL: "r",
+      DRAFTS_ENABLED: "false",
+      VOICE_ENABLED: "false",
+    });
+    expect(own.VOICE_ENABLED).toBe(false);
+    expect(own.DRAFT_MODEL).toBe("d");
+    expect(own.REWRITE_MODEL).toBe("r");
+    expect(own.DRAFTS_ENABLED).toBe(false);
+  });
+
+  it("21: bounds DRAFT_CONCURRENCY to 1-16", () => {
+    expect(
+      parseWorkerEnv({ ...base, DRAFT_CONCURRENCY: "16" }).DRAFT_CONCURRENCY,
+    ).toBe(16);
+    expect(
+      parseWorkerEnv({ ...base, DRAFT_CONCURRENCY: "1" }).DRAFT_CONCURRENCY,
+    ).toBe(1);
+    for (const v of ["0", "17", "2.5", "x"])
+      expect(() => parseWorkerEnv({ ...base, DRAFT_CONCURRENCY: v })).toThrow(
+        /DRAFT_CONCURRENCY/,
+      );
+    expect(() => parseWorkerEnv({ ...base, DRAFTS_ENABLED: "yes" })).toThrow(
+      /DRAFTS_ENABLED/,
+    );
+  });
+});

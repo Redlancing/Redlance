@@ -1,0 +1,33 @@
+{
+  "id": "dev-13-urgent-fix",
+  "tags": ["urgent"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "URGENT: production checkout broken, need a dev TODAY - $150",
+    "body": "Our Next.js store's checkout throws a 500 on the payment step since this morning's deploy. We are losing orders. I can give repo access. Need someone online right now. $150 for a fix, more if it takes long.",
+    "subreddit": "hiring"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["development"],
+    "skillIds": ["nextjs", "payments"],
+    "budgetMin": 150,
+    "budgetMax": 150,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "remote",
+    "location": null,
+    "deadline": "2026-10-19",
+    "redFlags": [],
+    "summary": "Fix a 500 error on the payment step of a Next.js store's checkout after a deploy; same-day, $150.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "conveys it can look at it today / start now only if the evidence supports availability",
+    "mentions the checkout error",
+    "short, no long pitch",
+    "does not claim it can fix it in a stated time"
+  ]
+}

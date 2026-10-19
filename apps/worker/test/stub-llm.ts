@@ -356,13 +356,78 @@ export function stubRescoreResponder(req: GenerateRequest<unknown>): unknown {
   };
 }
 
-/** An LlmClient that answers resume steps and match re-scores with the stub (no network). */
+// ---------- drafts ----------
+
+export const isDraftRequest = (req: GenerateRequest<unknown>) =>
+  /^Task: draft$/m.test(req.prompt);
+
+/** In a post: the first answer invents "60%"; the retry (with <problems>) is clean. */
+export const STUB_INVENT = "STUB_INVENT";
+/** In a post: every answer invents "60%", so the validator fails twice. */
+export const STUB_INVENT_TWICE = "STUB_INVENT_TWICE";
+
+/**
+ * Deterministic draft: a 2-sentence comment and an ~80-word DM built from the evidence's
+ * project, first skill and link, so it passes the validators. `STUB_INVENT` in the prompt
+ * adds an invented "60%" (first answer only); `STUB_INVENT_TWICE` adds it every time.
+ */
+export function stubDraftResponder(req: GenerateRequest<unknown>): unknown {
+  const ev = block(req.prompt, "evidence");
+  const project = /^Project: (.*?)(?: \(\d{4}\))?$/m.exec(ev)?.[1];
+  const skill =
+    (/^Skills to mention: (.*)$/m.exec(ev)?.[1] ?? "none").split(", ")[0] ??
+    "none";
+  const link = /^Link: (\S+)$/m.exec(ev)?.[1];
+  const work = project && project !== "none" ? project : "a similar project";
+  const tool = skill !== "none" ? skill : "the right tools";
+  const retry = req.prompt.includes("<problems>");
+  const invent =
+    req.prompt.includes(STUB_INVENT_TWICE) ||
+    (req.prompt.includes(STUB_INVENT) && !retry);
+  const dm = [
+    "Hi, it sounds like you need this sorted without a lot of back and forth.",
+    `I recently built ${work} with ${tool}${link ? `, and you can see it here: ${link}` : ""}.`,
+    invent ? "It made pages load 60% faster." : "It was a close fit for this.",
+    "I would start by looking at what you have now, fix the main problem first, and keep you posted as I go so nothing is a surprise.",
+    "I can share a short plan once I know a bit more about the scope.",
+    "Would a quick chat this week work for you?",
+  ].join(" ");
+  return {
+    problem: "They need the job done well and quickly.",
+    citedFact: `Built ${work}`,
+    applyInstructions: null,
+    comment: `I built ${work} with ${tool}. Sent you a DM.`,
+    dm,
+  };
+}
+
+// ---------- voice notes ----------
+
+export const isVoiceRequest = (req: GenerateRequest<unknown>) =>
+  /^Task: voice$/m.test(req.prompt);
+
+/**
+ * Deterministic voice notes: plain instructions that end with the number of messages in the
+ * prompt, so a test can tell two updates apart.
+ */
+export function stubVoiceResponder(req: GenerateRequest<unknown>): unknown {
+  const count = (req.prompt.match(/^Message \d+ /gm) ?? []).length;
+  return {
+    notes: `Short sentences. Starts with hey. Never uses a sign-off. Based on ${count} messages.`,
+  };
+}
+
+/** An LlmClient that answers resume steps, match re-scores, drafts and voice notes with the stub (no network). */
 export function stubLlm(): LlmClient {
   return createClient(
     createFakeTransport((req) =>
-      isRescoreRequest(req)
-        ? stubRescoreResponder(req)
-        : stubResumeResponder(req),
+      isDraftRequest(req)
+        ? stubDraftResponder(req)
+        : isVoiceRequest(req)
+          ? stubVoiceResponder(req)
+          : isRescoreRequest(req)
+            ? stubRescoreResponder(req)
+            : stubResumeResponder(req),
     ),
   );
 }

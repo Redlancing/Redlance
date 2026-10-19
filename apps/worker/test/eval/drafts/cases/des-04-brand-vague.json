@@ -1,0 +1,32 @@
+{
+  "id": "des-04-brand-vague",
+  "tags": ["vague", "no_budget"],
+  "profileId": "junior-designer",
+  "post": {
+    "title": "Brand designer needed for my startup",
+    "body": "We are a startup and need a full brand - name feel, logo, colours, everything. Will share details once we talk. Looking for someone creative who gets us.",
+    "subreddit": "forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "unknown",
+    "categories": ["design"],
+    "skillIds": ["brand-identity"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": ["vague_pay"],
+    "summary": "Full brand identity for an unnamed startup; no scope, budget or timeline given.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "asks one short question about the product or scope",
+    "cites the cafe brand project honestly as a student piece",
+    "does not claim startup branding experience"
+  ]
+}

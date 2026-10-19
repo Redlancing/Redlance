@@ -37,6 +37,20 @@ export type WorkerEnv = {
   RESCORE_ENABLED: boolean;
   /** Daily cap on AI re-score spend, in USD (UTC day), across all users. */
   RESCORE_DAILY_BUDGET_USD: number;
+  /** Write drafts (docs/drafts/plan/07-worker-drafts.md). */
+  DRAFTS_ENABLED: boolean;
+  /** Learn each user's voice from what they send (docs/drafts/plan/09-voice.md); needs DRAFTS_ENABLED. */
+  VOICE_ENABLED: boolean;
+  /** First drafts and "different project" rewrites. Defaults to VERTEX_MODEL_SMART. */
+  DRAFT_MODEL: string;
+  /** Style and typed rewrites. Defaults to VERTEX_MODEL_FAST. */
+  REWRITE_MODEL: string;
+  /** Drafts written at once (1-16). */
+  DRAFT_CONCURRENCY: number;
+  /** Daily drafting spend across all users (USD, UTC day) at which to log an alert. */
+  DRAFT_BUDGET_ALERT_USD: number;
+  /** Daily drafting spend across all users (USD, UTC day) at which new drafts pause. */
+  DRAFT_BUDGET_PAUSE_USD: number;
   /**
    * How the worker signs in to Vertex AI. "adc" = Application Default Credentials
    * (gcloud login locally, Workload Identity Federation on EC2). "service-account-key" =
@@ -116,6 +130,25 @@ const schema = z.object({
     empty,
     z.coerce.number().min(0).max(1000).default(5),
   ),
+  DRAFTS_ENABLED: z.preprocess(
+    empty,
+    z.enum(["true", "false"]).default("true"),
+  ),
+  VOICE_ENABLED: z.preprocess(empty, z.enum(["true", "false"]).default("true")),
+  DRAFT_MODEL: optional,
+  REWRITE_MODEL: optional,
+  DRAFT_CONCURRENCY: z.preprocess(
+    empty,
+    z.coerce.number().int().min(1).max(16).default(4),
+  ),
+  DRAFT_BUDGET_ALERT_USD: z.preprocess(
+    empty,
+    z.coerce.number().min(0).max(10_000).default(40),
+  ),
+  DRAFT_BUDGET_PAUSE_USD: z.preprocess(
+    empty,
+    z.coerce.number().min(0).max(10_000).default(80),
+  ),
   REDDIT_UA_CONTACT: z.preprocess(
     empty,
     z
@@ -163,6 +196,11 @@ export function parseWorkerEnv(
         "REDDIT_UA_CONTACT is required outside local when ingestion is on (Reddit asks for a contact)",
       );
     }
+    if (env.DRAFT_BUDGET_ALERT_USD > env.DRAFT_BUDGET_PAUSE_USD) {
+      problems.push(
+        "DRAFT_BUDGET_ALERT_USD must not be above DRAFT_BUDGET_PAUSE_USD",
+      );
+    }
     const keyPath = env.GOOGLE_APPLICATION_CREDENTIALS;
     if (keyPath && !fileExists(keyPath)) {
       problems.push(
@@ -177,6 +215,10 @@ export function parseWorkerEnv(
         ANALYSIS_ENABLED: env.ANALYSIS_ENABLED === "true",
         MATCHING_ENABLED: env.MATCHING_ENABLED === "true",
         RESCORE_ENABLED: env.RESCORE_ENABLED === "true",
+        DRAFTS_ENABLED: env.DRAFTS_ENABLED === "true",
+        VOICE_ENABLED: env.VOICE_ENABLED === "true",
+        DRAFT_MODEL: env.DRAFT_MODEL ?? env.VERTEX_MODEL_SMART,
+        REWRITE_MODEL: env.REWRITE_MODEL ?? env.VERTEX_MODEL_FAST,
         credentials: keyPath
           ? { kind: "service-account-key", path: keyPath }
           : { kind: "adc" },

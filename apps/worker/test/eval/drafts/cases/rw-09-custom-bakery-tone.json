@@ -1,0 +1,10 @@
+{
+  "id": "rw-09-custom-bakery-tone",
+  "baseCaseId": "mkt-01-social-manager",
+  "instruction": "Mention that I'm happy to start with a one-month trial instead of three.",
+  "expect": [
+    "follows the instruction",
+    "does not invent new experience",
+    "keeps it short"
+  ]
+}

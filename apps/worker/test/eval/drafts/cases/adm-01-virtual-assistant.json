@@ -1,0 +1,33 @@
+{
+  "id": "adm-01-virtual-assistant",
+  "tags": ["broad"],
+  "profileId": "broad-generalist",
+  "post": {
+    "title": "[Hiring] Virtual assistant for scheduling and inbox - 10 hrs/week",
+    "body": "Busy consultant looking for a VA for about 10 hours a week: calendar management, inbox triage, booking travel, and keeping a simple CRM sheet up to date. $18-22/hr depending on experience. US/Canada time zones preferred.",
+    "subreddit": "forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "part_time",
+    "payType": "paid",
+    "categories": ["admin"],
+    "skillIds": ["virtual-assistant", "excel"],
+    "budgetMin": 18,
+    "budgetMax": 22,
+    "currency": "USD",
+    "budgetUnit": "hour",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Part-time virtual assistant (about 10 hrs/week) for calendar, inbox triage, travel booking and a CRM sheet; $18-22/hr, US/Canada time zones preferred.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "leans on the operations assistant experience without naming the employer",
+    "mentions scheduling or inbox",
+    "does not claim tools not in evidence",
+    "may state availability in US time zones"
+  ]
+}

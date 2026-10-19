@@ -1,0 +1,32 @@
+{
+  "id": "vid-04-wedding-dm-only",
+  "tags": ["dm_only"],
+  "profileId": "video-editor",
+  "post": {
+    "title": "[Hiring] Wedding highlight editor - DM only",
+    "body": "Need a 5-minute highlight film edited from about 3 hours of wedding footage (two cameras, drone shots). Music licensed already. Budget $250. DM only - public comments will be ignored and I don't answer replies on this thread.",
+    "subreddit": "forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["video"],
+    "skillIds": ["video-editing", "color-grading", "premiere-pro"],
+    "budgetMin": 250,
+    "budgetMax": 250,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Edit a 5-minute wedding highlight film from about 3 hours of two-camera and drone footage; $250.",
+    "applyInstructions": "DM only; comments are ignored."
+  },
+  "expect": [
+    "follows DM only: the comment is empty or a one-line note",
+    "the DM mentions the highlight film",
+    "is honest that it has no wedding work in the evidence"
+  ]
+}

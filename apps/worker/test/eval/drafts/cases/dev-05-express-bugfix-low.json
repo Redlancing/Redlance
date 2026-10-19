@@ -1,0 +1,32 @@
+{
+  "id": "dev-05-express-bugfix-low",
+  "tags": ["below_min"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "[TASK] Fix a few bugs in my Express app - $15 total",
+    "body": "I have an Express + MongoDB app with 3 small bugs (login redirect loop, a broken pagination query, a crash on empty form). Should take under an hour if you know what you are doing. $15 via PayPal.",
+    "subreddit": "slavelabour"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["development"],
+    "skillIds": ["nodejs", "mongodb"],
+    "budgetMin": 15,
+    "budgetMax": 15,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Fix three small bugs in an Express/MongoDB app for $15.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "does not mention a rate or accept the $15 in public",
+    "mentions the specific bugs or the Express app",
+    "does not promise a fixed turnaround that is not in the evidence"
+  ]
+}

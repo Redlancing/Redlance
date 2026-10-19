@@ -13,7 +13,12 @@
     "ingest:status": "node --env-file-if-exists=.env.local --import tsx src/cli/ingest-status.ts",
     "ingest:plan": "node --env-file-if-exists=.env.local --import tsx src/cli/ingest-plan.ts",
     "match:status": "node --env-file-if-exists=.env.local --import tsx src/cli/match-status.ts",
-    "eval:posts": "node --env-file-if-exists=.env.local --import tsx test/eval/posts/run.ts"
+    "eval:posts": "node --env-file-if-exists=.env.local --import tsx test/eval/posts/run.ts",
+    "eval:export-cases": "node --env-file-if-exists=.env.local --import tsx test/eval/drafts/export-cases.ts",
+    "eval:drafts": "node --env-file-if-exists=.env.local --import tsx test/eval/drafts/run.ts",
+    "eval:candidates": "node --env-file-if-exists=.env.local --import tsx test/eval/drafts/candidates.ts",
+    "eval:winners": "node --env-file-if-exists=.env.local --import tsx test/eval/drafts/winners.ts",
+    "credits:grant": "node --env-file-if-exists=.env.local --import tsx scripts/grant-credits.ts"
   },
   "devDependencies": {
     "@types/html-to-text": "^9.0.4",
