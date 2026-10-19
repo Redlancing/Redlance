@@ -23,4 +23,6 @@ Layout:
 - `apps/web` — Next.js marketing site and web app; server-only code in `src/server/`
 - `packages/db` — database schema, client and migrations
 - `brand/` — logo files and brand guide
-- `docs/` — product spec (`PROJECT.md`) and one folder per feature with its design, plans and research; see `docs/README.md`
+- `apps/worker` — background worker (resume/GitHub imports, Reddit ingestion, post analysis)
+- `packages/core`, `packages/llm` — shared pure code (taxonomy, schemas, catalogue) and the Gemini client
+- `docs/` — product spec (`PROJECT.md`) and one folder per feature; each built feature has a `conclusion.md` explaining how it works. Start at `docs/README.md`

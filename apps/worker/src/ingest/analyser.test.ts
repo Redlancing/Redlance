@@ -76,6 +76,9 @@ const row = (over: Partial<JobPostRow> = {}): JobPostRow => ({
   analysisLockedAt: new Date(),
   analysisError: null,
   duplicateOf: null,
+  matchStatus: null,
+  matchAttempts: 0,
+  matchLockedAt: null,
   ...over,
 });
 
@@ -319,12 +322,12 @@ describe("analyser (database)", () => {
   });
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table job_post_analyses, job_posts, feed_polls, feeds, llm_usage`,
+      sql`truncate table match_events, matches, job_post_analyses, job_posts, feed_polls, feeds, llm_usage`,
     );
   });
   afterAll(async () => {
     await db.execute(
-      sql`truncate table job_post_analyses, job_posts, feed_polls, feeds, llm_usage`,
+      sql`truncate table match_events, matches, job_post_analyses, job_posts, feed_polls, feeds, llm_usage`,
     );
     await pool.end();
   });

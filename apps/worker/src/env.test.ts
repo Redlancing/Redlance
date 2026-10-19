@@ -84,6 +84,64 @@ describe("parseWorkerEnv", () => {
     ).toBe(90_000);
   });
 
+  it("17: parses and bounds the matching settings", () => {
+    const d = parseWorkerEnv(base);
+    expect(d.MATCHING_ENABLED).toBe(true);
+    expect(d.RESCORE_THRESHOLD).toBe(50);
+    expect(d.MATCH_MAX_AGE_DAYS).toBe(7);
+    const env = parseWorkerEnv({
+      ...base,
+      MATCHING_ENABLED: "false",
+      RESCORE_THRESHOLD: "0",
+      MATCH_MAX_AGE_DAYS: "30",
+    });
+    expect(env.MATCHING_ENABLED).toBe(false);
+    expect(env.RESCORE_THRESHOLD).toBe(0);
+    expect(env.MATCH_MAX_AGE_DAYS).toBe(30);
+    expect(parseWorkerEnv({ ...base, RESCORE_THRESHOLD: "100" })).toMatchObject(
+      { RESCORE_THRESHOLD: 100 },
+    );
+    expect(() => parseWorkerEnv({ ...base, MATCHING_ENABLED: "yes" })).toThrow(
+      /MATCHING_ENABLED/,
+    );
+    for (const v of ["-1", "101", "50.5", "x"])
+      expect(() => parseWorkerEnv({ ...base, RESCORE_THRESHOLD: v })).toThrow(
+        /RESCORE_THRESHOLD/,
+      );
+    for (const v of ["0", "31", "1.5"])
+      expect(() => parseWorkerEnv({ ...base, MATCH_MAX_AGE_DAYS: v })).toThrow(
+        /MATCH_MAX_AGE_DAYS/,
+      );
+  });
+
+  it("23: parses and bounds the re-score settings", () => {
+    const d = parseWorkerEnv(base);
+    expect(d.RESCORE_ENABLED).toBe(false);
+    expect(d.RESCORE_DAILY_BUDGET_USD).toBe(5);
+    expect(
+      parseWorkerEnv({ ...base, RESCORE_ENABLED: "true" }).RESCORE_ENABLED,
+    ).toBe(true);
+    const env = parseWorkerEnv({
+      ...base,
+      RESCORE_ENABLED: "false",
+      RESCORE_DAILY_BUDGET_USD: "0.25",
+    });
+    expect(env.RESCORE_ENABLED).toBe(false);
+    expect(env.RESCORE_DAILY_BUDGET_USD).toBe(0.25);
+    for (const v of ["0", "1000"])
+      expect(
+        parseWorkerEnv({ ...base, RESCORE_DAILY_BUDGET_USD: v })
+          .RESCORE_DAILY_BUDGET_USD,
+      ).toBe(Number(v));
+    expect(() => parseWorkerEnv({ ...base, RESCORE_ENABLED: "1" })).toThrow(
+      /RESCORE_ENABLED/,
+    );
+    for (const v of ["-1", "1000.01", "x"])
+      expect(() =>
+        parseWorkerEnv({ ...base, RESCORE_DAILY_BUDGET_USD: v }),
+      ).toThrow(/RESCORE_DAILY_BUDGET_USD/);
+  });
+
   it("requires a Reddit contact outside local only while ingestion is on", () => {
     const staging = { ...base, APP_ENV: "staging", GITHUB_TOKEN: "t" };
     expect(() => parseWorkerEnv(staging)).toThrow(/REDDIT_UA_CONTACT/);

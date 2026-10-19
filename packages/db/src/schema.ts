@@ -93,6 +93,33 @@ export const ROLE_EMPLOYMENT_TYPES = [
   "unknown",
 ] as const;
 export const ENTRY_SOURCES = ["resume", "manual"] as const;
+// Matching (core matching/constants.ts and plans.ts).
+export const PLANS = ["trial", "standard", "max"] as const;
+export const MATCH_STATUSES = [
+  "new",
+  "seen",
+  "saved",
+  "dismissed",
+  "replied",
+] as const;
+export const AI_STATUSES = [
+  "not_needed",
+  "pending",
+  "running",
+  "done",
+  "failed",
+  "capped",
+] as const;
+/** Every status change is an event. */
+export const MATCH_EVENTS = MATCH_STATUSES;
+/** job_posts.match_status (the matcher's queue); null = not analysed yet. */
+export const POST_MATCH_STATUSES = [
+  "pending",
+  "running",
+  "done",
+  "skipped",
+] as const;
+
 const sqlList = (values: readonly string[]) =>
   sql.raw(values.map((v) => `'${v}'`).join(", "));
 const createdAt = () =>
@@ -206,6 +233,20 @@ export const profiles = pgTable(
     mentionEmployers: boolean("mention_employers").notNull().default(false),
     onboardedAt: timestamp("onboarded_at", { withTimezone: true }).notNull(),
     trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }).notNull(),
+    /** Set by hand (SQL) until billing exists. */
+    plan: text("plan", { enum: PLANS }).notNull().default("trial"),
+    /** Shows unpaid, commission-only and revshare posts. */
+    includeUnpaid: boolean("include_unpaid").notNull().default(false),
+    /** A pending re-match request: match posts since this time (the matcher clears it). */
+    rematchSince: timestamp("rematch_since", { withTimezone: true }),
+    /** The matcher's lease on the request; an old one (crashed matcher) can be claimed again. */
+    rematchClaimedAt: timestamp("rematch_claimed_at", { withTimezone: true }),
+    /** Claims of the current request; it is dropped after MAX_REMATCH_ATTEMPTS. */
+    rematchAttempts: integer("rematch_attempts").notNull().default(0),
+    /** Backoff after a failed re-match: not claimed again before this. */
+    rematchAfter: timestamp("rematch_after", { withTimezone: true }),
+    /** Bumped when matching-relevant profile data changes; matches remember the version. */
+    profileVersion: integer("profile_version").notNull().default(1),
     createdAt: createdAt(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -232,6 +273,15 @@ export const profiles = pgTable(
       "profiles_categories_check",
       sql`cardinality(${t.categories}) between 1 and 3`,
     ),
+    check("profiles_plan_check", sql`${t.plan} in (${sqlList(PLANS)})`),
+    check("profiles_profile_version_check", sql`${t.profileVersion} >= 1`),
+    check(
+      "profiles_rematch_attempts_check",
+      sql`${t.rematchAttempts} >= 0`,
+    ),
+    index("profiles_rematch_idx")
+      .on(t.rematchSince)
+      .where(sql`${t.rematchSince} is not null`),
   ],
 );
 
@@ -652,6 +702,10 @@ export const jobPosts = pgTable(
       (): AnyPgColumn => jobPosts.id,
       { onDelete: "set null" },
     ),
+    /** The matcher's queue: set by completePostAnalysis. Null = not analysed yet (or older). */
+    matchStatus: text("match_status", { enum: POST_MATCH_STATUSES }),
+    matchAttempts: integer("match_attempts").notNull().default(0),
+    matchLockedAt: timestamp("match_locked_at", { withTimezone: true }),
   },
   (t) => [
     unique("job_posts_source_external_unique").on(t.source, t.externalId),
@@ -684,6 +738,16 @@ export const jobPosts = pgTable(
     index("job_posts_duplicate_of_idx")
       .on(t.duplicateOf)
       .where(sql`${t.duplicateOf} is not null`),
+    check(
+      "job_posts_match_status_check",
+      sql`${t.matchStatus} is null or ${t.matchStatus} in (${sqlList(POST_MATCH_STATUSES)})`,
+    ),
+    index("job_posts_match_queue_idx")
+      .on(t.postedAt.desc())
+      .where(sql`${t.matchStatus} = 'pending'`),
+    index("job_posts_match_running_idx")
+      .on(t.matchLockedAt)
+      .where(sql`${t.matchStatus} = 'running'`),
   ],
 );
 
@@ -827,3 +891,144 @@ export const jobPostAnalyses = pgTable(
 );
 
 export type JobPostAnalysis = typeof jobPostAnalyses.$inferSelect;
+
+// ---- Matching (docs/matching/plan/03-database.md) ----
+
+/** One row per (user, post) the rules matched. Upserted by the matcher, scored by the re-scorer. */
+export const matches = pgTable(
+  "matches",
+  {
+    id: v7Id(),
+    userId: userId(),
+    jobPostId: uuid("job_post_id")
+      .notNull()
+      .references(() => jobPosts.id, { onDelete: "cascade" }),
+    /** Copy of job_posts.posted_at (never changes): the feed's keyset index needs it here. */
+    postedAt: timestamp("posted_at", { withTimezone: true }).notNull(),
+    ruleScore: integer("rule_score").notNull(),
+    broad: boolean("broad").notNull(),
+    /** core `Feature[]`: the rule score's breakdown, kept for tuning. */
+    features: jsonb("features")
+      .$type<{ signal: string; points: number; detail?: string[] }[]>()
+      .notNull(),
+    ruleReason: text("rule_reason").notNull(),
+    aiStatus: text("ai_status", { enum: AI_STATUSES }).notNull(),
+    aiAttempts: integer("ai_attempts").notNull().default(0),
+    aiRunAfter: timestamp("ai_run_after", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    aiLockedAt: timestamp("ai_locked_at", { withTimezone: true }),
+    /** An error code only, never text from the model or the post. */
+    aiError: text("ai_error"),
+    aiScore: integer("ai_score"),
+    aiReason: text("ai_reason"),
+    aiConcerns: textArray("ai_concerns"),
+    aiModel: text("ai_model"),
+    aiScoredAt: timestamp("ai_scored_at", { withTimezone: true }),
+    bestProjectId: uuid("best_project_id").references(
+      () => profileProjects.id,
+      { onDelete: "set null" },
+    ),
+    bestRoleId: uuid("best_role_id").references(() => profileExperience.id, {
+      onDelete: "set null",
+    }),
+    /** The final score: ai_score once AI is done, else rule_score. */
+    score: integer("score").notNull(),
+    status: text("status", { enum: MATCH_STATUSES }).notNull().default("new"),
+    profileVersion: integer("profile_version").notNull(),
+    /**
+     * The analysis (job_post_analyses.created_at, to the millisecond) the rule score was
+     * computed from. A row is only replaced by a strictly newer (profile_version, analysed_at).
+     */
+    analysedAt: timestamp("analysed_at", { withTimezone: true }).notNull(),
+    /** Set when the match no longer qualifies (re-analysis, profile change): out of the feed. */
+    withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
+    /** The UTC day whose re-score unit this pair used (for the re-scorer's cap accounting). */
+    aiUnitDay: date("ai_unit_day", { mode: "string" }),
+    /** When the AI re-score finished (done, failed or capped). */
+    aiFinishedAt: timestamp("ai_finished_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique("matches_user_post_unique").on(t.userId, t.jobPostId),
+    check("matches_rule_score_check", sql`${t.ruleScore} between 0 and 100`),
+    check("matches_score_check", sql`${t.score} between 0 and 100`),
+    check(
+      "matches_ai_score_check",
+      sql`${t.aiScore} is null or ${t.aiScore} between 0 and 100`,
+    ),
+    check(
+      "matches_rule_reason_check",
+      sql`char_length(${t.ruleReason}) <= 160`,
+    ),
+    check(
+      "matches_ai_reason_check",
+      sql`${t.aiReason} is null or char_length(${t.aiReason}) <= 160`,
+    ),
+    check("matches_ai_concerns_check", sql`cardinality(${t.aiConcerns}) <= 3`),
+    check(
+      "matches_ai_status_check",
+      sql`${t.aiStatus} in (${sqlList(AI_STATUSES)})`,
+    ),
+    check(
+      "matches_status_check",
+      sql`${t.status} in (${sqlList(MATCH_STATUSES)})`,
+    ),
+    // Broad matches never go to AI re-scoring (decided 2026-10-17).
+    check(
+      "matches_broad_ai_check",
+      sql`not ${t.broad} or ${t.aiStatus} = 'not_needed'`,
+    ),
+    check("matches_ai_attempts_check", sql`${t.aiAttempts} >= 0`),
+    index("matches_user_status_idx").on(t.userId, t.status),
+    index("matches_ai_queue_idx")
+      .on(t.ruleScore.desc(), t.createdAt.desc())
+      .where(sql`${t.aiStatus} = 'pending'`),
+    index("matches_ai_running_idx")
+      .on(t.aiLockedAt)
+      .where(sql`${t.aiStatus} = 'running'`),
+    index("matches_job_post_idx").on(t.jobPostId),
+    // The feed: one user's matches, newest post first, keyset on (posted_at, id).
+    index("matches_feed_idx")
+      .on(t.userId, t.postedAt.desc(), t.id.desc())
+      .where(sql`${t.status} <> 'dismissed' and ${t.withdrawnAt} is null`),
+  ],
+);
+
+export type Match = typeof matches.$inferSelect;
+
+/** Every status change (seen, saved, dismissed, replied): the history learning uses later. */
+export const matchEvents = pgTable(
+  "match_events",
+  {
+    id: v7Id(),
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    userId: userId(),
+    event: text("event", { enum: MATCH_EVENTS }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check(
+      "match_events_event_check",
+      sql`${t.event} in (${sqlList(MATCH_EVENTS)})`,
+    ),
+    index("match_events_user_created_idx").on(t.userId, t.createdAt),
+  ],
+);
+
+/** AI re-scores used per user per UTC day: the plan's daily cap. */
+export const rescoreUsage = pgTable(
+  "rescore_usage",
+  {
+    userId: userId(),
+    day: date("day", { mode: "string" }).notNull(),
+    used: integer("used").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.day] }),
+    check("rescore_usage_used_check", sql`${t.used} >= 0`),
+  ],
+);

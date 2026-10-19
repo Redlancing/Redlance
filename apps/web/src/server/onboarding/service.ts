@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  BACKFILL_DAYS,
   STEP_IDS,
   STEP_SCHEMAS,
   TRIAL_DAYS,
@@ -23,6 +24,7 @@ import {
   profileProjects,
   profileSkills,
   profiles,
+  requestRematch,
   users,
 } from "@redlance/db";
 import { and, eq, sql } from "drizzle-orm";
@@ -325,6 +327,13 @@ export async function finishOnboarding(
           hidden: r.hidden,
         })),
       );
+
+    // Fill the new user's feed: the matcher backfills posts from the last few days.
+    await requestRematch(
+      tx,
+      userId,
+      new Date(Date.now() - BACKFILL_DAYS * 86_400_000),
+    );
 
     // No subreddit rows: everyone's feed comes from the central catalogue, filtered by what
     // each post asks for (docs/ingestion/plan.md).

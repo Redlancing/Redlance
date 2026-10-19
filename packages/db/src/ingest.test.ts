@@ -3,8 +3,13 @@ import { eq, inArray, sql } from "drizzle-orm";
 import pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
+  AI_STATUSES,
   ANALYSIS_STATUSES,
   BUDGET_UNITS,
+  MATCH_EVENTS,
+  MATCH_STATUSES,
+  PLANS,
+  POST_ANALYSED_CHANNEL,
   EMPLOYMENT_TYPES,
   FETCHED_VIA,
   JOB_POSTS_CHANNEL,
@@ -56,7 +61,7 @@ const { db, pool } = createDb(url, { max: 5 });
 
 const reset = () =>
   db.execute(
-    sql`truncate table job_post_analyses, job_posts, feed_polls, feeds, llm_usage`,
+    sql`truncate table match_events, matches, job_post_analyses, job_posts, feed_polls, feeds, llm_usage`,
   );
 
 beforeAll(async () => {
@@ -122,6 +127,10 @@ describe("literal lists", () => {
     expect(SUBREDDIT_TIERS).toEqual(core.SUBREDDIT_TIERS);
     expect(SUBREDDIT_STATUSES).toEqual(core.SUBREDDIT_STATUSES);
     expect(ANALYSIS_STATUSES).toContain("pending");
+    expect(PLANS).toEqual(core.PLANS);
+    expect(MATCH_STATUSES).toEqual(core.MATCH_STATUSES);
+    expect(AI_STATUSES).toEqual(core.AI_STATUSES);
+    expect(MATCH_EVENTS).toEqual(core.MATCH_EVENTS);
   });
 });
 
@@ -862,6 +871,80 @@ describe("analysis queue", () => {
       });
     expect(await llmCostSince(db, since, "post_analysis")).toBe(200);
     expect(await llmCostSince(db, since, "resume_import")).toBe(0);
+  });
+});
+
+describe("hand-off to the matcher", () => {
+  // Analyses a fresh post and returns its match_status plus how many post_analysed
+  // notifications arrived.
+  async function analyse(
+    over: Partial<NewPostAnalysis>,
+    before?: (id: string) => Promise<unknown>,
+  ) {
+    const listener = new pg.Client({ connectionString: url });
+    await listener.connect();
+    let notified = 0;
+    listener.on("notification", (n) => {
+      if (n.channel === POST_ANALYSED_CHANNEL) notified++;
+    });
+    await listener.query(`LISTEN ${POST_ANALYSED_CHANNEL}`);
+    await saveJobPosts(db, [post()], null);
+    const [c] = await claimPostsForAnalysis(db, 1);
+    await before?.(c!.id);
+    expect(
+      await completePostAnalysis(db, c!.id, c!.analysisAttempts, {
+        ...analysis,
+        ...over,
+      }),
+    ).toBe(true);
+    await new Promise((r) => setTimeout(r, 200));
+    await listener.end();
+    const [row] = await db
+      .select({ matchStatus: jobPosts.matchStatus })
+      .from(jobPosts)
+      .where(eq(jobPosts.id, c!.id));
+    return { status: row!.matchStatus, notified };
+  }
+
+  it("queues a freelance hiring post for matching and wakes the matcher", async () => {
+    expect(await analyse({})).toEqual({ status: "pending", notified: 1 });
+  });
+
+  it("skips full-time roles, for-hire posts and duplicates, without a wake-up", async () => {
+    expect(await analyse({ employmentType: "full_time" })).toEqual({
+      status: "skipped",
+      notified: 0,
+    });
+    expect(await analyse({ kind: "for_hire" })).toEqual({
+      status: "skipped",
+      notified: 0,
+    });
+    await saveJobPosts(
+      db,
+      [post({ externalId: "t3_original", analyse: false })],
+      null,
+    );
+    const original = (
+      await db
+        .select({ id: jobPosts.id })
+        .from(jobPosts)
+        .where(eq(jobPosts.externalId, "t3_original"))
+    )[0]!.id;
+    expect(
+      await analyse({}, (id) =>
+        db
+          .update(jobPosts)
+          .set({ duplicateOf: original })
+          .where(eq(jobPosts.id, id)),
+      ),
+    ).toEqual({ status: "skipped", notified: 0 });
+  });
+
+  it("starts with no match status before analysis", async () => {
+    const p = post();
+    await saveJobPosts(db, [p], null);
+    expect((await rowOf(p)).matchStatus).toBeNull();
+    expect((await rowOf(p)).matchAttempts).toBe(0);
   });
 });
 

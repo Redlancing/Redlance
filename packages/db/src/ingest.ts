@@ -17,6 +17,8 @@ import {
 // are fetched; analysis claims them later, so a failed model call never loses a post.
 
 export const JOB_POSTS_CHANNEL = "job_posts";
+/** NOTIFY channel: a post finished analysis and waits for the matcher. */
+export const POST_ANALYSED_CHANNEL = "post_analysed";
 export const MAX_ANALYSIS_ATTEMPTS = 3;
 
 export type NewJobPost = JobPost & {
@@ -493,13 +495,21 @@ export type NewPostAnalysis = Omit<
   "jobPostId" | "createdAt"
 >;
 
-/** Saves the analysis (replacing an older one) and marks the post done. False if the claim was lost. */
+/**
+ * Saves the analysis (replacing an older one), marks the post done and hands it to the matcher:
+ * match_status `pending` (plus NOTIFY post_analysed) for a freelance hiring original, or for any
+ * post that still has live (new or seen) matches, so the matcher can refresh or withdraw them;
+ * else `skipped`. A re-analysis queues it again; matching upserts, so that's safe. match_attempts is
+ * left alone so matcher claims stay fenced. False if the claim was lost.
+ */
 export async function completePostAnalysis(
   db: Database,
   id: string,
   claimAttempts: number,
   analysis: NewPostAnalysis,
 ): Promise<boolean> {
+  const matchable =
+    analysis.kind === "hiring" && analysis.employmentType !== "full_time";
   return db.transaction(async (tx) => {
     const done = await tx
       .update(jobPosts)
@@ -507,10 +517,23 @@ export async function completePostAnalysis(
         analysisStatus: "done",
         analysisLockedAt: null,
         analysisError: null,
+        // Pending also when the post already has live matches, even if it no longer qualifies
+        // (re-analysed as for-hire or full-time, or since marked a duplicate): the matcher then
+        // withdraws them.
+        matchStatus: sql`case
+          when ${matchable} and ${jobPosts.duplicateOf} is null then 'pending'
+          when exists (
+            select 1 from matches m
+            where m.job_post_id = ${jobPosts.id}
+              and m.withdrawn_at is null and m.status in ('new', 'seen')) then 'pending'
+          else 'skipped' end`,
+        matchLockedAt: null,
       })
       .where(ownedPost(id, claimAttempts))
-      .returning({ id: jobPosts.id });
+      .returning({ id: jobPosts.id, matchStatus: jobPosts.matchStatus });
     if (done.length === 0) return false;
+    if (done[0]!.matchStatus === "pending")
+      await tx.execute(sql`select pg_notify(${POST_ANALYSED_CHANNEL}, '')`);
     await tx
       .insert(jobPostAnalyses)
       .values({ jobPostId: id, ...analysis })

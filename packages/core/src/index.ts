@@ -7,5 +7,6 @@ export * from "./suggestions";
 export * from "./work";
 export * from "./job-post";
 export * from "./post-tags";
+export * from "./matching";
 export * from "./email";
 export * from "./client-names";

@@ -2,7 +2,7 @@
 
 Redlance is an AI tool that finds freelance jobs on Reddit, matches them to your skills, and drafts replies in your voice.
 
-Status: pre-MVP — homepage built; local backend foundation, login page and a basic dashboard built (see "Where we are" at the end). The full spec is in `docs/PROJECT.md` (transcribed from `Redlance_Project_Description.pdf`); read the relevant section before designing a feature, schema, or page.
+Status: pre-MVP — homepage, local backend foundation, onboarding, ingestion (collect + understand posts) and the matching + feed backend built; the feed UI, alerts and drafts are next (see "Where we are" at the end and `docs/README.md`). The full spec is in `docs/PROJECT.md` (transcribed from `Redlance_Project_Description.pdf`); read the relevant section before designing a feature, schema, or page.
 
 ## Repo layout and commands
 
@@ -28,10 +28,10 @@ Collect (RSS: every hiring subreddit about every 5 min, in combined feeds of ~80
 - **Request path:** CloudFront (CDN) → WAF (managed rules + per-IP rate limit) → one EC2 server running the app in Docker (decided 2026-09-26 after the AWS Free Tier credits were lost). Add an ALB + ECS Fargate when a second server is needed; the app stays stateless so that's an infrastructure change only. Per-user rate limits run in the app against Redis. No AWS API Gateway until there are several backend services or a public API; routes live under `/api/v1`.
 - **Data:** Postgres 17 + pgvector runs as a Docker container, on the laptop and on the EC2 server (no RDS, to save cost), with a tested daily backup to S3. Redis: a Valkey 8 container locally, **Upstash** in production (no ElastiCache); only `REDIS_URL` differs, and Redis only holds rebuildable data. Frequent health checks must not touch Redis (Upstash bills per command). Redis is used from day one for per-user rate limits (token bucket), daily quotas and hot caches; S3 for static assets (and uploads if we ever keep files). **No SQS** (decided 2026-09-29): slow jobs go into a Postgres job table, and the worker picks them up. Add SQS only when there are several servers or far more jobs than Postgres can hand out.
 - **Auth:** Cognito (Essentials) with Google + email one-time code, no passwords. Tokens in httpOnly cookies, verified in the app on every request; our `users` table is keyed by the Cognito `sub`.
-- **Workflow:** build and test each feature locally first (Docker: Postgres + Valkey; a dev Cognito pool), then deploy. Docs are grouped by feature: `docs/<feature>/` holds its design, plans and research (index: `docs/README.md`).
+- **Workflow:** build and test each feature locally first (Docker: Postgres + Valkey; a dev Cognito pool), then deploy. Docs are grouped by feature: `docs/<feature>/` holds its `conclusion.md` (how the built feature works), its design and research (index and status: `docs/README.md`). Step-by-step plans are deleted once built.
 - **Worker:** one Node process (`apps/worker`), run as a second Docker container on the same EC2 server as the web app; no separate AWS service for it. It runs RSS ingestion (one poller system-wide, at least 65 s between Reddit requests), post analysis, and the background jobs from the Postgres job table. Web code starts work by adding a job row (or calling an API), not through SQS.
 - **AI:** Gemini, tiered by task: Flash-Lite for high-volume work (per-post extraction, scoring), Flash for drafts and onboarding imports. Calls go through our own interface so any task can switch model.
-- **Matching:** embeddings shortlist + rule filters, then LLM re-score with reasons
+- **Matching:** rule filters + a rule score with a reason. The LLM re-score is built but off for the MVP (decided 2026-10-19, `RESCORE_ENABLED=false`); drafting picks the project to cite. Strict cross-post dedupe stays; the feed links every subreddit a gig was posted in.
 - **Alerts:** Telegram Bot API (email/push later)
 - **Payments:** subscriptions for US, UK and India customers; provider not chosen yet (Razorpay alone doesn't cover US/UK well)
 
@@ -84,104 +84,46 @@ Phase 0 (wks 1–2): Telegram bot, one niche, 10–15 subreddits → Phase 1 (wk
 
 North-star metric: gigs won per active user per month.
 
-## Where we are (2026-09-29)
+## Where we are (2026-10-17)
 
 Handover for the next chat. Update this section as things change.
 
 ### Branches
 
-- `main`: homepage + local backend foundation, merged through PR #1 on 2026-09-28 (105 tests passing).
+- `main`: homepage + local backend foundation, merged through PR #1 on 2026-09-28.
 - `feat/homepage`: kept on purpose (the user asked not to delete it); its work is already in `main`.
-- `feat/onboarding`: onboarding slices 1–3 built and reviewed (not merged or pushed yet). 471 tests passing (web 224, worker 145, core 47, db 31, llm 24).
-- `feat/ingestion` (cut from `feat/onboarding`, 2026-10-01; **not committed yet**): ingestion Phases 1–4 built from `docs/ingestion/plan.md` (see its "Build status"): subreddit catalogue, collector (poller, governor, feed planner, RSS adapter, gap catch-up), analyser (Flash-Lite, eval meets the bar at about $0.00025 a post), daily upkeep, `ingest:status` / `ingest:plan` / `eval:posts` scripts. Docs reorganised into one folder per feature (`docs/README.md`). 489 tests pass (core 82, db 51, llm 26, worker 104, web 226). Reviewed once by a fresh agent; all important findings fixed. Live run 2026-10-01 (25 min, real Reddit + Vertex): 580 posts, 312 analysed, $0.079, 0 rate-limited. Catalogue: 238 active subreddits after a second research pass; groups of 80 polled every 5 min.
+- `feat/onboarding` (at `5645aeb`, pushed): onboarding slices 1–3 (manual steps, worker + resume import, GitHub import). Not merged.
+- `feat/ingestion` (stacked on `feat/onboarding`, so it holds onboarding too): ingestion Phases 1–4, **committed** 2026-10-02 (`3f424f9`) and pushed. Not merged. Docs reorganised 2026-10-17 (conclusions per feature).
+- Tests: **601 pass** on 2026-10-17 (web 226, worker 216, core 82, db 51, llm 26); typecheck and lint clean. The worker tests deleted in commit `5645aeb` (broken by `a61bd1b` moving the fake LLM to `test/stub-llm.ts`) were restored on 2026-10-17, and `vertex:check` works again (not committed yet).
 
-### Built so far (in `main`)
+### In progress (2026-10-18)
 
-- **Local stack:** Postgres (`db`) and Valkey (`cache`) are two Docker containers bound to 127.0.0.1. Next.js runs on the host (`npm run dev`). Tests use the `redlance_test` database and Redis db 15.
-- **`packages/db`:** the `users` table (unique `auth_sub` and `email_normalized`, CHECK constraint on `status`); migrations `0000_enable_vector` and `0001_init`.
-- **`apps/web/src/server/`:**
-  - `env.ts`: zod-validated settings; the server crashes at startup (`instrumentation.ts`) if any are missing or invalid.
-  - `errors.ts`: one error shape, `{ error: { code, message, requestId, details? } }`.
-  - `logger.ts`: pino JSON logs, one line per request with its request ID.
-  - `http.ts`: `clientIp` prefers `CloudFront-Viewer-Address`, otherwise the **last** `X-Forwarded-For` entry.
-  - `db.ts`: one pool per process, kept on `globalThis`; the pool has an `error` handler.
-  - `redis.ts`: ioredis with RESP2, offline queue off, 1 s command timeout, explicit `retryDelay` backoff with jitter, stops retrying on WRONGPASS/NOAUTH, one warning per outage, and `awaitFirstConnection()` for any client. Lint forbids `new Redis()` outside this file.
-- **Rate limits** (`server/rate-limit`, Lua, 1 Redis command each, keys `rl:{u:<id>}:<bucket>` and `q:{u:<id>}:<name>:<yyyymmdd>`):
-  - `api` bucket: 30 burst, 2/s, per user (per IP when signed out).
-  - `health` bucket: 10 burst, one every 5 s.
-  - The bucket **fails open** when Redis is down. Daily quotas (`consumeQuota`) **fail closed** with 503. Quotas are built but not yet used by any feature.
-- **Auth (dev stand-in until Cognito):**
-  - `AUTH_MODE=dev` is only allowed when `APP_ENV=local` **and** `APP_ORIGIN` is localhost.
-  - The session is an HMAC-signed httpOnly cookie `rl_dev_session`. `getSession(request)` serves API routes and `getCurrentUser()` serves pages; both go through `getSessionFromToken()`, which is what Cognito will replace.
-  - Sign-in is an `ON CONFLICT` upsert on `auth_sub`.
-- **API** (`/api/v1`, every route wrapped in `apiRoute()`: session → origin check on mutations → zod input → rate limit):
-  - `/health` is liveness only and never touches Postgres or Redis. `/health?deep=1` checks both.
-  - `/me` returns the signed-in user.
-  - `/dev/session` POST signs in and DELETE signs out; it returns 404 unless `AUTH_MODE=dev`.
-- **UI:**
-  - `/login`: Google button disabled in dev, then email.
-  - `/dashboard`: sidebar with Overview plus "Soon" items, a "Set up your profile" card, zero-state stats, and an empty matches state.
-  - `src/proxy.ts` sends visitors without a session cookie from `/dashboard` to `/login?next=…`; the `(app)/layout.tsx` verifies the session.
-  - `safeNextPath()` only allows same-site paths and validates the normalised result.
-- **Deferred minors** (from the code review):
-  - The rate limit runs after the session, origin and input checks.
-  - `x-request-id` from the client is not validated.
-  - A database outage during the session lookup returns 500 instead of 503, and errors can log email addresses.
-  - `AUTH_MODE=cognito` throws in `getSession` until the login spec lands.
-  - `refillPerSec: 0` isn't guarded.
-  - The layout redirect hardcodes `next=/dashboard`.
-  - The sign-in upsert conflicts only on `auth_sub`; revisit before Cognito.
+- **Projects & experience** (resume import extracts projects and roles, client names scrubbed, a new onboarding step `/onboarding/work`):
+  - slices 1–7 are built, the review is done and all 11 fixes are in;
+  - still to do: the user's manual check on real resumes (slice 8 in `docs/onboarding/projects-experience-plan.md`) and `conclusion.md`;
+  - build notes are in `docs/onboarding/projects-experience-build-notes.md`.
+- **Matching + job feed backend:** built, reviewed and fixed (F1–F5), verified 2026-10-18: `docs/matching/conclusion.md`. The phase plan and build notes are still in `docs/matching/plan/` (delete them once the user has read the conclusion). Not run live end to end yet (real posts + Vertex re-scores + an onboarded profile). The AI re-scorer is **off** for the MVP (2026-10-19); when it's on, trial/Standard get 15 AI re-scores a day and Max ($20/month) gets 50.
+- Tests on 2026-10-19: **1,124 pass** (web 299, worker 436, core 173, db 190, llm 26); typecheck, lint and `npm run build` clean. **Nothing is committed** (docs reorganisation, restored worker tests, Projects & experience, matching). Ask the user about commits.
 
-### Specs and plans (`docs/`, one folder per feature; moved from `docs/superpowers/` on 2026-10-01)
+### What's built (read the conclusions)
 
-- `foundation/local-dev-design.md` and `foundation/local-dev-plan.md`: done.
-- `foundation/cdn-waf-design.md` (Phases 0–2: CDK, Route 53, ACM, CloudFront, WAF): **partly outdated.** The static-export-to-S3 idea is replaced: CloudFront's origin is the EC2 server, with static assets still cached at the edge. It uses the CloudFront flat-rate **Free plan** (includes WAF + Route 53, 1M requests, 100 GB and 5 WAF rules a month; no VPC origins, so the server is locked to CloudFront by security group + secret header). The user hasn't explicitly confirmed the flat-rate plan.
+Each built feature has `docs/<feature>/conclusion.md`: what was built, how it works step by step, where the code is, how it connects, decisions, known gaps and deferred minors. They were checked against the code on 2026-10-17. **Read the relevant one before changing a feature, and update it when you change one.** `docs/README.md` has the status table and a whole-system diagram.
 
-### Onboarding: slices 1–3 built on `feat/onboarding`
+- `docs/foundation/conclusion.md`: Docker Postgres + Valkey, env, errors, logging, `apiRoute()`, rate limits (bucket fails open; quota fails closed and is used by imports), dev session auth, `/health`, `/me`, `/dev/session`, `/login`, `/dashboard`, `proxy.ts`.
+- `docs/homepage/conclusion.md`: the 11 sections, techniques, and a table of **out-of-date copy** (Free/Pro plans, `/signup`, "connected to subreddits", portfolio wording).
+- `docs/onboarding/conclusion.md`: steps, saving with versions, the import queue, worker resume pipeline, GitHub import, Finish (profile + trial; **no `user_subreddits`**), `@redlance/llm`, and the deviations from `design.md`.
+- `docs/ingestion/conclusion.md`: catalogue, tables, poller/governor/planner, RSS adapter, analyser, upkeep, settings, scripts, results, gaps.
+- `docs/matching/conclusion.md`: strict dedupe of cross-posts, the rule score, broad matches, the matcher, the AI re-scorer with per-plan daily caps, the feed API (`/api/v1/feed`), `match:status`.
 
-Spec: `docs/onboarding/design.md`. Plans: `docs/onboarding/plan-slice-1.md` (13 tasks) and `docs/onboarding/plan-slices-2-3.md` (10 tasks, built in parallel waves). Both built 2026-09-29 with subagent-driven development (an implementer and a review per task, then whole-branch reviews and one fix wave).
-
-**Slices 2–3 (resume and GitHub import):**
-- **Queue:** `import_jobs` in Postgres (migration `0003_imports`), `LISTEN/NOTIFY` + 5 s poll, `FOR UPDATE SKIP LOCKED`, backoff, stale sweep; every write is fenced to the claim that owns it (`status='running' AND attempts=$claim`). `llm_usage` records every model attempt (tokens, cost, step, prompt version; never text).
-- **Worker (`apps/worker`):** runner with concurrency 4, 90 s job timeout, graceful stop that aborts jobs (`SHUTDOWN`, retried). Resume job: extraction in a `worker_threads` thread (memory limits, 20 s kill) → DOCX zip checked (central directory, real inflate limits) and **rebuilt** before `mammoth` reads it → text cleaned (invisible characters stripped) → file bytes deleted, text kept for retries → deterministic pre-pass (sections, years from dates, skill shortlist, GitHub username) → three Gemini steps in parallel (Basics and Job types on Flash-Lite, Skills on Flash; 10 s each, one retry, 20 s total) → evidence checks → merge into suggestions v1. Results cached by text hash + pipeline/prompt/model versions (never partial results). GitHub job: only `api.github.com` user + repos metadata, redirects refused, 1 MB cap.
-- **Vertex AI only:** `new GoogleGenAI({ vertexai: true, project, location })`; the worker refuses to start with an API key set. Uses Google Application Default Credentials.
-- **Web:** `POST /api/v1/onboarding/imports/resume` (multipart, body read capped at ~5 MB, type by magic bytes, 5/day), `…/imports/github` (10/day), `GET …/imports/:id`, `POST …/imports/reset`; the Import step blocks Next while imports run (live stages, 60 s escape), then Basics/Skills/Import are pre-filled from merged suggestions (skills keep `source: resume|github` into the profile). Re-import replaces Basics/Skills only after the new import is accepted.
-- **Eval:** `apps/worker/test/eval` (14 synthetic labelled resumes, scoring, `--baseline` one-call comparison, LangSmith only for eval runs). Not run live yet: needs Google credentials.
-
-**To run resume import against Vertex locally:** create the Google Cloud project (free-trial $300 credits cover Gemini on Vertex), enable the Vertex AI API, `gcloud auth application-default login`, then in `apps/worker/.env.local` set `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION=global` (the Gemini 3.x models 404 in `us-central1`). Check access with `npm run vertex:check -w @redlance/worker`. First real run (2026-09-29): one resume took 6.8 s and cost about $0.0036. There is no fake model mode any more (removed 2026-09-29): running the worker locally needs Vertex credentials. Tests never call Vertex; they use the deterministic stub in `apps/worker/test/stub-llm.ts` (built on `createFakeTransport` from `@redlance/llm`).
-
-**Slice 1:**
-
-What slice 1 added:
-- **`packages/core` (`@redlance/core`, pure, zod + uuid only):** 12 job types and about 180 skills (`taxonomy.ts`; skills are retired, never deleted), a 16-subreddit seed list (unverified, `subreddits.ts`), ISO country codes and default currency, the per-step draft/complete schemas and `resumeAt()` (`onboarding.ts`), `parseGithubUsername`, `newId()` (UUIDv7).
-- **`packages/db`:** migration `0002_onboarding` adds `skills`, `subreddits`, `onboarding_steps`, `profiles` (with `github_username`), `profile_skills`, `custom_skills`, `user_subreddits`, `alert_channels`. `npm run db:migrate` runs `prepareDatabase()`: migrations, then `syncReferenceData()` copies the taxonomy and subreddits in (upsert, never deletes, advisory lock).
-- **Server:** `apiRoute()` takes a `params` zod schema (mismatch → 404) and caps JSON bodies at 256 KB (413). `server/onboarding/service.ts` is the only writer: `saveStep` (one transaction with the user row `FOR SHARE`; step order, no completed→draft, optimistic `version`), `finishOnboarding` (user row `FOR UPDATE`, re-validates every step, writes the profile and child tables, auto-connects subreddits, adds the email alert channel, starts the 5-day trial once). New error codes: `VERSION_CONFLICT`, `STEP_ORDER`, `ALREADY_ONBOARDED`, `PAYLOAD_TOO_LARGE`.
-- **API:** `GET /api/v1/onboarding`, `PUT /api/v1/onboarding/steps/:step`, `POST /api/v1/onboarding/finish`.
-- **Pages:** `(onboarding)` route group with its own layout; `/onboarding` → the first unfinished step; `/onboarding/[step]` = Import (optional GitHub link; resume "coming soon") → Basics → Skills → Rates & filters → Review. Forms share `useStepForm` (Next / Save draft / Save changes, version conflicts, beforeunload, a localStorage safety net with a restore banner). Dashboard card says "Start setup" / "Continue setup · step N of 5", then shows trial days left.
-- **GitHub field:** `checkGithubInput` (core) accepts a username or a github.com profile/repo link (parsed with `URL`: only `github.com`/`www.github.com`, http(s), no port or credentials; reserved pages like `/settings` refused) and keeps only the username; the form shows the reason as you leave the field and checks the account exists by calling `api.github.com` from the browser (never our server). Safety rules for the slice 3 GitHub import are in the spec's GitHub job section.
-- **Not checked in a real browser yet:** click-through checks were done with curl only.
-- **Deferred minors (from the per-task and final reviews; none block merge):**
-  - UX: Enter doesn't submit a step (no `<form>`); editing from Review goes Next → following step, not back to Review; progress bars show position, not completion; client navigation (progress links, logo) skips the leave dialog (the local copy still saves edits); focus is lost when the skills list fills or a chip is removed; disabled job-type chips drop out of the tab order; the country code shows for a moment before its name.
-  - Form hook: `pending` resets before navigation (a fast double click sends a second save); Back isn't disabled mid-save; STEP_ORDER/ALREADY_ONBOARDED only refresh, no notice; hook save/conflict logic has no tests.
-  - A11y: progress rows ~22px tall on mobile; no "(completed)" text for screen readers; add `role="list"` for Safari; some hints aren't linked by `aria-describedby`.
-  - Server: a client abort mid-body logs a 500; `getOnboardingState` runs two queries with `Promise.all` on one transaction client (breaks under pg@9); the rate limit runs after reading up to 256 KB; the API accepts retired skill ids; Finish re-validation of bad saved data isn't tested; the finish-vs-save race test is timing-based.
-  - Data: taxonomy `group()` can't mark a skill `retired` yet (fix before retiring one); 1–2 letter aliases (c, r, ps, pm…) are risky for free-text matching in slice 2; `parseGithubUsername` accepts `github.com/orgs|settings`; "GMT"/"EST5EDT" time zones are refused; no db CHECKs on profile country / GitHub / lengths (app-validated only); `sqlList` uses `sql.raw` (trusted constants only).
-  - Tests: countries test only checks count; the "edit" ranking test depends on taxonomy order; some core helpers untested.
-
-Key decisions (2026-09-29):
-- **Scope:** all freelance job types found on Reddit (development, design, video, writing, …) with one shared skill taxonomy. This replaces "pick one launch niche".
-- **Steps:** Import (optional GitHub link; resume upload in slice 2) → Basics → Skills → Rates & filters → Review/Finish. No subreddit or alert steps: Finish auto-connects subreddits from the job types and turns on email alerts; editing subreddits and connecting Telegram come later in the dashboard.
-- **Saving:** only on Next (`completed`) or Save draft (`draft`), one `onboarding_steps` row per user per step with a `version` for conflict detection; no autosave. The user lands on the first step that isn't completed.
-- **Imports:** resume (PDF/DOCX → text → Gemini → validated suggestions) and GitHub (public API, no LLM). They run in a new `apps/worker` process that takes jobs from a Postgres `import_jobs` table (`FOR UPDATE SKIP LOCKED` + `LISTEN/NOTIFY`); the browser polls the job every 1.5 s. The resume file is never kept, only its text.
-- **IDs:** UUIDv7 for new tables. New packages: `@redlance/core` (taxonomy, step schemas) and `@redlance/llm`.
-- **Build order:** manual onboarding (done) → worker + resume import (slice 2, plan next) → GitHub import (slice 3).
-- **No portfolio step** (user decision): an optional GitHub link on the Import step instead.
+Facts that are easy to get wrong:
+- Taxonomy: 12 job types, 185 skills. Catalogue: 473 subreddits, 238 active (`packages/core/src/subreddit-catalogue.ts`, generated from `docs/ingestion/research/data/catalogue.json`; the generator script isn't in the repo).
+- Not checked in a real browser yet (onboarding); the resume eval hasn't run live; Flash-Lite prices are placeholders.
 
 ### AWS and accounts
 
 - **AWS account "Redlance":** us-east-1, IAM Identity Center (single-region) with an AdministratorAccess permission set, 8-hour sessions.
 - **Credits lost:** enabling Identity Center created an AWS Organization, which **expired the Free Tier credits** ($100, plus the $100 still to earn). A support ticket has been sent asking for them back. Also apply for AWS Activate.
-- **Nothing deployed yet.** Phases 0–2 would cost about $0 a month on the flat-rate plan.
+- **Nothing deployed yet.** Phases 0–2 would cost about $0 a month on the CloudFront flat-rate **Free plan** (includes WAF + Route 53, 1M requests, 100 GB and 5 WAF rules a month; no VPC origins, so the server is locked to CloudFront by security group + secret header). The user hasn't explicitly confirmed the flat-rate plan. Early draft: `docs/deployment/cdn-waf-design.md` (partly outdated, see its banner).
 - **Rule:** check billing and credit side effects before any account-level cloud step.
 - **Domain `redlance.app`:** nameservers still at Name.com's defaults; they move to Route 53 when the hosted zone is created.
 
@@ -198,15 +140,15 @@ Key decisions (2026-09-29):
 
 ### Open questions and next steps
 
-1. **Onboarding:** set up the Google Cloud project and run the eval against Vertex (`npm run eval -w @redlance/worker -- --baseline`); click through the whole flow in a browser; then merge `feat/onboarding` (user's call). The user still needs to look over the skill list and subreddit seed list. Vertex prices in `packages/llm/src/prices.ts` are from a third-party listing (gemini-3.8-flash introductory until 2026-12-31; flash-lite unverified) — confirm on the official pricing page.
-2. **Ingestion (`feat/ingestion`):** commit (user's call), a 24 h soak run; plan checks 0.1 (AWS CloudShell reachability) and 0.4 (Reddit API application); 0.2 and 0.3 answered 2026-10-01 (120 subreddits per URL work, banned ones are skipped; flair search works); then matching and alerts, then deployment.
+1. **Onboarding:** run the resume eval against Vertex (`npm run eval -w @redlance/worker -- --baseline`); click through the whole flow in a browser; then merge (user's call). The user still needs to look over the skill list. Vertex prices in `packages/llm/src/prices.ts` are from a third-party listing (gemini-3.8-flash introductory until 2026-12-31; flash-lite unverified) — confirm on the official pricing page.
+2. **Ingestion (`feat/ingestion`):** a 24 h soak run; plan checks 0.1 (AWS CloudShell reachability) and 0.4 (Reddit API application); 0.2 and 0.3 answered 2026-10-01 (120 subreddits per URL work, banned ones are skipped; flair search works); then **matching** (next feature) and alerts, then deployment.
 3. **Subreddit list:** the catalogue comes from a study (`docs/ingestion/research/`); the user still has to review it, and the worker logs subreddits outside it that have hiring posts (weekly discovery).
-5. **Deployment spec:** EC2 + CloudFront + WAF with CDK. CloudFront must forward `Origin` and `CloudFront-Viewer-Address`. Run `/api/v1/health?deep=1` after every deploy. Check that Upstash supports `TIME` inside Lua. **Run migrations + `syncReferenceData()` before a new web build takes traffic** (a new skill in code but not yet in the `skills` table makes Finish fail on the `profile_skills` foreign key); `db:migrate` needs `tsx`, so ship a compiled migrate step. WAF: exempt `POST /api/v1/onboarding/imports/resume` from the 8 KB body rule. **Worker container:** needs `tsx` at runtime (the extraction thread starts with `--import tsx`; don't install with `--omit=dev`, or compile the worker), `stop_grace_period` ≥ 35 s, memory for up to 4 extraction threads (256 + 64 MB heap each) next to web and Postgres, non-root, read-only filesystem, network only to Postgres, Vertex AI and api.github.com. Google credentials on EC2: Workload Identity Federation from the AWS role (no key files). Set a Vertex request quota and a billing budget alert on the Google Cloud project.
+5. **Deployment spec:** EC2 + CloudFront + WAF with CDK. CloudFront must forward `Origin` and `CloudFront-Viewer-Address`. Run `/api/v1/health?deep=1` after every deploy. Check that Upstash supports `TIME` inside Lua. **Run migrations + `syncReferenceData()` before a new web build takes traffic** (a new skill in code but not yet in the `skills` table makes Finish fail on the `profile_skills` foreign key); `db:migrate` needs `tsx`, so ship a compiled migrate step. WAF: exempt `POST /api/v1/onboarding/imports/resume` from the 8 KB body rule. **Worker container:** needs `tsx` at runtime (the extraction thread starts with `--import tsx`; don't install with `--omit=dev`, or compile the worker), `stop_grace_period` ≥ 35 s, memory for up to 4 extraction threads (256 + 64 MB heap each) next to web and Postgres, non-root, read-only filesystem, network only to Postgres, Vertex AI, api.github.com and www.reddit.com. Google credentials on EC2: Workload Identity Federation from the AWS role (no key files). Set a Vertex request quota and a billing budget alert on the Google Cloud project.
 6. **Still undecided:**
    - which features go in which plan, and credit amounts;
    - the payment provider;
    - alert channels for US/UK (email + Telegram suggested);
-   - the homepage nav still says "Start free" → `/signup`, which no longer matches the plans.
+   - the homepage copy is out of date in several places (plans, `/signup`, subreddits); see `docs/homepage/conclusion.md`.
 
 ### Working style that worked
 

@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { VALID } from "../../../test/onboarding-fixtures";
 import { closeAll, resetState } from "../../../test/helpers";
 import { signInDevUser } from "../session";
-import { STEP_IDS } from "@redlance/core";
+import { BACKFILL_DAYS, STEP_IDS } from "@redlance/core";
 import {
   alertChannels,
   customSkills,
@@ -256,6 +256,22 @@ describe("finishOnboarding", () => {
 
     expect((await getOnboardingState(id)).onboardedAt).toEqual(
       profile!.onboardedAt,
+    );
+  });
+
+  it("asks the matcher to backfill the last 3 days of posts", async () => {
+    const id = await user();
+    await completeAll(id);
+    await finishOnboarding(id);
+    const [profile] = await getDb()
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, id));
+    expect(profile).toMatchObject({ plan: "trial", profileVersion: 1 });
+    const expected =
+      profile!.onboardedAt.getTime() - BACKFILL_DAYS * 86_400_000;
+    expect(Math.abs(profile!.rematchSince!.getTime() - expected)).toBeLessThan(
+      5_000,
     );
   });
 

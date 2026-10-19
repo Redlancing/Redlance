@@ -9,6 +9,8 @@ import { UPKEEP_INTERVAL_MS, runUpkeep } from "./ingest/upkeep";
 import { handlers } from "./jobs";
 import { createLlmFromEnv } from "./llm";
 import { createLogger } from "./logger";
+import { createMatcherFromEnv } from "./match/matcher";
+import { createRescorerFromEnv } from "./match/rescorer";
 import { createRunner } from "./runner";
 
 async function main() {
@@ -42,8 +44,9 @@ async function main() {
     }
   }
   const { db, pool } = createDb(env.DATABASE_URL, {
-    // import jobs + post analysis + the poller and upkeep
-    max: env.WORKER_CONCURRENCY * 2 + 3,
+    // import jobs + post analysis + matching (posts and one re-match) + AI re-scores + the
+    // poller and upkeep
+    max: env.WORKER_CONCURRENCY * 4 + 4,
     onError: (err) =>
       log.error({ err: err.message }, "postgres idle client error"),
   });
@@ -88,13 +91,30 @@ async function main() {
           createPgListener(env.DATABASE_URL, log, JOB_POSTS_CHANNEL),
       })
     : null;
+  // Matches analysed posts to users: woken by NOTIFY post_analysed (its own listener connection).
+  const matcher = createMatcherFromEnv(env, {
+    db,
+    log: log.child({ part: "matcher" }),
+  });
+  // AI re-scores of strong matches, within each plan's daily cap: woken by NOTIFY matches.
+  const rescorer = createRescorerFromEnv(env, {
+    db,
+    llm,
+    log: log.child({ part: "rescorer" }),
+  });
 
   let shuttingDown = false;
   const shutdown = async (signal: string) => {
     if (shuttingDown) return;
     shuttingDown = true;
     log.info({ signal }, "worker stopping");
-    await Promise.all([runner.stop(), poller?.stop(), analyser?.stop()]);
+    await Promise.all([
+      runner.stop(),
+      poller?.stop(),
+      analyser?.stop(),
+      matcher?.stop(),
+      rescorer?.stop(),
+    ]);
     await Promise.race([
       pool.end().catch(() => {}),
       new Promise((r) => setTimeout(r, 5000)),
@@ -107,6 +127,8 @@ async function main() {
   await runner.start();
   poller?.start();
   await analyser?.start();
+  await matcher?.start();
+  await rescorer?.start();
   log.info(
     {
       appEnv: env.APP_ENV,
@@ -116,6 +138,8 @@ async function main() {
       concurrency: env.WORKER_CONCURRENCY,
       ingest: env.INGEST_ENABLED,
       analysis: env.ANALYSIS_ENABLED,
+      matching: env.MATCHING_ENABLED,
+      rescore: rescorer !== null,
     },
     "worker started",
   );

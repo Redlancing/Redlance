@@ -12,6 +12,7 @@
     "vertex:check": "node --env-file-if-exists=.env.local --import tsx scripts/vertex-check.ts",
     "ingest:status": "node --env-file-if-exists=.env.local --import tsx src/cli/ingest-status.ts",
     "ingest:plan": "node --env-file-if-exists=.env.local --import tsx src/cli/ingest-plan.ts",
+    "match:status": "node --env-file-if-exists=.env.local --import tsx src/cli/match-status.ts",
     "eval:posts": "node --env-file-if-exists=.env.local --import tsx test/eval/posts/run.ts"
   },
   "devDependencies": {

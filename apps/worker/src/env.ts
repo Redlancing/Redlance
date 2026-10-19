@@ -27,6 +27,16 @@ export type WorkerEnv = {
   DEDUPE_WINDOW_HOURS: number;
   /** Contact for the User-Agent (an email or u/name), so Reddit can reach us. */
   REDDIT_UA_CONTACT?: string;
+  /** Match analysed posts to users (docs/matching/plan/04-matcher.md). */
+  MATCHING_ENABLED: boolean;
+  /** A match goes to the AI re-score queue at this rule score or above (0–100). */
+  RESCORE_THRESHOLD: number;
+  /** Posts older than this many days are never matched. */
+  MATCH_MAX_AGE_DAYS: number;
+  /** AI re-score of strong matches (docs/matching/plan/05-rescorer.md); needs MATCHING_ENABLED. */
+  RESCORE_ENABLED: boolean;
+  /** Daily cap on AI re-score spend, in USD (UTC day), across all users. */
+  RESCORE_DAILY_BUDGET_USD: number;
   /**
    * How the worker signs in to Vertex AI. "adc" = Application Default Credentials
    * (gcloud login locally, Workload Identity Federation on EC2). "service-account-key" =
@@ -85,6 +95,26 @@ const schema = z.object({
   DEDUPE_WINDOW_HOURS: z.preprocess(
     empty,
     z.coerce.number().int().min(1).max(336).default(72),
+  ),
+  MATCHING_ENABLED: z.preprocess(
+    empty,
+    z.enum(["true", "false"]).default("true"),
+  ),
+  RESCORE_THRESHOLD: z.preprocess(
+    empty,
+    z.coerce.number().int().min(0).max(100).default(50),
+  ),
+  MATCH_MAX_AGE_DAYS: z.preprocess(
+    empty,
+    z.coerce.number().int().min(1).max(30).default(7),
+  ),
+  RESCORE_ENABLED: z.preprocess(
+    empty,
+    z.enum(["true", "false"]).default("false"),
+  ),
+  RESCORE_DAILY_BUDGET_USD: z.preprocess(
+    empty,
+    z.coerce.number().min(0).max(1000).default(5),
   ),
   REDDIT_UA_CONTACT: z.preprocess(
     empty,
@@ -145,6 +175,8 @@ export function parseWorkerEnv(
         ...rest,
         INGEST_ENABLED: env.INGEST_ENABLED === "true",
         ANALYSIS_ENABLED: env.ANALYSIS_ENABLED === "true",
+        MATCHING_ENABLED: env.MATCHING_ENABLED === "true",
+        RESCORE_ENABLED: env.RESCORE_ENABLED === "true",
         credentials: keyPath
           ? { kind: "service-account-key", path: keyPath }
           : { kind: "adc" },

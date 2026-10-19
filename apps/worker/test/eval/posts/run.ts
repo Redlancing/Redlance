@@ -60,6 +60,9 @@ const row = (p: LabelledPost, i: number): JobPostRow => ({
   analysisLockedAt: new Date(),
   analysisError: null,
   duplicateOf: null,
+  matchStatus: null,
+  matchAttempts: 0,
+  matchLockedAt: null,
 });
 
 console.log(

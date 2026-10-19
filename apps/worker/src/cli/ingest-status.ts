@@ -4,10 +4,12 @@ import {
   activeFeeds,
   createDb,
   llmCostSince,
+  matchingStats,
   uncataloguedCommunities,
 } from "@redlance/db";
 import { sql } from "drizzle-orm";
 import { ANALYSIS_TASK, startOfUtcDay } from "../ingest/analyser";
+import { formatMatchingSection } from "./match-report";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -96,6 +98,9 @@ try {
     ANALYSIS_TASK,
   );
   console.log(`Model spend today (UTC): $${(spent / 1e6).toFixed(4)}`);
+  console.log(
+    `\n${formatMatchingSection(await matchingStats(db, new Date()))}`,
+  );
 
   const discovery = await uncataloguedCommunities(db, 7, 10);
   if (discovery.length) {
