@@ -80,3 +80,36 @@ describe("parseEnv", () => {
     ).toThrowError(/DATABASE_URL/);
   });
 });
+
+describe("drafting budget settings", () => {
+  it("defaults to alert at $40 and pause at $80", () => {
+    const env = parseEnv(valid);
+    expect(env.DRAFT_BUDGET_ALERT_USD).toBe(40);
+    expect(env.DRAFT_BUDGET_PAUSE_USD).toBe(80);
+  });
+
+  it("parses numbers and treats an empty value as the default", () => {
+    const env = parseEnv({
+      ...valid,
+      DRAFT_BUDGET_ALERT_USD: "12.5",
+      DRAFT_BUDGET_PAUSE_USD: "",
+    });
+    expect(env.DRAFT_BUDGET_ALERT_USD).toBe(12.5);
+    expect(env.DRAFT_BUDGET_PAUSE_USD).toBe(80);
+  });
+
+  it("rejects values outside 0 to 10,000, and an alert above the pause", () => {
+    for (const v of ["-1", "10001", "abc"]) {
+      expect(() =>
+        parseEnv({ ...valid, DRAFT_BUDGET_PAUSE_USD: v }),
+      ).toThrowError(/DRAFT_BUDGET_PAUSE_USD/);
+    }
+    expect(() =>
+      parseEnv({
+        ...valid,
+        DRAFT_BUDGET_ALERT_USD: "90",
+        DRAFT_BUDGET_PAUSE_USD: "80",
+      }),
+    ).toThrowError(/DRAFT_BUDGET_ALERT_USD/);
+  });
+});

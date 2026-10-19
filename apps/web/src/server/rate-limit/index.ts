@@ -1,4 +1,5 @@
 import "server-only";
+import { HOURLY_WARNING } from "@redlance/core";
 import type { Redis } from "ioredis";
 import type { Logger } from "pino";
 import { ApiError } from "../errors";
@@ -36,7 +37,15 @@ type ScriptedRedis = Redis & {
     limit: number,
     ttlSec: number,
   ): Promise<[number, number]>;
+  rlCount(key: string, ttlSec: number): Promise<number>;
 };
+
+// INCR, and set the expiry on the first hit, in one command (Upstash bills per command).
+const WINDOW_COUNT_LUA = `
+local count = redis.call('INCR', KEYS[1])
+if count == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
+return count
+`;
 
 function withScripts(redis: Redis): ScriptedRedis {
   const scripted = redis as ScriptedRedis;
@@ -46,6 +55,7 @@ function withScripts(redis: Redis): ScriptedRedis {
       lua: TOKEN_BUCKET_LUA,
     });
     redis.defineCommand("rlQuota", { numberOfKeys: 1, lua: QUOTA_LUA });
+    redis.defineCommand("rlCount", { numberOfKeys: 1, lua: WINDOW_COUNT_LUA });
   }
   return scripted;
 }
@@ -116,7 +126,50 @@ export function createRateLimiter(redis: Redis, log: Pick<Logger, "error">) {
         resetAt,
       };
     },
+
+    /**
+     * Counts this call in a fixed window of `windowSec` (keyed by the window's start).
+     * For soft warnings only: fails open, returning null on Redis errors.
+     */
+    async countInWindow(
+      subject: string,
+      name: string,
+      windowSec: number,
+      now = new Date(),
+    ): Promise<{ count: number } | null> {
+      const nowSec = Math.floor(now.getTime() / 1000);
+      const windowStart = nowSec - (nowSec % windowSec);
+      try {
+        await awaitFirstConnection(redis);
+        const count = await r.rlCount(
+          `w:{${subject}}:${name}:${windowStart}`,
+          windowSec + 60,
+        );
+        return { count };
+      } catch (err) {
+        log.error(
+          { err, subject, name },
+          "window counter unavailable; skipping the warning",
+        );
+        return null;
+      }
+    },
   };
+}
+
+/** Counts a draft request; more than HOURLY_WARNING in the hour shows "slow down". */
+export async function hourlyDraftWarning(
+  limiter: Pick<RateLimiter, "countInWindow">,
+  userId: string,
+  now = new Date(),
+): Promise<{ slowDown: boolean }> {
+  const counted = await limiter.countInWindow(
+    `u:${userId}`,
+    "drafts",
+    3600,
+    now,
+  );
+  return { slowDown: counted !== null && counted.count > HOURLY_WARNING };
 }
 
 export type RateLimiter = ReturnType<typeof createRateLimiter>;

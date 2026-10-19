@@ -19,6 +19,7 @@ import {
   type Database,
   alertChannels,
   customSkills,
+  grantPlanCredits,
   onboardingSteps,
   profileExperience,
   profileProjects,
@@ -245,23 +246,35 @@ export async function finishOnboarding(
       userId,
     );
 
-    await tx.insert(profiles).values({
+    const [created] = await tx
+      .insert(profiles)
+      .values({
+        userId,
+        displayName: basics.displayName,
+        headline: basics.headline,
+        categories: basics.categories,
+        experienceLevel: basics.experienceLevel,
+        country: basics.country,
+        timeZone: basics.timeZone,
+        githubUsername: imported.githubUsername,
+        minRateMinor: Math.round(rates.minRate * 100),
+        currency: rates.currency,
+        rateType: rates.rateType,
+        remoteOnly: rates.remoteOnly,
+        mentionEmployers: work.mentionEmployers,
+        onboardedAt: sql`now()`,
+        trialEndsAt: sql`now() + make_interval(days => ${TRIAL_DAYS})`,
+      })
+      .returning({ trialEndsAt: profiles.trialEndsAt });
+
+    // The trial's credits, in the same transaction: no trial without credits, or the reverse.
+    await grantPlanCredits(
+      tx,
       userId,
-      displayName: basics.displayName,
-      headline: basics.headline,
-      categories: basics.categories,
-      experienceLevel: basics.experienceLevel,
-      country: basics.country,
-      timeZone: basics.timeZone,
-      githubUsername: imported.githubUsername,
-      minRateMinor: Math.round(rates.minRate * 100),
-      currency: rates.currency,
-      rateType: rates.rateType,
-      remoteOnly: rates.remoteOnly,
-      mentionEmployers: work.mentionEmployers,
-      onboardedAt: sql`now()`,
-      trialEndsAt: sql`now() + make_interval(days => ${TRIAL_DAYS})`,
-    });
+      "trial",
+      created!.trialEndsAt,
+      new Date(),
+    );
 
     if (skills.skills.length)
       await tx.insert(profileSkills).values(

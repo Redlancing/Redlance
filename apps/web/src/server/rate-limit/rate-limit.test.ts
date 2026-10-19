@@ -10,7 +10,7 @@ import {
 import { TEST_ENV } from "../../../test/test-env";
 import { ApiError } from "../errors";
 import { createRedis, redisReady } from "../redis";
-import { createRateLimiter } from "./index";
+import { createRateLimiter, hourlyDraftWarning } from "./index";
 
 const redis = createRedis(TEST_ENV.REDIS_URL);
 const log = { error: vi.fn() };
@@ -93,6 +93,63 @@ describe("daily quota", () => {
   });
 });
 
+describe("count in a window (the hourly drafts warning)", () => {
+  const t = new Date("2026-10-19T10:15:00Z");
+
+  it("19: the 11th draft in an hour returns count 11 and slows down", async () => {
+    for (let i = 1; i <= 10; i++) {
+      expect(await limiter.countInWindow("u:w1", "drafts", 3600, t)).toEqual({
+        count: i,
+      });
+    }
+    expect(await limiter.countInWindow("u:w1", "drafts", 3600, t)).toEqual({
+      count: 11,
+    });
+    expect(await hourlyDraftWarning(limiter, "w1", t)).toEqual({
+      slowDown: true,
+    });
+  });
+
+  it("the first 10 drafts don't warn", async () => {
+    for (let i = 0; i < 10; i++) {
+      expect(await hourlyDraftWarning(limiter, "w2", t)).toEqual({
+        slowDown: false,
+      });
+    }
+  });
+
+  it("starts a new count in the next window and expires its key", async () => {
+    await limiter.countInWindow("u:w3", "drafts", 3600, t);
+    await limiter.countInWindow("u:w3", "drafts", 3600, t);
+    const next = new Date("2026-10-19T11:00:01Z");
+    expect(await limiter.countInWindow("u:w3", "drafts", 3600, next)).toEqual({
+      count: 1,
+    });
+    const windowStart = Date.UTC(2026, 9, 19, 10) / 1000;
+    const ttl = await redis.ttl(`w:{u:w3}:drafts:${windowStart}`);
+    expect(ttl).toBeGreaterThan(0);
+    expect(ttl).toBeLessThanOrEqual(3600 + 60);
+  });
+
+  it("keeps subjects and names apart", async () => {
+    await limiter.countInWindow("u:w4", "drafts", 3600, t);
+    expect(await limiter.countInWindow("u:w5", "drafts", 3600, t)).toEqual({
+      count: 1,
+    });
+    expect(await limiter.countInWindow("u:w4", "other", 3600, t)).toEqual({
+      count: 1,
+    });
+  });
+
+  it("uses one Redis command per call", async () => {
+    await limiter.countInWindow("u:w6", "drafts", 3600, t); // loads the script
+    const spy = vi.spyOn(redis, "sendCommand");
+    await limiter.countInWindow("u:w6", "drafts", 3600, t);
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+});
+
 describe("Redis command cost", () => {
   it("uses exactly one command per consume and per quota check", async () => {
     await limiter.consume("u:1", "api", { capacity: 5, refillPerSec: 1 }); // loads the script
@@ -160,5 +217,13 @@ describe("when Redis is down", () => {
       status: 503,
     });
     expect(Date.now() - started).toBeLessThan(1000);
+  });
+
+  it("20: countInWindow fails open: null, logged, and no warning", async () => {
+    expect(await downLimiter.countInWindow("u:1", "drafts", 3600)).toBeNull();
+    expect(log.error).toHaveBeenCalledTimes(1);
+    expect(await hourlyDraftWarning(downLimiter, "1")).toEqual({
+      slowDown: false,
+    });
   });
 });

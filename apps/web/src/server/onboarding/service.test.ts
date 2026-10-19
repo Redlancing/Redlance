@@ -5,6 +5,10 @@ import { signInDevUser } from "../session";
 import { BACKFILL_DAYS, STEP_IDS } from "@redlance/core";
 import {
   alertChannels,
+  creditBalances,
+  creditLedger,
+  skills as skillsTable,
+  syncReferenceData,
   customSkills,
   profileExperience,
   profileProjects,
@@ -460,5 +464,66 @@ describe("resetForReimport", () => {
     const id = await filled();
     await resetForReimport(id, []);
     expect(await saved(id)).toEqual(["import", "work"]);
+  });
+});
+
+describe("finishOnboarding trial credits", () => {
+  it("28: grants 210 credits ending at trialEndsAt, with a grant ledger row", async () => {
+    const id = await user();
+    await completeAll(id);
+    await finishOnboarding(id);
+    const db = getDb();
+    const [profile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, id));
+    const [bal] = await db
+      .select()
+      .from(creditBalances)
+      .where(eq(creditBalances.userId, id));
+    expect(bal).toMatchObject({ plan: "trial", balance: 210 });
+    expect(bal!.periodEnd).toEqual(profile!.trialEndsAt);
+    const ledger = await db
+      .select()
+      .from(creditLedger)
+      .where(eq(creditLedger.userId, id));
+    expect(ledger.map((l) => [l.reason, l.delta])).toEqual([["grant", 210]]);
+  });
+
+  it("a repeated finish does not grant twice", async () => {
+    const id = await user();
+    await completeAll(id);
+    await Promise.all([finishOnboarding(id), finishOnboarding(id)]);
+    await finishOnboarding(id);
+    const ledger = await getDb()
+      .select()
+      .from(creditLedger)
+      .where(eq(creditLedger.userId, id));
+    expect(ledger).toHaveLength(1);
+  });
+
+  it("29: a failure after the grant rolls the grant back too", async () => {
+    const id = await user();
+    await completeAll(id);
+    const db = getDb();
+    // profile_skills has a foreign key to skills: removing one makes Finish fail after the grant.
+    await db.delete(skillsTable).where(eq(skillsTable.id, "premiere-pro"));
+    try {
+      await expect(finishOnboarding(id)).rejects.toBeDefined();
+    } finally {
+      await syncReferenceData(db);
+    }
+    expect(
+      await db.select().from(profiles).where(eq(profiles.userId, id)),
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(creditBalances)
+        .where(eq(creditBalances.userId, id)),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(creditLedger).where(eq(creditLedger.userId, id)),
+    ).toHaveLength(0);
   });
 });

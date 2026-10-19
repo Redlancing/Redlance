@@ -23,6 +23,8 @@ export type SeedPost = {
   duplicateOf?: string | null;
   budget?: { min: number; max: number; currency: string; unit: "fixed" };
   summary?: string;
+  applyInstructions?: string | null;
+  redFlags?: string[];
 };
 
 export async function seedPost(spec: SeedPost = {}): Promise<string> {
@@ -61,8 +63,9 @@ export async function seedPost(spec: SeedPost = {}): Promise<string> {
     remote: "remote",
     location: null,
     deadline: null,
-    redFlags: [],
+    redFlags: spec.redFlags ?? [],
     summary: spec.summary ?? `Gig ${seq}`,
+    applyInstructions: spec.applyInstructions ?? null,
     model: "gemini-test",
   });
   return row!.id;

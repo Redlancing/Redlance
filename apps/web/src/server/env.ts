@@ -3,6 +3,11 @@ import { z } from "zod";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+const empty = (v: unknown) => (v === "" ? undefined : v);
+/** A dollar amount from 0 to 10,000; an empty value means the default. */
+const usd = (fallback: number) =>
+  z.preprocess(empty, z.coerce.number().min(0).max(10_000).default(fallback));
+
 const schema = z
   .object({
     APP_ENV: z.enum(["local", "staging", "production"]),
@@ -21,8 +26,19 @@ const schema = z
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
+    /** Daily drafting spend across all users (USD, UTC day): log an alert at this level... */
+    DRAFT_BUDGET_ALERT_USD: usd(40),
+    /** ...and pause new drafts at this level (docs/drafts/README.md §10). */
+    DRAFT_BUDGET_PAUSE_USD: usd(80),
   })
   .superRefine((value, ctx) => {
+    if (value.DRAFT_BUDGET_ALERT_USD > value.DRAFT_BUDGET_PAUSE_USD) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["DRAFT_BUDGET_ALERT_USD"],
+        message: "must not be above DRAFT_BUDGET_PAUSE_USD",
+      });
+    }
     if (value.AUTH_MODE === "dev" && value.APP_ENV !== "local") {
       ctx.addIssue({
         code: "custom",
