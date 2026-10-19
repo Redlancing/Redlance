@@ -21,8 +21,8 @@ import { z } from "zod";
 // from a shortlist found in the post's own text, and a budget is kept only when its quote is
 // really in the post: the model can't invent either.
 
-export const PIPELINE_VERSION = "post@2";
-export const PROMPT_VERSION = "post-extract@2";
+export const PIPELINE_VERSION = "post@3";
+export const PROMPT_VERSION = "post-extract@3";
 export const MAX_SHORTLIST = 40;
 const MAX_PROMPT_BODY = 6_000;
 
@@ -98,6 +98,8 @@ export const postAnalysisOutput = z.object({
     .nullable(),
   redFlags: z.array(z.enum(RED_FLAGS)).max(5),
   summary: z.string().max(160),
+  applyInstructions: z.string().max(300).nullable(),
+  quote: z.string().max(200).nullable(),
 });
 export type PostAnalysisOutput = z.infer<typeof postAnalysisOutput>;
 
@@ -151,6 +153,7 @@ export function buildPrompt(post: JobPostRow, shortlist: string[]): string {
     "- remote: remote, onsite, hybrid or unknown. location: the place if one is required, else null.",
     '- deadline: the due date as YYYY-MM-DD if stated (work out relative dates like "in 2 weeks" from the Posted date), else null.',
     "- redFlags: only those clearly present: asks_for_free_work (unpaid test work), off_platform_payment (pay via gift cards, crypto only, or outside protection), upfront_fee (the worker must pay first), vague_pay (hiring with no pay information at all), unrealistic_pay (pay far too high for the work), personal_info_request (asks for ID, bank details), adult_content, academic_dishonesty (homework, exams, essays for school).",
+    "- applyInstructions: how the poster wants people to apply, only if the post says so: where to reply (comment or DM), what to include (portfolio, rate, links, a code word), and any format rule. Copy their exact words into quote. Return null (and a null quote) when the post gives no instructions. Never invent instructions.",
     "- summary: one plain sentence (at most 140 characters) saying what the work is (for hiring posts, what the client needs), without the budget and without anyone's name or handle.",
   ].join("\n");
 }
@@ -198,6 +201,18 @@ export function checkBudget(
     SYMBOL_CURRENCY.find(([re]) => re.test(out.quote!))?.[1] ??
     null;
   return { min, max, currency, unit: out.unit, quote: out.quote };
+}
+
+/** Keeps the instructions only if their quote is in the post; always one line. */
+export function checkApplyInstructions(
+  value: string | null,
+  quote: string | null,
+  text: string,
+): string | null {
+  if (!value || !quote) return null;
+  const q = squash(quote);
+  if (!q || !squash(text).includes(q)) return null;
+  return value.replace(/\s+/g, " ").trim() || null;
 }
 
 export function checkDeadline(
@@ -271,6 +286,10 @@ export async function analysePost(
     deadline: checkDeadline(out.deadline, post.postedAt),
     redFlags: [...new Set(out.redFlags)],
     summary: out.summary.trim().slice(0, 160),
+    applyInstructions:
+      out.kind === "hiring"
+        ? checkApplyInstructions(out.applyInstructions, out.quote, text)
+        : null,
     model: res.attempts.at(-1)?.usage?.model ?? deps.model,
   };
 }

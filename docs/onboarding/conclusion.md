@@ -152,6 +152,7 @@ That profile is what matching will compare job posts against.
    2. If a profile already exists, just redirect. A double click is harmless.
    3. Check every step again.
    4. Insert `profiles` (trial ends 5 days from **now**: the trial starts at Finish, not at sign-up), `profile_skills`, `custom_skills`, and an `email` alert channel.
+   5. In the same transaction, grant the trial's 210 draft credits (`grantPlanCredits(tx, userId, "trial", trialEndsAt, now)`): a `credit_balances` row ending at `trial_ends_at` and a `grant` ledger row. If Finish fails, the grant rolls back with it.
 3. The user lands on `/dashboard`. The dashboard shows "Your trial: N days left". From then on, every `/onboarding` URL redirects to the dashboard, and the API answers `ALREADY_ONBOARDED`.
 
 The dashboard card before Finish reads "Start setup", or "Continue setup · step N of 5".

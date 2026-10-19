@@ -61,7 +61,7 @@ const { db, pool } = createDb(url, { max: 5 });
 
 const reset = () =>
   db.execute(
-    sql`truncate table match_events, matches, job_post_analyses, job_posts, feed_polls, feeds, llm_usage`,
+    sql`truncate table match_events, matches, job_post_analyses, job_posts, feed_polls, feeds, llm_usage cascade`,
   );
 
 beforeAll(async () => {
@@ -111,6 +111,7 @@ const analysis: NewPostAnalysis = {
   deadline: null,
   redFlags: [],
   summary: "React developer for a small project",
+  applyInstructions: null,
   model: "gemini-3.5-flash-lite",
 };
 
@@ -773,13 +774,21 @@ describe("analysis queue", () => {
     expect(a!.budgetMin).toBe(500);
     expect(a!.skillIds).toEqual(["react"]);
 
+    expect(a!.applyInstructions).toBeNull();
+
     await requeuePostsForAnalysis(db, [c.id]);
     const [again] = await claimPostsForAnalysis(db, 1);
     await completePostAnalysis(db, again!.id, again!.analysisAttempts, {
       ...analysis,
-      pipelineVersion: "post@2",
+      pipelineVersion: "post@3",
+      applyInstructions: "DM only, include your rate",
     });
     expect(await db.$count(jobPostAnalyses)).toBe(1);
+    const [b] = await db
+      .select()
+      .from(jobPostAnalyses)
+      .where(eq(jobPostAnalyses.jobPostId, c.id));
+    expect(b!.applyInstructions).toBe("DM only, include your rate");
   });
 
   it("retries with backoff, then fails for good", async () => {

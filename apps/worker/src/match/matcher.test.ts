@@ -49,7 +49,7 @@ const ago = (ms: number) => new Date(Date.now() - ms);
 const reset = async () => {
   await db.execute(sql`truncate table users cascade`);
   await db.execute(
-    sql`truncate table match_events, matches, job_post_analyses, job_posts, llm_usage`,
+    sql`truncate table match_events, matches, job_post_analyses, job_posts, llm_usage cascade`,
   );
 };
 

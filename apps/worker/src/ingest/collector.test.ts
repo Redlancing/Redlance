@@ -68,7 +68,7 @@ const lastPolled = (names: string[], at: Date | null) =>
 
 const reset = async () => {
   await db.execute(
-    sql`truncate table match_events, matches, job_post_analyses, job_posts, feed_polls, feeds, llm_usage`,
+    sql`truncate table match_events, matches, job_post_analyses, job_posts, feed_polls, feeds, llm_usage cascade`,
   );
   await db.update(subreddits).set({
     lastPolledAt: null,

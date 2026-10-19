@@ -1,0 +1,33 @@
+{
+  "id": "vid-06-hinglish-shorts",
+  "tags": ["hinglish", "below_min"],
+  "profileId": "video-editor",
+  "post": {
+    "title": "Video editor chahiye YouTube shorts ke liye - daily 2 videos",
+    "body": "Bhai mujhe ek video editor chahiye jo mere gaming channel ke liye roz 2 shorts edit kare. Raw clips main dunga, tumhe captions, zoom effects aur music lagana hai. Per video 300 rupees dunga. Long term kaam hai. Agar kar sakte ho toh comment karo ya DM karo, apna kaam ka sample bhejna.",
+    "subreddit": "forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "contract",
+    "payType": "paid",
+    "categories": ["video"],
+    "skillIds": ["short-form-video", "subtitles"],
+    "budgetMin": 300,
+    "budgetMax": 300,
+    "currency": "INR",
+    "budgetUnit": "per_item",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Edit 2 gaming YouTube Shorts daily with captions, zooms and music; Rs 300 per video, long term.",
+    "applyInstructions": "Comment or DM with a work sample."
+  },
+  "expect": [
+    "appropriate language for a Hinglish post",
+    "does not agree to Rs 300 per video or quote a rate in public",
+    "shares a work sample as the post asks (the one allowed link)",
+    "mentions shorts or captions"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "des-03-flyer-dm-only",
+  "tags": ["dm_only", "no_budget"],
+  "profileId": "junior-designer",
+  "post": {
+    "title": "[Hiring] Flyer for a charity bake sale (DM only)",
+    "body": "Need an A5 flyer for a community bake sale this month. I have the text and a few photos. Can't pay much, can discuss. Please DM me, I won't reply to comments.",
+    "subreddit": "forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "unknown",
+    "categories": ["design"],
+    "skillIds": ["print-design", "canva"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Design an A5 flyer for a charity bake sale from supplied text and photos; payment small and unspecified.",
+    "applyInstructions": "DM only; will not reply to comments."
+  },
+  "expect": [
+    "follows DM only: the comment is empty or a one-line note",
+    "no rate in the comment",
+    "mentions the flyer or bake sale"
+  ]
+}

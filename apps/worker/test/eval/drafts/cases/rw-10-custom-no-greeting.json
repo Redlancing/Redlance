@@ -1,0 +1,6 @@
+{
+  "id": "rw-10-custom-no-greeting",
+  "baseCaseId": "vid-01-youtube-longform",
+  "instruction": "Drop the greeting and open straight with the problem. Keep it under 70 words.",
+  "expect": ["no greeting", "under 70 words (DM)", "keeps the link"]
+}

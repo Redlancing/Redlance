@@ -8,6 +8,8 @@ import { createPoller } from "./ingest/poller";
 import { UPKEEP_INTERVAL_MS, runUpkeep } from "./ingest/upkeep";
 import { handlers } from "./jobs";
 import { createLlmFromEnv } from "./llm";
+import { createDrafterFromEnv } from "./drafts/drafter";
+import { createVoiceUpdaterFromEnv } from "./drafts/voice-job";
 import { createLogger } from "./logger";
 import { createMatcherFromEnv } from "./match/matcher";
 import { createRescorerFromEnv } from "./match/rescorer";
@@ -45,8 +47,8 @@ async function main() {
   }
   const { db, pool } = createDb(env.DATABASE_URL, {
     // import jobs + post analysis + matching (posts and one re-match) + AI re-scores + the
-    // poller and upkeep
-    max: env.WORKER_CONCURRENCY * 4 + 4,
+    // poller and upkeep, plus drafts and voice updates (each holds at most one connection at a time)
+    max: env.WORKER_CONCURRENCY * 4 + env.DRAFT_CONCURRENCY + 6,
     onError: (err) =>
       log.error({ err: err.message }, "postgres idle client error"),
   });
@@ -102,6 +104,19 @@ async function main() {
     llm,
     log: log.child({ part: "rescorer" }),
   });
+  // Comment + first DM drafts the user asked for: woken by NOTIFY drafts. Logs an error at
+  // start if a draft model has no price (the drafting budget can't work without one).
+  const drafter = createDrafterFromEnv(env, {
+    db,
+    llm,
+    log: log.child({ part: "drafter" }),
+  });
+  // Rewrites each user's voice notes every few sends: woken by NOTIFY voice.
+  const voice = createVoiceUpdaterFromEnv(env, {
+    db,
+    llm,
+    log: log.child({ part: "voice" }),
+  });
 
   let shuttingDown = false;
   const shutdown = async (signal: string) => {
@@ -114,6 +129,8 @@ async function main() {
       analyser?.stop(),
       matcher?.stop(),
       rescorer?.stop(),
+      drafter?.stop(),
+      voice?.stop(),
     ]);
     await Promise.race([
       pool.end().catch(() => {}),
@@ -129,6 +146,8 @@ async function main() {
   await analyser?.start();
   await matcher?.start();
   await rescorer?.start();
+  await drafter?.start();
+  await voice?.start();
   log.info(
     {
       appEnv: env.APP_ENV,
@@ -140,6 +159,10 @@ async function main() {
       analysis: env.ANALYSIS_ENABLED,
       matching: env.MATCHING_ENABLED,
       rescore: rescorer !== null,
+      drafts: drafter !== null,
+      voice: voice !== null,
+      draftModel: env.DRAFT_MODEL,
+      rewriteModel: env.REWRITE_MODEL,
     },
     "worker started",
   );

@@ -1,0 +1,32 @@
+{
+  "id": "des-01-cafe-logo",
+  "tags": [],
+  "profileId": "junior-designer",
+  "post": {
+    "title": "[Hiring] Logo for a new coffee shop - $75",
+    "body": "Opening a small coffee shop called Ember & Oak. Need a simple logo that works on cups and a sign, warm colours. Budget $75, one revision. Send past logo work.",
+    "subreddit": "DesignJobs"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["design"],
+    "skillIds": ["logo-design", "illustrator"],
+    "budgetMin": 75,
+    "budgetMax": 75,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Design a simple warm-toned logo for a coffee shop (cups and signage); $75, one revision.",
+    "applyInstructions": "Send past logo work."
+  },
+  "expect": [
+    "cites the campus cafe brand project as the closest work",
+    "is honest that it is a student project, not a paid client job",
+    "does not claim professional experience"
+  ]
+}

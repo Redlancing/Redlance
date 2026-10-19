@@ -1,0 +1,33 @@
+{
+  "id": "wri-03-ghostwriter-dm",
+  "tags": ["dm_only"],
+  "profileId": "senior-writer",
+  "post": {
+    "title": "[Hiring] LinkedIn ghostwriter for a founder - DM only",
+    "body": "I'm a founder in the HR tech space and want a ghostwriter for 8 LinkedIn posts a month in my voice. Budget $800/month. Please DM me with a sample, I'm not checking comments.",
+    "subreddit": "forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "contract",
+    "payType": "paid",
+    "categories": ["writing"],
+    "skillIds": ["ghostwriting", "copywriting"],
+    "budgetMin": 800,
+    "budgetMax": 800,
+    "currency": "USD",
+    "budgetUnit": "month",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Ghostwrite 8 LinkedIn posts a month in a HR-tech founder's voice; $800/month.",
+    "applyInstructions": "DM only with a sample; comments not checked."
+  },
+  "expect": [
+    "follows DM only: the comment is empty or a one-line note",
+    "the DM cites the founder ghostwriting project",
+    "does not reveal client names",
+    "mentions the voice requirement"
+  ]
+}

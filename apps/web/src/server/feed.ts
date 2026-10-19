@@ -70,6 +70,7 @@ export function toFeedResponse(page: {
         remote: i.post.remote,
         deadline: i.post.deadline,
         redFlags: i.post.redFlags,
+        applyInstructions: i.post.applyInstructions,
         alsoPostedIn: i.post.alsoPostedIn,
       },
     })),

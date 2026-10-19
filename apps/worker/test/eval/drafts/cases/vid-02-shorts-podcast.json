@@ -1,0 +1,32 @@
+{
+  "id": "vid-02-shorts-podcast",
+  "tags": [],
+  "profileId": "video-editor",
+  "post": {
+    "title": "[Hiring] Short-form editor for podcast clips (TikTok/Reels/Shorts) - $25 per clip",
+    "body": "We record a business podcast and need 4-6 vertical clips per episode with animated captions and a hook in the first 2 seconds. $25 per clip, 2 episodes a month. Please send examples of captioned shorts you made.",
+    "subreddit": "hireavideoeditor"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["video"],
+    "skillIds": ["short-form-video", "subtitles", "podcast-editing"],
+    "budgetMin": 25,
+    "budgetMax": 25,
+    "currency": "USD",
+    "budgetUnit": "per_item",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Cut 4-6 vertical podcast clips per episode with animated captions and hooks, $25 each, two episodes a month.",
+    "applyInstructions": "Send examples of captioned shorts."
+  },
+  "expect": [
+    "cites the fitness podcast clips project",
+    "gives the clips reel as the example",
+    "mentions captions or the hook"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "rw-04-casual-ops",
+  "baseCaseId": "dev-09-send-rate",
+  "option": "casual",
+  "expect": [
+    "noticeably more casual tone",
+    "no new facts or links",
+    "still only one link"
+  ]
+}

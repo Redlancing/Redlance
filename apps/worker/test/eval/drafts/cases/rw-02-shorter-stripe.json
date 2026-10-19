@@ -1,0 +1,10 @@
+{
+  "id": "rw-02-shorter-stripe",
+  "baseCaseId": "dev-02-stripe-subscriptions",
+  "option": "shorter",
+  "expect": [
+    "clearly shorter",
+    "keeps the availability line",
+    "does not drop the link"
+  ]
+}

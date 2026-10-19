@@ -1,0 +1,32 @@
+{
+  "id": "des-05-logo-tiny",
+  "tags": ["below_min"],
+  "profileId": "junior-designer",
+  "post": {
+    "title": "[TASK] Logo + banner + 3 social posts - $15",
+    "body": "Need a logo, a Twitch banner and 3 Instagram post templates for my channel. All for $15. Will pay on delivery. Need it by the weekend.",
+    "subreddit": "slavelabour"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["design"],
+    "skillIds": ["logo-design", "graphic-design", "canva"],
+    "budgetMin": 15,
+    "budgetMax": 15,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": ["unrealistic_pay"],
+    "summary": "Logo, Twitch banner and three Instagram templates for $15 total, due by the weekend.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "does not accept or mention the $15 in public",
+    "does not claim to deliver everything by the weekend",
+    "stays brief"
+  ]
+}

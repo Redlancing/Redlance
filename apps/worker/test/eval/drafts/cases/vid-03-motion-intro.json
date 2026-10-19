@@ -1,0 +1,32 @@
+{
+  "id": "vid-03-motion-intro",
+  "tags": [],
+  "profileId": "video-editor",
+  "post": {
+    "title": "[Hiring] After Effects artist for a 10-second logo sting - $300",
+    "body": "Need a 10-second animated logo intro for a gaming channel. I have the logo as vector files. Looking for something snappy with a glitch/neon feel, 1080p, with a transparent version. $300 fixed, two rounds of revisions.",
+    "subreddit": "forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["video"],
+    "skillIds": ["after-effects", "motion-graphics"],
+    "budgetMin": 300,
+    "budgetMax": 300,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Animate a 10-second glitch/neon logo sting in After Effects for a gaming channel, with transparent version; $300, two revisions.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "mentions the logo sting or After Effects",
+    "is honest that its closest work is captions/motion in its projects, not invented gaming work",
+    "uses at most one link"
+  ]
+}

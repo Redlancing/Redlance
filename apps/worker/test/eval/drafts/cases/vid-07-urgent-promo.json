@@ -1,0 +1,32 @@
+{
+  "id": "vid-07-urgent-promo",
+  "tags": ["urgent"],
+  "profileId": "video-editor",
+  "post": {
+    "title": "[Hiring] Need a 60s promo cut by tomorrow evening - $120",
+    "body": "We have a product launch event on Thursday and need a 60-second promo cut from existing footage and stills, with lower thirds and a music bed I will send. Final delivery tomorrow evening (EST). $120. Must be available right now.",
+    "subreddit": "hiring"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["video"],
+    "skillIds": ["video-editing", "premiere-pro", "motion-graphics"],
+    "budgetMin": 120,
+    "budgetMax": 120,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "remote",
+    "location": null,
+    "deadline": "2026-10-20",
+    "redFlags": [],
+    "summary": "Cut a 60-second launch promo with lower thirds from existing footage by tomorrow evening EST; $120.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "addresses the tight deadline honestly (can start now only if evidence supports it)",
+    "mentions the promo or lower thirds",
+    "short"
+  ]
+}

@@ -5,7 +5,10 @@ export default defineConfig({
     environment: "node",
     fileParallelism: false,
     env: {
-      TEST_DATABASE_URL: "postgres://redlance:redlance@127.0.0.1:5432/redlance_test",
+      // Override to give a parallel run its own database.
+      TEST_DATABASE_URL:
+        process.env.TEST_DATABASE_URL ??
+        "postgres://redlance:redlance@127.0.0.1:5432/redlance_test",
     },
   },
 });

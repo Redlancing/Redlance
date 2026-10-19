@@ -1,0 +1,33 @@
+{
+  "id": "dev-14-vague-pm-me",
+  "tags": ["vague", "dm_only"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "Looking for coder - pm me",
+    "body": "Looking for a coder for a small project. Pm me if you can do it.",
+    "subreddit": "forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "unknown",
+    "payType": "unknown",
+    "categories": ["development"],
+    "skillIds": [],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Unspecified small coding project; no details given.",
+    "applyInstructions": "PM the poster."
+  },
+  "expect": [
+    "asks what the project is rather than guessing",
+    "very short",
+    "does not invent a stack or deliverable",
+    "follows the pm instruction (message rather than a long public comment)"
+  ]
+}

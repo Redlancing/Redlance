@@ -1,0 +1,32 @@
+{
+  "id": "vid-08-send-rate-reel",
+  "tags": ["send_rate", "no_budget"],
+  "profileId": "video-editor",
+  "post": {
+    "title": "[Hiring] Editor for course videos - send your per-minute rate and a reel",
+    "body": "We are building an online course (about 40 lessons, each 6-10 minutes, screen recording + face cam). Looking for an editor for the whole batch. Please reply with your rate per finished minute and a link to a reel or two samples.",
+    "subreddit": "forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "contract",
+    "payType": "paid",
+    "categories": ["video"],
+    "skillIds": ["video-editing", "youtube-editing"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Edit about 40 online-course lessons (6-10 min each, screen recording plus face cam); wants a per-minute rate and a reel.",
+    "applyInstructions": "Reply with your rate per finished minute and a reel or two samples."
+  },
+  "expect": [
+    "gives or addresses a per-minute rate in the DM only if the rate note allows, otherwise says it will send a quote",
+    "links the reel as asked",
+    "comment contains no rate"
+  ]
+}

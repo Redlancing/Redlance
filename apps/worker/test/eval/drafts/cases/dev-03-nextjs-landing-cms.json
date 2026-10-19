@@ -1,0 +1,32 @@
+{
+  "id": "dev-03-nextjs-landing-cms",
+  "tags": ["no_budget"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "[Hiring] Next.js marketing site with a headless CMS",
+    "body": "Looking for a developer to build our marketing site in Next.js with Sanity as the CMS. About 8 pages, a blog, and a contact form. Design is done in Figma. Happy to talk about price once I see who is interested.",
+    "subreddit": "forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["development"],
+    "skillIds": ["nextjs", "react"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Build an 8-page Next.js marketing site with a Sanity CMS, blog and contact form from finished Figma designs. Budget not stated.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "mentions the Next.js site, the CMS or the Figma designs",
+    "does not state a rate or price",
+    "cites a relevant project (Next.js or React)"
+  ]
+}

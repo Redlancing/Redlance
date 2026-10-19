@@ -1,0 +1,32 @@
+{
+  "id": "dev-12-code-word",
+  "tags": ["code_word"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "[Hiring] Landing page + Stripe checkout for a digital product - $450",
+    "body": "I sell a PDF guide and need a one-page site with a Stripe checkout and an email capture (Mailchimp). Copy and logo are ready. $450.\n\nTo show me you read this, put the word 'pineapple' in the first line of your message. Applications without it go in the bin.",
+    "subreddit": "hiring"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["development"],
+    "skillIds": ["payments", "html-css"],
+    "budgetMin": 450,
+    "budgetMax": 450,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Build a one-page site with Stripe checkout and Mailchimp email capture for a PDF guide; $450.",
+    "applyInstructions": "Include the word 'pineapple' in the first line of your message."
+  },
+  "expect": [
+    "includes the word 'pineapple' in the first line of the message that carries the application",
+    "still mentions Stripe checkout or the landing page",
+    "the word appears naturally, not as a bare token with no sentence"
+  ]
+}
