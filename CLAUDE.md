@@ -84,26 +84,31 @@ Phase 0 (wks 1–2): Telegram bot, one niche, 10–15 subreddits → Phase 1 (wk
 
 North-star metric: gigs won per active user per month.
 
-## Where we are (2026-10-17)
+## Where we are (2026-10-19)
 
 Handover for the next chat. Update this section as things change.
 
 ### Branches
 
-- `main`: homepage + local backend foundation, merged through PR #1 on 2026-09-28.
+- `main`: on 2026-10-19 merge commit `2f37612` ("Merge onboarding, ingestion and matching") brought in `feat/onboarding`, `feat/ingestion` and `feat/matching`. Not pushed yet.
+- `main` also holds the earlier homepage and local backend foundation (PR #1, 2026-09-28).
 - `feat/homepage`: kept on purpose (the user asked not to delete it); its work is already in `main`.
-- `feat/onboarding` (at `5645aeb`, pushed): onboarding slices 1–3 (manual steps, worker + resume import, GitHub import). Not merged.
-- `feat/ingestion` (stacked on `feat/onboarding`, so it holds onboarding too): ingestion Phases 1–4, **committed** 2026-10-02 (`3f424f9`) and pushed. Not merged. Docs reorganised 2026-10-17 (conclusions per feature).
-- Tests: **601 pass** on 2026-10-17 (web 226, worker 216, core 82, db 51, llm 26); typecheck and lint clean. The worker tests deleted in commit `5645aeb` (broken by `a61bd1b` moving the fake LLM to `test/stub-llm.ts`) were restored on 2026-10-17, and `vertex:check` works again (not committed yet).
+- Commits merged into `main`: `4bb7838` restore worker tests and reorganise docs; `e2d0d47` projects and experience; `2ddf2c4` cross-post dedupe at ingestion; `c196807` matching + job feed backend.
+- Tests on `main` (2026-10-19): **1,124 pass** (web 299, worker 436, core 173, db 190, llm 26); typecheck, lint and `npm run build` clean.
 
-### In progress (2026-10-18)
+### In progress (2026-10-19)
 
 - **Projects & experience** (resume import extracts projects and roles, client names scrubbed, a new onboarding step `/onboarding/work`):
   - slices 1–7 are built, the review is done and all 11 fixes are in;
   - still to do: the user's manual check on real resumes (slice 8 in `docs/onboarding/projects-experience-plan.md`) and `conclusion.md`;
   - build notes are in `docs/onboarding/projects-experience-build-notes.md`.
 - **Matching + job feed backend:** built, reviewed and fixed (F1–F5), verified 2026-10-18: `docs/matching/conclusion.md`. The phase plan and build notes are still in `docs/matching/plan/` (delete them once the user has read the conclusion). Not run live end to end yet (real posts + Vertex re-scores + an onboarded profile). The AI re-scorer is **off** for the MVP (2026-10-19); when it's on, trial/Standard get 15 AI re-scores a day and Max ($20/month) gets 50.
-- Tests on 2026-10-19: **1,124 pass** (web 299, worker 436, core 173, db 190, llm 26); typecheck, lint and `npm run build` clean. **Nothing is committed** (docs reorganisation, restored worker tests, Projects & experience, matching). Ask the user about commits.
+
+### Next
+
+- The next feature is **drafts (comment + first DM)**. Design it together with the reply tracker, since they share the `replies` table. Backend first, UI later.
+- Before that, optionally a live end-to-end run of ingestion → matching.
+- When building the profile edit page, limit profile changes to 5 per user per week.
 
 ### What's built (read the conclusions)
 
@@ -140,8 +145,8 @@ Facts that are easy to get wrong:
 
 ### Open questions and next steps
 
-1. **Onboarding:** run the resume eval against Vertex (`npm run eval -w @redlance/worker -- --baseline`); click through the whole flow in a browser; then merge (user's call). The user still needs to look over the skill list. Vertex prices in `packages/llm/src/prices.ts` are from a third-party listing (gemini-3.8-flash introductory until 2026-12-31; flash-lite unverified) — confirm on the official pricing page.
-2. **Ingestion (`feat/ingestion`):** a 24 h soak run; plan checks 0.1 (AWS CloudShell reachability) and 0.4 (Reddit API application); 0.2 and 0.3 answered 2026-10-01 (120 subreddits per URL work, banned ones are skipped; flair search works); then **matching** (next feature) and alerts, then deployment.
+1. **Onboarding:** run the resume eval against Vertex (`npm run eval -w @redlance/worker -- --baseline`); click through the whole flow in a browser. The user still needs to look over the skill list. Vertex prices in `packages/llm/src/prices.ts` are from a third-party listing (gemini-3.8-flash introductory until 2026-12-31; flash-lite unverified) — confirm on the official pricing page.
+2. **Ingestion:** a 24 h soak run; plan checks 0.1 (AWS CloudShell reachability) and 0.4 (Reddit API application); 0.2 and 0.3 answered 2026-10-01 (120 subreddits per URL work, banned ones are skipped; flair search works). Then drafts (see Next), alerts, and deployment.
 3. **Subreddit list:** the catalogue comes from a study (`docs/ingestion/research/`); the user still has to review it, and the worker logs subreddits outside it that have hiring posts (weekly discovery).
 5. **Deployment spec:** EC2 + CloudFront + WAF with CDK. CloudFront must forward `Origin` and `CloudFront-Viewer-Address`. Run `/api/v1/health?deep=1` after every deploy. Check that Upstash supports `TIME` inside Lua. **Run migrations + `syncReferenceData()` before a new web build takes traffic** (a new skill in code but not yet in the `skills` table makes Finish fail on the `profile_skills` foreign key); `db:migrate` needs `tsx`, so ship a compiled migrate step. WAF: exempt `POST /api/v1/onboarding/imports/resume` from the 8 KB body rule. **Worker container:** needs `tsx` at runtime (the extraction thread starts with `--import tsx`; don't install with `--omit=dev`, or compile the worker), `stop_grace_period` ≥ 35 s, memory for up to 4 extraction threads (256 + 64 MB heap each) next to web and Postgres, non-root, read-only filesystem, network only to Postgres, Vertex AI, api.github.com and www.reddit.com. Google credentials on EC2: Workload Identity Federation from the AWS role (no key files). Set a Vertex request quota and a billing budget alert on the Google Cloud project.
 6. **Still undecided:**
