@@ -2,7 +2,7 @@
 
 Redlance is an AI tool that finds freelance jobs on Reddit, matches them to your skills, and drafts replies in your voice.
 
-Status: pre-MVP — homepage, local backend foundation, onboarding, ingestion (collect + understand posts) and the matching + feed backend built; the feed UI, alerts and drafts are next (see "Where we are" at the end and `docs/README.md`). The full spec is in `docs/PROJECT.md` (transcribed from `Redlance_Project_Description.pdf`); read the relevant section before designing a feature, schema, or page.
+Status: pre-MVP — homepage, local backend foundation, onboarding, ingestion (collect + understand posts), the matching + feed backend and the drafts + reply tracker backend built; the UI, alerts and a live run are next (see "Where we are" at the end and `docs/README.md`). The full spec is in `docs/PROJECT.md` (transcribed from `Redlance_Project_Description.pdf`); read the relevant section before designing a feature, schema, or page.
 
 ## Repo layout and commands
 
@@ -84,7 +84,7 @@ Phase 0 (wks 1–2): Telegram bot, one niche, 10–15 subreddits → Phase 1 (wk
 
 North-star metric: gigs won per active user per month.
 
-## Where we are (2026-10-19)
+## Where we are (2026-10-20)
 
 Handover for the next chat. Update this section as things change.
 
@@ -95,8 +95,11 @@ Handover for the next chat. Update this section as things change.
 - `feat/homepage`: kept on purpose (the user asked not to delete it); its work is already in `main`.
 - Commits merged into `main`: `4bb7838` restore worker tests and reorganise docs; `e2d0d47` projects and experience; `2ddf2c4` cross-post dedupe at ingestion; `c196807` matching + job feed backend.
 - Tests on `main` (2026-10-19): **1,124 pass** (web 299, worker 436, core 173, db 190, llm 26); typecheck, lint and `npm run build` clean.
+- `feat/drafts` (2026-10-20): drafts + reply tracker backend, committed in 6 commits on top of `main` (not pushed; the user pushes). **1,538 pass** (web 377, worker 562, core 282, db 291, llm 26); typecheck, lint and build clean.
 
-### In progress (2026-10-19)
+### In progress (2026-10-20)
+
+- **Drafts + reply tracker backend** (`feat/drafts`): built in 11 phases, reviewed (1 high, 5 medium, 9 low, all fixed except L6) — read `docs/drafts/conclusion.md`. Credits: 1 credit ≈ $0.0007; draft 7, different project 7, style rewrite 1; trial 210, Standard $10 = 2,100/month, Max $20 = 5,600/month; daily caps 105/210/560 credits and $0.20/$0.40/$1.00. Not run live yet: `report.json` is a stub, so do the first live eval (`npm run eval:drafts -w @redlance/worker`, ~$1, with Flash and then Flash-Lite) and commit its report. Eval cases are all hand-written (the dev db had no posts); swap in real ones after the ingestion soak run. Delete `docs/drafts/plan/` once the user has read the conclusion.
 
 - **Projects & experience** (resume import extracts projects and roles, client names scrubbed, a new onboarding step `/onboarding/work`):
   - slices 1–7 are built, the review is done and all 11 fixes are in;
@@ -106,8 +109,8 @@ Handover for the next chat. Update this section as things change.
 
 ### Next
 
-- The next feature is **drafts (comment + first DM)**. Design it together with the reply tracker, since they share the `replies` table. Backend first, UI later.
-- Before that, optionally a live end-to-end run of ingestion → matching.
+- Live end-to-end run: the 24 h ingestion soak (fills the dev db with real posts), then matching and the first live draft eval.
+- The feed + drafts UI (polling `GET /api/v1/drafts/:id`: 1.5 s, then every 1 s, give up at 30 s). Reminders and follow-ups wait for the email system; the monthly credit grant waits for payments (unify `profiles.plan` and `credit_balances.plan` then).
 - When building the profile edit page, limit profile changes to 5 per user per week.
 
 ### What's built (read the conclusions)
@@ -118,6 +121,7 @@ Each built feature has `docs/<feature>/conclusion.md`: what was built, how it wo
 - `docs/homepage/conclusion.md`: the 11 sections, techniques, and a table of **out-of-date copy** (Free/Pro plans, `/signup`, "connected to subreddits", portfolio wording).
 - `docs/onboarding/conclusion.md`: steps, saving with versions, the import queue, worker resume pipeline, GitHub import, Finish (profile + trial; **no `user_subreddits`**), `@redlance/llm`, and the deviations from `design.md`.
 - `docs/ingestion/conclusion.md`: catalogue, tables, poller/governor/planner, RSS adapter, analyser, upkeep, settings, scripts, results, gaps.
+- `docs/drafts/conclusion.md`: drafts (comment + first DM), rewrites, credits and limits, the reply tracker, voice learning, the example library and the draft eval.
 - `docs/matching/conclusion.md`: strict dedupe of cross-posts, the rule score, broad matches, the matcher, the AI re-scorer with per-plan daily caps, the feed API (`/api/v1/feed`), `match:status`.
 
 Facts that are easy to get wrong:
