@@ -95,11 +95,11 @@ Handover for the next chat. Update this section as things change.
 - `feat/homepage`: kept on purpose (the user asked not to delete it); its work is already in `main`.
 - Commits merged into `main`: `4bb7838` restore worker tests and reorganise docs; `e2d0d47` projects and experience; `2ddf2c4` cross-post dedupe at ingestion; `c196807` matching + job feed backend.
 - Tests on `main` (2026-10-19): **1,124 pass** (web 299, worker 436, core 173, db 190, llm 26); typecheck, lint and `npm run build` clean.
-- `feat/drafts` (2026-10-20): drafts + reply tracker backend, committed in 6 commits on top of `main` (not pushed; the user pushes). **1,538 pass** (web 377, worker 562, core 282, db 291, llm 26); typecheck, lint and build clean.
+- `main`: on 2026-10-20 merge commit `62e3835` ("Merge drafts and reply tracker backend") brought in `feat/drafts` (6 commits). Not pushed yet; the user pushes. Tests: **1,538 pass** (web 377, worker 562, core 282, db 291, llm 26); typecheck, lint and build clean.
 
 ### In progress (2026-10-20)
 
-- **Drafts + reply tracker backend** (`feat/drafts`): built in 11 phases, reviewed (1 high, 5 medium, 9 low, all fixed except L6) — read `docs/drafts/conclusion.md`. Credits: 1 credit ≈ $0.0007; draft 7, different project 7, style rewrite 1; trial 210, Standard $10 = 2,100/month, Max $20 = 5,600/month; daily caps 105/210/560 credits and $0.20/$0.40/$1.00. Not run live yet: `report.json` is a stub, so do the first live eval (`npm run eval:drafts -w @redlance/worker`, ~$1, with Flash and then Flash-Lite) and commit its report. Eval cases are all hand-written (the dev db had no posts); swap in real ones after the ingestion soak run. Delete `docs/drafts/plan/` once the user has read the conclusion.
+- **Drafts + reply tracker backend** (merged into `main`): built in 11 phases, reviewed (1 high, 5 medium, 9 low, all fixed except L6) — read `docs/drafts/conclusion.md`. Credits: 1 credit ≈ $0.0007; draft 7, different project 7, style rewrite 1; trial 210, Standard $10 = 2,100/month, Max $20 = 5,600/month; daily caps 105/210/560 credits and $0.20/$0.40/$1.00. Not run live yet: `report.json` is a stub, so do the first live eval (`npm run eval:drafts -w @redlance/worker`, ~$1, with Flash and then Flash-Lite) and commit its report. Eval cases are all hand-written (the dev db had no posts); swap in real ones after the ingestion soak run. Delete `docs/drafts/plan/` once the user has read the conclusion.
 
 - **Projects & experience** (resume import extracts projects and roles, client names scrubbed, a new onboarding step `/onboarding/work`):
   - slices 1–7 are built, the review is done and all 11 fixes are in;
