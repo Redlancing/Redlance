@@ -1,4 +1,15 @@
-{ "categories": ["writing"], "experienceLevel": "intermediate",
-  "mustSkills": ["copywriting", "content-writing", "seo-writing", "translation", "editing-proofreading", "product-descriptions", "newsletter-writing"],
+{
+  "categories": ["writing"],
+  "experienceLevel": "intermediate",
+  "mustSkills": [
+    "copywriting",
+    "content-writing",
+    "seo-writing",
+    "translation",
+    "editing-proofreading",
+    "product-descriptions",
+    "newsletter-writing"
+  ],
   "maySkills": ["ghostwriting", "subtitles"],
-  "mustNotSkills": ["react", "video-editing", "python"] }
+  "mustNotSkills": ["react", "video-editing", "python"]
+}

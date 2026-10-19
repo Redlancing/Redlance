@@ -1,4 +1,14 @@
-{ "categories": ["photo"], "experienceLevel": "experienced",
-  "mustSkills": ["photoshop", "lightroom", "photo-retouching", "photo-restoration", "background-removal", "real-estate-photo-editing"],
+{
+  "categories": ["photo"],
+  "experienceLevel": "experienced",
+  "mustSkills": [
+    "photoshop",
+    "lightroom",
+    "photo-retouching",
+    "photo-restoration",
+    "background-removal",
+    "real-estate-photo-editing"
+  ],
   "maySkills": ["product-photo-editing", "photo-manipulation"],
-  "mustNotSkills": ["video-editing", "python", "logo-design"] }
+  "mustNotSkills": ["video-editing", "python", "logo-design"]
+}

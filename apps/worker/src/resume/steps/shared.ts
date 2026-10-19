@@ -1,6 +1,7 @@
 import type { ResumeStepName } from "@redlance/core";
 import type { Thinking } from "@redlance/llm";
 import type { z } from "zod";
+import type { Block } from "../entries";
 import type { ResumeSections } from "../sections";
 
 export type PipelineInput = {
@@ -8,6 +9,12 @@ export type PipelineInput = {
   sections: ResumeSections;
   shortlist: string[];
   yearsExperience: number | null;
+  /** Whether any section heading was found (if not, every section is the whole text). */
+  headed: boolean;
+  /** The Projects section split into P1..Pn; empty when `headed` is false. */
+  projectBlocks: Block[];
+  /** The Experience section (or, with no headings, the whole text) split into E1..En. */
+  experienceBlocks: Block[];
 };
 
 export type StepSpec<T> = {
@@ -16,10 +23,17 @@ export type StepSpec<T> = {
   model: "fast" | "smart";
   maxOutputTokens: number;
   thinking: Thinking;
-  schema: z.ZodType<T>;
+  /** Per-call timeout; the pipeline's STEP_TIMEOUT_MS (10 s) when unset. */
+  timeoutMs?: number;
+  /** Why the step doesn't run for this resume (no request is sent), or null to run it. */
+  skip?(input: PipelineInput): string | null;
   system: string;
   buildPrompt(input: PipelineInput): string;
-};
+} & (
+  | { schema: z.ZodType<T>; schemaFor?: never }
+  /** A schema built for this call (enums of the block ids and the shortlist). */
+  | { schemaFor(input: PipelineInput): z.ZodType<T>; schema?: never }
+);
 
 export const SYSTEM =
   "You read resumes for Redlance, a tool that matches freelancers to jobs. " +
@@ -53,3 +67,11 @@ export function resumePrompt(routed: string, instructions: string): string {
   const safe = routed.replace(/<\s*\/?\s*resume\s*>/gi, "");
   return `<resume>\n${safe}\n</resume>\n\n${instructions}`;
 }
+
+/** Entry blocks for the prompt, each under its id ("[P1]\n<text>"), blank line between. */
+export function blocksText(blocks: { id: string; text: string }[]): string {
+  return blocks.map((b) => `[${b.id}]\n${b.text}`).join("\n\n");
+}
+
+/** The heading the projects and experience prompts put above the shortlist (the stub reads it). */
+export const WORK_SHORTLIST_HEADING = "Skills found in the text (id — name):";

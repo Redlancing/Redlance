@@ -2,15 +2,19 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { VALID } from "../../../test/onboarding-fixtures";
 import { closeAll, resetState } from "../../../test/helpers";
 import { signInDevUser } from "../session";
+import { STEP_IDS } from "@redlance/core";
 import {
   alertChannels,
   customSkills,
+  profileExperience,
+  profileProjects,
   profileSkills,
   profiles,
   userSubreddits,
 } from "@redlance/db";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { getDb } from "../db";
+import { resetForReimport } from "./imports";
 import { finishOnboarding, getOnboardingState, saveStep } from "./service";
 
 beforeEach(resetState);
@@ -142,9 +146,51 @@ describe("saveStep", () => {
 });
 
 async function completeAll(id: string) {
-  for (const step of ["import", "basics", "skills", "rates"] as const)
-    await complete(id, step);
+  for (const step of STEP_IDS) await complete(id, step);
 }
+
+describe("saveStep: work", () => {
+  async function throughSkills() {
+    const id = await user();
+    for (const step of ["import", "basics", "skills"] as const)
+      await complete(id, step);
+    return id;
+  }
+
+  it("saves work as draft and complete", async () => {
+    const id = await throughSkills();
+    expect(
+      await saveStep(id, "work", {
+        mode: "draft",
+        data: { projects: [{ title: "" }] },
+        expectedVersion: 0,
+      }),
+    ).toEqual({ status: "draft", version: 1, next: "work" });
+    expect(await complete(id, "work", 1)).toEqual({
+      status: "completed",
+      version: 2,
+      next: "rates",
+    });
+    expect((await getOnboardingState(id)).resumeAt).toBe("rates");
+  });
+
+  it("refuses work before skills is completed", async () => {
+    const id = await user();
+    await complete(id, "import");
+    await complete(id, "basics");
+    await expect(complete(id, "work")).rejects.toMatchObject({
+      code: "STEP_ORDER",
+    });
+  });
+
+  it("refuses rates before work is completed", async () => {
+    const id = await throughSkills();
+    await expect(complete(id, "rates")).rejects.toMatchObject({
+      code: "STEP_ORDER",
+      details: { resumeAt: "work" },
+    });
+  });
+});
 
 describe("finishOnboarding", () => {
   it("refuses while a step is missing or a draft", async () => {
@@ -213,6 +259,109 @@ describe("finishOnboarding", () => {
     );
   });
 
+  it("writes projects and experience in order, with source and hidden", async () => {
+    const id = await user();
+    await completeAll(id);
+    await finishOnboarding(id);
+    const db = getDb();
+    const projects = await db
+      .select()
+      .from(profileProjects)
+      .where(eq(profileProjects.userId, id))
+      .orderBy(asc(profileProjects.position));
+    expect(projects).toEqual([
+      expect.objectContaining({
+        position: 0,
+        title: "Wedding film",
+        summary: "Edited a 10-minute wedding film.",
+        role: "solo",
+        kind: "client",
+        skillIds: ["video-editing"],
+        categories: [],
+        domains: [],
+        outcomes: ["Delivered in 3 days"],
+        links: ["https://vimeo.com/123"],
+        year: 2024,
+        source: "resume",
+        hidden: false,
+      }),
+      expect.objectContaining({
+        position: 1,
+        title: "Channel trailer",
+        role: "unknown",
+        kind: "personal",
+        year: null,
+        source: "manual",
+        hidden: true,
+      }),
+    ]);
+    const roles = await db
+      .select()
+      .from(profileExperience)
+      .where(eq(profileExperience.userId, id));
+    expect(roles).toEqual([
+      expect.objectContaining({
+        position: 0,
+        title: "Video editor",
+        organisation: "Acme Media",
+        organisationDescription: "a YouTube production studio",
+        employmentType: "full_time",
+        startYear: 2021,
+        startMonth: 3,
+        endYear: null,
+        endMonth: null,
+        isCurrent: true,
+        summary: "",
+        highlights: ["Cut 40 videos a month"],
+        source: "resume",
+        hidden: false,
+      }),
+    ]);
+    const [profile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, id));
+    expect(profile!.mentionEmployers).toBe(true);
+  });
+
+  it("with empty work lists writes no rows and succeeds", async () => {
+    const id = await user();
+    for (const step of STEP_IDS)
+      await saveStep(id, step, {
+        mode: "complete",
+        data: step === "work" ? {} : VALID[step],
+        expectedVersion: 0,
+      });
+    expect(await finishOnboarding(id)).toEqual({ redirect: "/dashboard" });
+    const db = getDb();
+    expect(
+      await db.$count(profileProjects, eq(profileProjects.userId, id)),
+    ).toBe(0);
+    expect(
+      await db.$count(profileExperience, eq(profileExperience.userId, id)),
+    ).toBe(0);
+    const [profile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, id));
+    expect(profile!.mentionEmployers).toBe(false);
+  });
+
+  it("sends the user back when work is a draft", async () => {
+    const id = await user();
+    for (const step of ["import", "basics", "skills"] as const)
+      await complete(id, step);
+    await saveStep(id, "work", {
+      mode: "draft",
+      data: {},
+      expectedVersion: 0,
+    });
+    await expect(finishOnboarding(id)).rejects.toMatchObject({
+      code: "STEP_ORDER",
+      details: { resumeAt: "work" },
+    });
+  });
+
   it("is idempotent under concurrency and never restarts the trial", async () => {
     const id = await user();
     await completeAll(id);
@@ -267,4 +416,33 @@ describe("finishOnboarding", () => {
       else expect(profile!.minRateMinor).toBe(9900);
     },
   );
+});
+
+describe("resetForReimport", () => {
+  async function filled() {
+    const id = await user();
+    for (const step of ["import", "basics", "skills", "work"] as const)
+      await complete(id, step);
+    return id;
+  }
+  const saved = async (id: string) =>
+    (await getOnboardingState(id)).steps.map((r) => r.step);
+
+  it("keeps Projects & experience when only GitHub was imported", async () => {
+    const id = await filled();
+    await resetForReimport(id, ["github"]);
+    expect(await saved(id)).toEqual(["import", "work"]);
+  });
+
+  it("clears Projects & experience when a resume was imported", async () => {
+    const id = await filled();
+    await resetForReimport(id, ["resume", "github"]);
+    expect(await saved(id)).toEqual(["import"]);
+  });
+
+  it("keeps Projects & experience when no kind is given", async () => {
+    const id = await filled();
+    await resetForReimport(id, []);
+    expect(await saved(id)).toEqual(["import", "work"]);
+  });
 });

@@ -1,6 +1,7 @@
 import {
   SKILLS,
   checkGithubInput,
+  checkLink,
   normalizeSkillName,
   type Skill,
 } from "@redlance/core";
@@ -83,4 +84,44 @@ export function skillShortlist(
     .sort((a, b) => a.pos - b.pos)
     .slice(0, MAX_SHORTLIST)
     .map((f) => f.id);
+}
+
+// ---------- links ----------
+
+/** Common TLDs, so a bare lowercase "domain.tld/path" counts as a link (merge.ts strips the same ones). */
+export const TLDS =
+  "com|net|org|io|dev|app|ai|co|me|xyz|in|uk|gg|tv|ly|so|sh|to|be|de|site|page|link|bio";
+
+export const MAX_PROJECT_LINKS = 3;
+
+// Link characters stop at whitespace and the separators resumes put between links.
+const LINK_CHARS = "[^\\s<>\"'`|·•]";
+/**
+ * - a scheme or www link, in any case;
+ * - a lowercase "domain.tld/path" (so "Node.js/React" and "ASP.NET/C#" don't match);
+ * - a lowercase host with a subdomain and no path ("shop.vercel.app", "jane.github.io").
+ *   A bare two-part host ("socket.io") is left out: too many tech names look like one.
+ */
+const LINK_RE = new RegExp(
+  [
+    `(?:[hH][tT][tT][pP][sS]?:\\/\\/|[wW][wW][wW]\\.)${LINK_CHARS}+`,
+    `(?<![\\w.@/-])(?:[a-z0-9-]+\\.)+(?:${TLDS})\\/${LINK_CHARS}*`,
+    `(?<![\\w.@/-])(?:[a-z0-9-]+\\.){2,}(?:${TLDS})(?![\\w-]|\\.\\w)`,
+  ].join("|"),
+  "g",
+);
+const EMAIL_RE = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
+
+/**
+ * Up to 3 links found in a project block, each normalised by core's checkLink
+ * (http/https only, no credentials, ports or IP addresses). They are never fetched.
+ */
+export function projectLinks(text: string): string[] {
+  const found: string[] = [];
+  for (const m of text.replace(EMAIL_RE, " ").matchAll(LINK_RE)) {
+    const check = checkLink(m[0]);
+    if (check.ok && !found.includes(check.url)) found.push(check.url);
+    if (found.length === MAX_PROJECT_LINKS) break;
+  }
+  return found;
 }

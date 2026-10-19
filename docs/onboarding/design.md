@@ -1,6 +1,8 @@
 # Onboarding, resume and GitHub import — design
 
-Date: 2026-09-29 · Status: draft for review (revised 2026-09-29 after checking it against the code; see "Revisions" at the end)
+Date: 2026-09-29 · Status: **built** (slices 1–3, on `feat/onboarding`). Revised 2026-09-29 after checking it against the code; see "Revisions" at the end.
+
+> This is the original spec, kept for its reasons and its security and privacy rules. **For how it works now, read `conclusion.md`.** It is checked against the code and lists where the code differs from this file. The biggest change: Finish no longer connects users to subreddits.
 
 ## Goal
 

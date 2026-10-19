@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  PAGE_IDS,
+  PAGE_TITLES,
+  STEP_IDS,
   STEP_SCHEMAS,
   canOpen,
   emptyDraft,
@@ -32,7 +35,7 @@ describe("resumeAt / page helpers", () => {
     ).toBe("basics");
     expect(
       resumeAt(
-        ["import", "basics", "skills", "rates"].map((step) => ({
+        ["import", "basics", "skills", "work", "rates"].map((step) => ({
           step,
           status: "completed" as const,
         })),
@@ -45,6 +48,44 @@ describe("resumeAt / page helpers", () => {
     expect(canOpen("skills", "skills")).toBe(true);
     expect(canOpen("rates", "skills")).toBe(false);
     expect(nextPage("rates")).toBe("review");
+  });
+
+  it("STEP_IDS are import, basics, skills, work, rates", () => {
+    expect(STEP_IDS).toEqual(["import", "basics", "skills", "work", "rates"]);
+    expect(PAGE_TITLES.work).toBe("Projects & experience");
+  });
+
+  it("PAGE_IDS end with review and have 6 entries", () => {
+    expect(PAGE_IDS).toHaveLength(6);
+    expect(PAGE_IDS.at(-1)).toBe("review");
+  });
+
+  it("puts work between skills and rates", () => {
+    expect(nextPage("skills")).toBe("work");
+    expect(nextPage("work")).toBe("rates");
+  });
+
+  it("resumeAt returns work when skills is the last completed step", () => {
+    expect(
+      resumeAt(
+        ["import", "basics", "skills"].map((step) => ({
+          step,
+          status: "completed" as const,
+        })),
+      ),
+    ).toBe("work");
+  });
+
+  it("registers the work step's schemas", () => {
+    expect(emptyDraft("work")).toEqual({
+      projects: [],
+      experience: [],
+      mentionEmployers: false,
+    });
+    expect(
+      STEP_SCHEMAS.work.complete.safeParse({ projects: [{ title: "" }] })
+        .success,
+    ).toBe(false);
   });
 });
 

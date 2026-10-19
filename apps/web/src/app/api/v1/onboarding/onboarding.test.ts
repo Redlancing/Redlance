@@ -1,3 +1,4 @@
+import { STEP_IDS } from "@redlance/core";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
   closeAll,
@@ -131,6 +132,66 @@ describe("onboarding routes", () => {
     expect(res.status).toBe(403);
   });
 
+  describe("PUT /steps/work", () => {
+    async function upToSkills() {
+      const cookie = await cookieFor();
+      for (const step of ["import", "basics", "skills"] as const)
+        await put(cookie, step, {
+          mode: "complete",
+          data: VALID[step],
+          expectedVersion: 0,
+        });
+      return cookie;
+    }
+    const project = (over: object = {}) => ({
+      ...VALID.work.projects[0],
+      ...over,
+    });
+
+    it("saves and returns next = rates", async () => {
+      const cookie = await upToSkills();
+      const res = await put(cookie, "work", {
+        mode: "complete",
+        data: VALID.work,
+        expectedVersion: 0,
+      });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({
+        status: "completed",
+        next: "rates",
+      });
+    });
+
+    it("refuses a javascript: link with a field error", async () => {
+      const cookie = await upToSkills();
+      const res = await put(cookie, "work", {
+        mode: "complete",
+        data: {
+          ...VALID.work,
+          projects: [project({ links: ["javascript:alert(1)"] })],
+        },
+        expectedVersion: 0,
+      });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error.details[0].path).toBe(
+        "data.projects.0.links.0",
+      );
+    });
+
+    it("refuses 9 projects", async () => {
+      const cookie = await upToSkills();
+      const res = await put(cookie, "work", {
+        mode: "draft",
+        data: {
+          ...VALID.work,
+          projects: Array.from({ length: 9 }, () => project()),
+        },
+        expectedVersion: 0,
+      });
+      expect(res.status).toBe(400);
+    });
+  });
+
   it("POST finish works once every step is completed", async () => {
     const cookie = await cookieFor();
     const post = () =>
@@ -141,7 +202,7 @@ describe("onboarding routes", () => {
         }),
       );
     expect((await post()).status).toBe(409);
-    for (const step of ["import", "basics", "skills", "rates"] as const)
+    for (const step of STEP_IDS)
       await put(cookie, step, {
         mode: "complete",
         data: VALID[step],

@@ -82,6 +82,8 @@ const PARTIAL_HINT: Record<ResumeStepName, string> = {
   basics: "your basics in Basics",
   jobTypes: "your job types in Basics",
   skills: "your skills in Skills",
+  projects: "your projects in Projects & experience",
+  experience: "your experience in Projects & experience",
 };
 
 const plural = (n: number, one: string, many: string) =>
@@ -195,3 +197,22 @@ export function adoptImports(
 }
 
 export { isActive as isActiveImport };
+
+/** The confirm dialog before an import replaces saved steps (only a resume fills Projects & experience). */
+export function reimportDialog(sources: { resume: boolean; github: boolean }): {
+  title: string;
+  body: string;
+} {
+  const steps = sources.resume
+    ? "Basics, Skills, and Projects & experience"
+    : "Basics and Skills";
+  const from = sources.resume
+    ? sources.github
+      ? "the new resume and GitHub"
+      : "the new resume"
+    : "GitHub";
+  return {
+    title: `Replace ${steps}?`,
+    body: `Once the import starts, what's in ${steps} will be replaced with suggestions from ${from}.`,
+  };
+}

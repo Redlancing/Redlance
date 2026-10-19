@@ -1,4 +1,16 @@
-{ "categories": ["data"], "experienceLevel": "experienced",
-  "mustSkills": ["python", "sql", "dashboards", "machine-learning", "excel", "statistics", "web-scraping", "data-analysis"],
+{
+  "categories": ["data"],
+  "experienceLevel": "experienced",
+  "mustSkills": [
+    "python",
+    "sql",
+    "dashboards",
+    "machine-learning",
+    "excel",
+    "statistics",
+    "web-scraping",
+    "data-analysis"
+  ],
   "maySkills": ["automation", "data-engineering"],
-  "mustNotSkills": ["react", "photoshop", "unity"] }
+  "mustNotSkills": ["react", "photoshop", "unity"]
+}

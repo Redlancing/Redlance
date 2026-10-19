@@ -1,4 +1,15 @@
-{ "categories": ["3d"], "experienceLevel": "experienced",
-  "mustSkills": ["blender", "3d-modeling", "texturing", "product-rendering", "archviz", "cad", "zbrush"],
+{
+  "categories": ["3d"],
+  "experienceLevel": "experienced",
+  "mustSkills": [
+    "blender",
+    "3d-modeling",
+    "texturing",
+    "product-rendering",
+    "archviz",
+    "cad",
+    "zbrush"
+  ],
   "maySkills": ["rigging", "3d-animation", "3d-printing"],
-  "mustNotSkills": ["unity", "video-editing", "javascript"] }
+  "mustNotSkills": ["unity", "video-editing", "javascript"]
+}

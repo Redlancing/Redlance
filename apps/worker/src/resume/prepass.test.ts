@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { githubFromText, MAX_SHORTLIST, skillShortlist } from "./prepass";
+import {
+  githubFromText,
+  MAX_PROJECT_LINKS,
+  MAX_SHORTLIST,
+  projectLinks,
+  skillShortlist,
+} from "./prepass";
 import { splitSections } from "./sections";
 
 describe("skillShortlist", () => {
@@ -27,7 +33,75 @@ describe("skillShortlist", () => {
     const text = "Python then React";
     const ids = skillShortlist(text, splitSections(text));
     expect(ids.indexOf("python")).toBeLessThan(ids.indexOf("react"));
-    const all = "Skills\n" + ["python", "react", "javascript", "typescript", "java", "go", "rust", "php", "ruby", "swift", "kotlin", "sql", "html", "css", "docker", "aws", "figma", "photoshop", "premiere pro", "after effects", "wordpress", "shopify", "seo", "node.js", "vue", "angular", "django", "flask", "laravel", "mongodb", "postgresql", "mysql", "redis", "graphql", "kubernetes", "linux", "git", "excel", "copywriting", "illustrator", "blender", "unity", "unreal engine", "flutter", "react native", "tensorflow", "pytorch", "pandas", "tableau", "power bi", "webflow", "canva", "davinci resolve", "final cut pro", "next.js", "tailwind", "sass", "jquery", "bootstrap", "c++", "scala", "elixir", "dart", "firebase", "supabase"].join(", ");
+    const all =
+      "Skills\n" +
+      [
+        "python",
+        "react",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "rust",
+        "php",
+        "ruby",
+        "swift",
+        "kotlin",
+        "sql",
+        "html",
+        "css",
+        "docker",
+        "aws",
+        "figma",
+        "photoshop",
+        "premiere pro",
+        "after effects",
+        "wordpress",
+        "shopify",
+        "seo",
+        "node.js",
+        "vue",
+        "angular",
+        "django",
+        "flask",
+        "laravel",
+        "mongodb",
+        "postgresql",
+        "mysql",
+        "redis",
+        "graphql",
+        "kubernetes",
+        "linux",
+        "git",
+        "excel",
+        "copywriting",
+        "illustrator",
+        "blender",
+        "unity",
+        "unreal engine",
+        "flutter",
+        "react native",
+        "tensorflow",
+        "pytorch",
+        "pandas",
+        "tableau",
+        "power bi",
+        "webflow",
+        "canva",
+        "davinci resolve",
+        "final cut pro",
+        "next.js",
+        "tailwind",
+        "sass",
+        "jquery",
+        "bootstrap",
+        "c++",
+        "scala",
+        "elixir",
+        "dart",
+        "firebase",
+        "supabase",
+      ].join(", ");
     const r = skillShortlist(all, splitSections(all));
     expect(r.length).toBeLessThanOrEqual(MAX_SHORTLIST);
     expect(new Set(r).size).toBe(r.length);
@@ -73,5 +147,71 @@ describe("githubFromText", () => {
     expect(githubFromText("code: github.com/octocat.")).toBe("octocat");
     expect(githubFromText("evilgithub.com/foo")).toBeNull();
     expect(githubFromText("x.github.com/foo")).toBeNull();
+  });
+});
+
+describe("projectLinks", () => {
+  it("finds scheme, www and lowercase domain/path links", () => {
+    expect(
+      projectLinks(
+        "Live: https://shop.example.com/demo · code github.com/jane/shop\n• Docs at www.janeshop.io",
+      ),
+    ).toEqual([
+      "https://shop.example.com/demo",
+      "https://github.com/jane/shop",
+      "https://www.janeshop.io/",
+    ]);
+  });
+
+  it("finds lowercase hosts with a subdomain, like Vercel and GitHub Pages sites", () => {
+    expect(
+      projectLinks("Deployed to shopfront.vercel.app and jane.github.io."),
+    ).toEqual(["https://shopfront.vercel.app/", "https://jane.github.io/"]);
+  });
+
+  it("ignores Node.js/React, ASP.NET/C# and email addresses", () => {
+    expect(
+      projectLinks(
+        "Built with Node.js/React and ASP.NET/C#, Socket.io, socket.io and next.js. Mail jane@site.io or mailto:jane@shop.dev",
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps a medium.com/@user link", () => {
+    expect(
+      projectLinks("Write-up: medium.com/@jane/how-i-built-shopfront"),
+    ).toEqual(["https://medium.com/@jane/how-i-built-shopfront"]);
+  });
+
+  it(`keeps at most ${MAX_PROJECT_LINKS} per block and only those passing checkLink`, () => {
+    expect(
+      projectLinks(
+        "http://127.0.0.1/admin https://x.io:8080/a http://[::1]/b https://u:p@x.io/a javascript:alert(1) a.dev/1 b.dev/2 c.dev/3 d.dev/4",
+      ),
+    ).toEqual(["https://a.dev/1", "https://b.dev/2", "https://c.dev/3"]);
+  });
+
+  it("trims trailing punctuation and brackets, and drops duplicates", () => {
+    expect(
+      projectLinks(
+        "(see github.com/jane/shop), or https://github.com/jane/shop.",
+      ),
+    ).toEqual(["https://github.com/jane/shop"]);
+  });
+
+  it("stops at separators and matches the scheme in any case", () => {
+    expect(projectLinks("github.com/jane/a|github.com/jane/b·2023")).toEqual([
+      "https://github.com/jane/a",
+      "https://github.com/jane/b",
+    ]);
+    expect(projectLinks("HTTPS://Shop.io/A")).toEqual(["https://shop.io/A"]);
+  });
+
+  it("returns an empty list for text without links", () => {
+    expect(
+      projectLinks(
+        "TaskFlow (2022)\n• React Native todo app with offline sync.",
+      ),
+    ).toEqual([]);
   });
 });

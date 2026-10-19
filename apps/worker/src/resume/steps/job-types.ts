@@ -1,8 +1,16 @@
 import { CATEGORIES } from "@redlance/core";
 import { jobTypesOutput, type JobTypesOutput } from "../step-types";
-import { resumePrompt, routeText, SYSTEM, taskMarker, type StepSpec } from "./shared";
+import {
+  resumePrompt,
+  routeText,
+  SYSTEM,
+  taskMarker,
+  type StepSpec,
+} from "./shared";
 
-const CATEGORY_LINES = CATEGORIES.map((c) => `${c.id} — ${c.name}: ${c.hint}`).join("\n");
+const CATEGORY_LINES = CATEGORIES.map(
+  (c) => `${c.id} — ${c.name}: ${c.hint}`,
+).join("\n");
 
 export const jobTypesStep: StepSpec<JobTypesOutput> = {
   name: "jobTypes",

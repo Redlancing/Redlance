@@ -51,8 +51,11 @@ export function score(expected: Expected, suggestions: Suggested): Score {
     skillPrecision: suggested.size ? good / suggested.size : 1,
     skillRecall: must.size ? found / must.size : 1,
     categoryAccuracy: union.size ? both / union.size : 1,
-    levelCorrect: suggestions.basics.experienceLevel === expected.experienceLevel,
-    mustNotViolations: expected.mustNotSkills.filter((s) => everything.has(norm(s))),
+    levelCorrect:
+      suggestions.basics.experienceLevel === expected.experienceLevel,
+    mustNotViolations: expected.mustNotSkills.filter((s) =>
+      everything.has(norm(s)),
+    ),
   };
 }
 
@@ -73,7 +76,10 @@ export function aggregate(scores: Score[]): Totals {
     skillRecall: avg((s) => s.skillRecall),
     categoryAccuracy: avg((s) => s.categoryAccuracy),
     levelAccuracy: avg((s) => (s.levelCorrect ? 1 : 0)),
-    mustNotViolations: scores.reduce((a, s) => a + s.mustNotViolations.length, 0),
+    mustNotViolations: scores.reduce(
+      (a, s) => a + s.mustNotViolations.length,
+      0,
+    ),
   };
 }
 

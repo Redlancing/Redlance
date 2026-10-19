@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   customType,
+  type AnyPgColumn,
   date,
   index,
   integer,
@@ -12,6 +13,7 @@ import {
   pgTable,
   primaryKey,
   real,
+  smallint,
   text,
   timestamp,
   unique,
@@ -48,6 +50,7 @@ export const ONBOARDING_STEP_IDS = [
   "import",
   "basics",
   "skills",
+  "work",
   "rates",
 ] as const;
 export const STEP_STATUSES = ["draft", "completed"] as const;
@@ -70,7 +73,26 @@ export const SUBREDDIT_STATUSES = [
   "gone",
 ] as const;
 export const ALERT_KINDS = ["email", "telegram"] as const;
-
+// Projects & experience (core work.ts).
+export const PROJECT_ROLES = ["solo", "lead", "team", "unknown"] as const;
+export const PROJECT_KINDS = [
+  "client",
+  "employer",
+  "personal",
+  "open_source",
+  "academic",
+  "hackathon",
+  "unknown",
+] as const;
+export const ROLE_EMPLOYMENT_TYPES = [
+  "full_time",
+  "part_time",
+  "freelance",
+  "contract",
+  "internship",
+  "unknown",
+] as const;
+export const ENTRY_SOURCES = ["resume", "manual"] as const;
 const sqlList = (values: readonly string[]) =>
   sql.raw(values.map((v) => `'${v}'`).join(", "));
 const createdAt = () =>
@@ -180,6 +202,8 @@ export const profiles = pgTable(
     currency: text("currency", { enum: PROFILE_CURRENCIES }).notNull(),
     rateType: text("rate_type", { enum: PROFILE_RATE_TYPES }).notNull(),
     remoteOnly: boolean("remote_only").notNull(),
+    // Drafts name employers only when this is on; otherwise they use organisation_description.
+    mentionEmployers: boolean("mention_employers").notNull().default(false),
     onboardedAt: timestamp("onboarded_at", { withTimezone: true }).notNull(),
     trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }).notNull(),
     createdAt: createdAt(),
@@ -234,6 +258,140 @@ export const profileSkills = pgTable(
     ),
   ],
 );
+
+// Projects and roles from the "Projects & experience" step, written once by Finish like
+// profile_skills. Tags are arrays, not join tables: matching reads one user's few entries at a
+// time. skill_ids has no foreign key; the app validates the ids (retired ones stay valid).
+const updatedAt = () =>
+  timestamp("updated_at", { withTimezone: true }).notNull().defaultNow();
+const textArray = (name: string) =>
+  text(name).array().notNull().default(emptyTextArray);
+const entryColumns = () => ({
+  id: v7Id(),
+  userId: userId(),
+  /** Order shown and used: the index in the step's list. */
+  position: smallint("position").notNull(),
+  title: text("title").notNull(),
+  summary: text("summary").notNull(),
+  skillIds: textArray("skill_ids"),
+  categories: textArray("categories"),
+  domains: textArray("domains"),
+  source: text("source", { enum: ENTRY_SOURCES }).notNull(),
+  /** Kept, but never used in drafts. */
+  hidden: boolean("hidden").notNull().default(false),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+type EntryColumns = Record<keyof ReturnType<typeof entryColumns>, AnyPgColumn>;
+/** The index and CHECKs both tables share; `maxPosition` is the list's limit. */
+const entryChecks = (prefix: string, t: EntryColumns, maxPosition: number) => [
+  index(`${prefix}_user_position_idx`).on(t.userId, t.position),
+  check(
+    `${prefix}_position_check`,
+    sql`${t.position} >= 0 and ${t.position} < ${sql.raw(String(maxPosition))}`,
+  ),
+  check(`${prefix}_title_check`, sql`char_length(${t.title}) between 1 and 80`),
+  check(`${prefix}_summary_check`, sql`char_length(${t.summary}) <= 160`),
+  check(`${prefix}_skill_ids_check`, sql`cardinality(${t.skillIds}) <= 10`),
+  check(`${prefix}_categories_check`, sql`cardinality(${t.categories}) <= 2`),
+  check(`${prefix}_domains_check`, sql`cardinality(${t.domains}) <= 4`),
+  check(
+    `${prefix}_source_check`,
+    sql`${t.source} in (${sqlList(ENTRY_SOURCES)})`,
+  ),
+];
+
+export const profileProjects = pgTable(
+  "profile_projects",
+  {
+    ...entryColumns(),
+    role: text("role", { enum: PROJECT_ROLES }).notNull(),
+    kind: text("kind", { enum: PROJECT_KINDS }).notNull(),
+    outcomes: textArray("outcomes"),
+    links: textArray("links"),
+    year: smallint("year"),
+  },
+  (t) => [
+    ...entryChecks("profile_projects", t, 8),
+    check(
+      "profile_projects_role_check",
+      sql`${t.role} in (${sqlList(PROJECT_ROLES)})`,
+    ),
+    check(
+      "profile_projects_kind_check",
+      sql`${t.kind} in (${sqlList(PROJECT_KINDS)})`,
+    ),
+    check(
+      "profile_projects_outcomes_check",
+      sql`cardinality(${t.outcomes}) <= 3`,
+    ),
+    check("profile_projects_links_check", sql`cardinality(${t.links}) <= 3`),
+    check(
+      "profile_projects_year_check",
+      sql`${t.year} is null or ${t.year} between 1950 and 2100`,
+    ),
+  ],
+);
+
+export type ProfileProject = typeof profileProjects.$inferSelect;
+
+export const profileExperience = pgTable(
+  "profile_experience",
+  {
+    ...entryColumns(),
+    /** Null for freelance and contract roles: there it is often a client. */
+    organisation: text("organisation"),
+    organisationDescription: text("organisation_description").notNull(),
+    employmentType: text("employment_type", {
+      enum: ROLE_EMPLOYMENT_TYPES,
+    }).notNull(),
+    startYear: smallint("start_year"),
+    startMonth: smallint("start_month"),
+    endYear: smallint("end_year"),
+    endMonth: smallint("end_month"),
+    isCurrent: boolean("is_current").notNull().default(false),
+    highlights: textArray("highlights"),
+  },
+  (t) => [
+    ...entryChecks("profile_experience", t, 6),
+    check(
+      "profile_experience_organisation_check",
+      sql`char_length(${t.organisation}) <= 80`,
+    ),
+    check(
+      "profile_experience_organisation_description_check",
+      sql`char_length(${t.organisationDescription}) <= 60`,
+    ),
+    check(
+      "profile_experience_employment_type_check",
+      sql`${t.employmentType} in (${sqlList(ROLE_EMPLOYMENT_TYPES)})`,
+    ),
+    check(
+      "profile_experience_free_organisation_check",
+      sql`${t.employmentType} not in ('freelance', 'contract') or ${t.organisation} is null`,
+    ),
+    check(
+      "profile_experience_start_check",
+      sql`(${t.startYear} is null or ${t.startYear} between 1950 and 2100)
+        and (${t.startMonth} is null or (${t.startYear} is not null and ${t.startMonth} between 1 and 12))`,
+    ),
+    check(
+      "profile_experience_end_check",
+      sql`(${t.endYear} is null or ${t.endYear} between 1950 and 2100)
+        and (${t.endMonth} is null or (${t.endYear} is not null and ${t.endMonth} between 1 and 12))`,
+    ),
+    check(
+      "profile_experience_current_check",
+      sql`not ${t.isCurrent} or (${t.endYear} is null and ${t.endMonth} is null)`,
+    ),
+    check(
+      "profile_experience_highlights_check",
+      sql`cardinality(${t.highlights}) <= 4`,
+    ),
+  ],
+);
+
+export type ProfileExperience = typeof profileExperience.$inferSelect;
 
 export const customSkills = pgTable(
   "custom_skills",

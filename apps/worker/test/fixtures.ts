@@ -15,7 +15,8 @@ export function makePdf(pages: string[]): Uint8Array {
     const stream = `BT /F1 12 Tf 72 720 Td (${esc(text)}) Tj ET`;
     objs[page] =
       `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents ${page + 1} 0 R /Resources << /Font << /F1 3 0 R >> >> >>`;
-    objs[page + 1] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+    objs[page + 1] =
+      `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
   });
   let out = "%PDF-1.4\n";
   const offsets: number[] = [];
@@ -66,7 +67,13 @@ export function makeDocxWithDescriptors(lines: string[]): Uint8Array {
   const central: Uint8Array[] = [];
   let offset = 0;
   const u16 = (n: number) => new Uint8Array([n & 255, (n >> 8) & 255]);
-  const u32 = (n: number) => new Uint8Array([n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255]);
+  const u32 = (n: number) =>
+    new Uint8Array([
+      n & 255,
+      (n >> 8) & 255,
+      (n >> 16) & 255,
+      (n >>> 24) & 255,
+    ]);
   const cat = (...a: Uint8Array[]) => {
     const out = new Uint8Array(a.reduce((s, x) => s + x.length, 0));
     let at = 0;
@@ -79,11 +86,61 @@ export function makeDocxWithDescriptors(lines: string[]): Uint8Array {
   for (const [name, raw] of entries) {
     const data = deflateSync(raw);
     const n = strToU8(name);
-    const local = cat(u32(0x04034b50), u16(20), u16(8), u16(8), u16(0), u16(0x21), u32(0), u32(0), u32(0), u16(n.length), u16(0), n, data, u32(0x08074b50), u32(0), u32(data.length), u32(raw.length));
-    central.push(cat(u32(0x02014b50), u16(20), u16(20), u16(8), u16(8), u16(0), u16(0x21), u32(0), u32(data.length), u32(raw.length), u16(n.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset), n));
+    const local = cat(
+      u32(0x04034b50),
+      u16(20),
+      u16(8),
+      u16(8),
+      u16(0),
+      u16(0x21),
+      u32(0),
+      u32(0),
+      u32(0),
+      u16(n.length),
+      u16(0),
+      n,
+      data,
+      u32(0x08074b50),
+      u32(0),
+      u32(data.length),
+      u32(raw.length),
+    );
+    central.push(
+      cat(
+        u32(0x02014b50),
+        u16(20),
+        u16(20),
+        u16(8),
+        u16(8),
+        u16(0),
+        u16(0x21),
+        u32(0),
+        u32(data.length),
+        u32(raw.length),
+        u16(n.length),
+        u16(0),
+        u16(0),
+        u16(0),
+        u16(0),
+        u32(0),
+        u32(offset),
+        n,
+      ),
+    );
     parts.push(local);
     offset += local.length;
   }
   const cd = cat(...central);
-  return cat(...parts, cd, u32(0x06054b50), u16(0), u16(0), u16(entries.length), u16(entries.length), u32(cd.length), u32(offset), u16(0));
+  return cat(
+    ...parts,
+    cd,
+    u32(0x06054b50),
+    u16(0),
+    u16(0),
+    u16(entries.length),
+    u16(entries.length),
+    u32(cd.length),
+    u32(offset),
+    u16(0),
+  );
 }

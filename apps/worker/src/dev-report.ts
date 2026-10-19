@@ -1,5 +1,7 @@
 import type { Suggestions } from "@redlance/core";
 import { repoSkillIds, type GithubRepo } from "./github/map";
+import type { DateRange } from "./resume/dates";
+import type { Block } from "./resume/entries";
 import type { MergeReport, StepResult } from "./resume/pipeline";
 import type { PipelineInput } from "./resume/steps/shared";
 
@@ -47,6 +49,36 @@ const indent = (s: string, n = 4) =>
     .join("\n");
 const json = (v: unknown) => indent(JSON.stringify(v, null, 2));
 const dollars = (micros: number) => `$${(micros / 1e6).toFixed(6)}`;
+const monthYear = (m: { year: number; month: number | null }) =>
+  m.month ? `${m.year}-${String(m.month).padStart(2, "0")}` : `${m.year}`;
+const rangeText = (r: DateRange | null) =>
+  r
+    ? `${monthYear(r.start)} – ${r.end ? monthYear(r.end) : "present"}`
+    : "no date range";
+const snippet = (t: string) => {
+  const one = t.replace(/\s+/g, " ").trim();
+  return one.length > 60 ? `${one.slice(0, 60)}…` : one;
+};
+const blockLines = (label: string, blocks: Block[]): string[] =>
+  blocks.length === 0
+    ? [`  ${label}: none`]
+    : [
+        `  ${label} (${blocks.length}):`,
+        ...blocks.map(
+          (b) =>
+            `    ${b.id}  ${rangeText(b.range)} · year ${b.year ?? "–"} · links ${b.links.length} · "${snippet(b.text)}"`,
+        ),
+      ];
+/** Output count for the two work steps; other steps print nothing extra. */
+function outputCount(step: string, output: unknown): string | null {
+  if (step !== "projects" && step !== "experience") return null;
+  const items = (output as Record<string, unknown> | undefined)?.[step];
+  if (!Array.isArray(items)) return "  output: none";
+  const n = items.length;
+  if (step === "projects")
+    return `  output: ${n} ${n === 1 ? "project" : "projects"}`;
+  return `  output: ${n} ${n === 1 ? "role" : "roles"}`;
+}
 
 export function createDevReport(opts: {
   enabled: boolean;
@@ -97,9 +129,12 @@ export function createDevReport(opts: {
           "pre-pass (no model):",
           `  text length:   ${input.text.length} chars`,
           `  sections:      ${sections.join(", ") || "(none)"}`,
+          `  headings found: ${input.headed ? "yes" : "no"}`,
           `  years of exp.: ${input.yearsExperience ?? "unknown"}`,
           `  shortlist:     ${input.shortlist.length} skill ids — ${input.shortlist.join(", ") || "(none)"}`,
           `  GitHub user:   ${githubUsername ?? "(none found)"}`,
+          ...blockLines("project blocks", input.projectBlocks),
+          ...blockLines("experience blocks", input.experienceBlocks),
         ].join("\n"),
       );
     },
@@ -114,11 +149,13 @@ export function createDevReport(opts: {
       }
       costMicros += tokens.cost;
       const outcomes = r.attempts.map((a) => a.outcome).join(", ") || "none";
+      const count = outputCount(r.step, r.output);
       print(
         [
           `Gemini step "${r.step}" — ${r.model}`,
           `  latency ${r.ms} ms · attempts ${r.attempts.length} (${outcomes})`,
           `  tokens: input ${tokens.input} · output ${tokens.output} (thought ${tokens.thought}) · cost ${dollars(tokens.cost)}`,
+          ...(count ? [count] : []),
           r.error ? `  FAILED: ${r.error}` : `  returned:\n${json(r.output)}`,
         ].join("\n"),
       );
@@ -129,7 +166,19 @@ export function createDevReport(opts: {
       else {
         lines.push(`  dropped ${m.dropped.length}:`);
         for (const d of m.dropped)
-          lines.push(`    - ${d.what} ${JSON.stringify(d.value)}: ${d.reason}`);
+          lines.push(
+            `    - ${d.what} ${JSON.stringify(d.value)}${d.block ? ` in ${d.block}` : ""}: ${d.reason}`,
+          );
+      }
+      for (const s of m.skipped)
+        lines.push(`  ${s.step}: skipped (${s.reason})`);
+      if (m.replaced.length === 0) lines.push("  replaced names: none");
+      else {
+        lines.push(`  replaced names ${m.replaced.length}:`);
+        for (const r of m.replaced)
+          lines.push(
+            `    ${r.block}: ${JSON.stringify(r.name)} → ${JSON.stringify(r.generic)} (${r.source})`,
+          );
       }
       if (m.partial.length)
         lines.push(`  partial (steps that failed): ${m.partial.join(", ")}`);

@@ -1,4 +1,4 @@
-import { pageIndex } from "@redlance/core";
+import { PAGE_IDS, pageIndex } from "@redlance/core";
 import { ArrowRight, Inbox, Send, Trophy } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -66,7 +66,7 @@ export default async function DashboardPage() {
               }
             >
               {started
-                ? `Continue setup · step ${pageIndex(state.resumeAt) + 1} of 5`
+                ? `Continue setup · step ${pageIndex(state.resumeAt) + 1} of ${PAGE_IDS.length}`
                 : "Start setup"}
               <ArrowRight aria-hidden="true" />
             </Link>

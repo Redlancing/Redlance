@@ -57,6 +57,13 @@
       "when": 1790823560143,
       "tag": "0007_ingestion",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792251608547,
+      "tag": "0008_projects_experience",
+      "breakpoints": true
     }
   ]
 }

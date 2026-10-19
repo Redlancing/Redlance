@@ -1,8 +1,15 @@
 import { z } from "zod";
 import { isCountryCode } from "./countries";
 import { CATEGORY_IDS, SKILL_BY_ID, normalizeSkillName } from "./taxonomy";
+import { WORK_LIMITS, workSchemas } from "./work";
 
-export const STEP_IDS = ["import", "basics", "skills", "rates"] as const;
+export const STEP_IDS = [
+  "import",
+  "basics",
+  "skills",
+  "work",
+  "rates",
+] as const;
 export type StepId = (typeof STEP_IDS)[number];
 export const PAGE_IDS = [...STEP_IDS, "review"] as const;
 export type PageId = (typeof PAGE_IDS)[number];
@@ -12,6 +19,7 @@ export const PAGE_TITLES: Record<PageId, string> = {
   import: "Import",
   basics: "Basics",
   skills: "Skills",
+  work: "Projects & experience",
   rates: "Rates & filters",
   review: "Review",
 };
@@ -35,6 +43,7 @@ export const LIMITS = {
   totalSkills: 30,
   customSkillName: 40,
   maxRate: 100_000,
+  ...WORK_LIMITS,
 } as const;
 
 // ---------- small validators (also used by the forms) ----------
@@ -361,6 +370,7 @@ export const STEP_SCHEMAS = {
   import: { draft: importData, complete: importData },
   basics: { draft: basicsDraft, complete: basicsComplete },
   skills: { draft: skillsSchema(false), complete: skillsSchema(true) },
+  work: workSchemas,
   rates: { draft: ratesDraft, complete: ratesComplete },
 } as const;
 

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import type { ReviewData } from "@/server/onboarding/page-data";
 import { LEVEL_TEXT } from "./basics-step";
 import { useCountryOptions } from "./browser-intl";
-import { formatMoney } from "./review-format";
+import { formatMoney, workSummary } from "./review-format";
 import { StepHeader } from "./step-header";
 
 const RATE_TYPE_TEXT = {
@@ -70,7 +70,7 @@ export function ReviewStep({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { basics, skills, rates } = data;
+  const { basics, skills, work, rates } = data;
   const githubUsername = data.import.githubUsername;
   const jobTypes = basics.categories.map(
     (id) => CATEGORIES.find((c) => c.id === id)?.name ?? id,
@@ -160,6 +160,24 @@ export function ReviewStep({
       >
         <Row label="Core">{core.join(", ")}</Row>
         {others.length > 0 && <Row label="Others">{others.join(", ")}</Row>}
+      </Section>
+
+      <Section
+        title="Projects & experience"
+        editHref="/onboarding/work"
+        editLabel="Edit projects and experience"
+      >
+        <p>{workSummary(work)}</p>
+        {work.projects.length > 0 && (
+          <Row label="Projects">
+            {work.projects.map((p) => p.title).join(", ")}
+          </Row>
+        )}
+        {work.experience.length > 0 && (
+          <Row label="Roles">
+            {work.experience.map((r) => r.title).join(", ")}
+          </Row>
+        )}
       </Section>
 
       <Section

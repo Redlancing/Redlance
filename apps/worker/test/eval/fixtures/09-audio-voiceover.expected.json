@@ -1,4 +1,12 @@
-{ "categories": ["audio"], "experienceLevel": "intermediate",
-  "mustSkills": ["voice-over", "audiobook-narration", "podcast-editing", "mixing-mastering"],
+{
+  "categories": ["audio"],
+  "experienceLevel": "intermediate",
+  "mustSkills": [
+    "voice-over",
+    "audiobook-narration",
+    "podcast-editing",
+    "mixing-mastering"
+  ],
   "maySkills": ["audio-editing"],
-  "mustNotSkills": ["unity", "kubernetes", "unreal"] }
+  "mustNotSkills": ["unity", "kubernetes", "unreal"]
+}

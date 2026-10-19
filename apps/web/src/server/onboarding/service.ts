@@ -19,6 +19,8 @@ import {
   alertChannels,
   customSkills,
   onboardingSteps,
+  profileExperience,
+  profileProjects,
   profileSkills,
   profiles,
   users,
@@ -209,6 +211,7 @@ async function completedSteps(tx: Tx, userId: string) {
     imported: read("import"),
     basics: read("basics"),
     skills: read("skills"),
+    work: read("work"),
     rates: read("rates"),
   };
 }
@@ -235,7 +238,7 @@ export async function finishOnboarding(
       .where(eq(profiles.userId, userId));
     if (existing) return { redirect: "/dashboard" };
 
-    const { basics, skills, rates, imported } = await completedSteps(
+    const { basics, skills, work, rates, imported } = await completedSteps(
       tx,
       userId,
     );
@@ -253,6 +256,7 @@ export async function finishOnboarding(
       currency: rates.currency,
       rateType: rates.rateType,
       remoteOnly: rates.remoteOnly,
+      mentionEmployers: work.mentionEmployers,
       onboardedAt: sql`now()`,
       trialEndsAt: sql`now() + make_interval(days => ${TRIAL_DAYS})`,
     });
@@ -274,6 +278,51 @@ export async function finishOnboarding(
           nameNormalized: normalizeSkillName(s.name),
           level: s.level,
           source: s.source,
+        })),
+      );
+
+    // Position is the index in the step's list: the order the user sees and drafts use.
+    // namesRemoved only drives the onboarding note, so it isn't stored.
+    if (work.projects.length)
+      await tx.insert(profileProjects).values(
+        work.projects.map((p, position) => ({
+          userId,
+          position,
+          title: p.title,
+          summary: p.summary,
+          role: p.role,
+          kind: p.kind,
+          skillIds: p.skills,
+          categories: p.categories,
+          domains: p.domains,
+          outcomes: p.outcomes,
+          links: p.links,
+          year: p.year,
+          source: p.source,
+          hidden: p.hidden,
+        })),
+      );
+    if (work.experience.length)
+      await tx.insert(profileExperience).values(
+        work.experience.map((r, position) => ({
+          userId,
+          position,
+          title: r.title,
+          summary: r.summary,
+          organisation: r.organisation,
+          organisationDescription: r.organisationDescription,
+          employmentType: r.employmentType,
+          startYear: r.start?.year ?? null,
+          startMonth: r.start?.month ?? null,
+          endYear: r.end?.year ?? null,
+          endMonth: r.end?.month ?? null,
+          isCurrent: r.current,
+          highlights: r.highlights,
+          skillIds: r.skills,
+          categories: r.categories,
+          domains: r.domains,
+          source: r.source,
+          hidden: r.hidden,
         })),
       );
 

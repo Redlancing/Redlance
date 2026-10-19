@@ -1,6 +1,12 @@
+import { STEP_IDS } from "@redlance/core";
 import { describe, expect, it } from "vitest";
 import { VALID } from "../../../test/onboarding-fixtures";
-import { mergedSuggestions, reviewData, stepInit } from "./page-data";
+import {
+  mergedSuggestions,
+  reviewData,
+  stepInit,
+  workImportNotice,
+} from "./page-data";
 import type { ImportSummary } from "./imports";
 import type { OnboardingState } from "./service";
 
@@ -42,11 +48,12 @@ const job = (
   errorCode: null,
   suggestions,
   partial: [],
+  skipped: [],
   createdAt: new Date().toISOString(),
 });
 
 const RESUME = {
-  v: 1 as const,
+  v: 2 as const,
   basics: {
     displayName: "Ravi Kumar",
     headline: "Web developer",
@@ -59,10 +66,12 @@ const RESUME = {
   ],
   customSkills: [],
   githubUsername: null,
+  projects: [],
+  experience: [],
 };
 
 const GITHUB = {
-  v: 1 as const,
+  v: 2 as const,
   basics: {},
   skills: [
     { id: "typescript", level: "secondary" as const },
@@ -70,6 +79,8 @@ const GITHUB = {
   ],
   customSkills: [],
   githubUsername: "ravi-k",
+  projects: [],
+  experience: [],
 };
 
 describe("stepInit", () => {
@@ -107,20 +118,32 @@ describe("stepInit", () => {
 
 describe("reviewData", () => {
   it("parses every step with its complete schema", () => {
-    const steps = (["import", "basics", "skills", "rates"] as const).map((s) =>
-      row(s, VALID[s]),
-    );
+    const steps = STEP_IDS.map((s) => row(s, VALID[s]));
     const result = reviewData(state(steps, "review"));
     expect(result.ok && result.data.rates.minRate).toBe(25);
+    expect(result.ok && result.data.work.projects).toHaveLength(2);
+    expect(result.ok && result.data.work.mentionEmployers).toBe(true);
   });
 
   it("points at the first step that no longer passes", () => {
-    const steps = (["import", "basics", "skills", "rates"] as const).map((s) =>
+    const steps = STEP_IDS.map((s) =>
       row(s, s === "skills" ? { skills: [] } : VALID[s]),
     );
     expect(reviewData(state(steps, "review"))).toEqual({
       ok: false,
       step: "skills",
+    });
+  });
+});
+
+describe("reviewData: work", () => {
+  it("points at work when it isn't completed", () => {
+    const steps = STEP_IDS.filter((s) => s !== "work").map((s) =>
+      row(s, VALID[s]),
+    );
+    expect(reviewData(state(steps, "review"))).toEqual({
+      ok: false,
+      step: "work",
     });
   });
 });
@@ -184,5 +207,127 @@ describe("pre-fill from imports", () => {
     expect(stepInit(s, "u1", "rates").data).toEqual(
       stepInit(state([]), "u1", "rates").data,
     );
+  });
+});
+
+describe("pre-fill: work", () => {
+  const WITH_WORK = {
+    ...RESUME,
+    projects: [
+      {
+        title: "Wedding film",
+        summary: "Edited a film.",
+        skills: ["video-editing"],
+        links: ["https://vimeo.com/123"],
+        namesRemoved: true,
+      },
+    ],
+    experience: [{ title: "Video editor", organisation: "Acme" }],
+  };
+  const withResume = (
+    steps: OnboardingState["steps"] = [],
+    suggestions: ImportSummary["suggestions"] = WITH_WORK as never,
+  ) =>
+    state(steps, "import", {
+      resume: job("resume", suggestions),
+      github: null,
+    });
+
+  it("work shows the saved row when there is one", () => {
+    const saved = { projects: [], experience: [], mentionEmployers: true };
+    const s = withResume([row("work", saved, "draft", 3)]);
+    const init = stepInit(s, "u1", "work");
+    expect(init.data.projects).toEqual([]);
+    expect(init.data.mentionEmployers).toBe(true);
+    expect(init.version).toBe(3);
+  });
+
+  it("work shows resume suggestions when there is no row", () => {
+    const init = stepInit(withResume(), "u1", "work");
+    expect(init.version).toBe(0);
+    expect(init.data.projects).toHaveLength(1);
+    expect(init.data.projects[0]).toMatchObject({
+      title: "Wedding film",
+      source: "resume",
+      namesRemoved: true,
+    });
+    expect(init.data.experience[0]).toMatchObject({
+      title: "Video editor",
+      source: "resume",
+    });
+  });
+
+  it("work is empty with no import, or with only a GitHub import", () => {
+    const none = stepInit(state([]), "u1", "work").data;
+    expect(none.projects).toEqual([]);
+    expect(none.experience).toEqual([]);
+    const gh = state([], "import", {
+      resume: null,
+      github: job("github", GITHUB),
+    });
+    expect(stepInit(gh, "u1", "work").data.projects).toEqual([]);
+  });
+
+  it("work falls back to empty when the suggestions don't parse", () => {
+    const bad = {
+      ...RESUME,
+      projects: [{ title: "x", links: [{ nope: 1 }] }],
+    } as never;
+    const init = stepInit(withResume([], bad), "u1", "work");
+    expect(init.data.projects).toEqual([]);
+    expect(init.data.experience).toEqual([]);
+  });
+});
+
+describe("workImportNotice", () => {
+  const withJob = (
+    over: Partial<ImportSummary>,
+    steps: OnboardingState["steps"] = [],
+  ) =>
+    state(steps, "import", {
+      resume: { ...job("resume", RESUME), ...over },
+      github: null,
+    });
+
+  it("is null without a finished resume import or with nothing missing", () => {
+    expect(workImportNotice(state([]))).toBeNull();
+    expect(workImportNotice(withJob({}))).toBeNull();
+    expect(
+      workImportNotice(
+        withJob({
+          status: "running",
+          suggestions: null,
+          partial: ["projects"],
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  it("reads partial and skipped from the latest resume import", () => {
+    expect(workImportNotice(withJob({ partial: ["projects"] }))).toMatch(
+      /projects/,
+    );
+    expect(workImportNotice(withJob({ skipped: ["experience"] }))).toMatch(
+      /experience/,
+    );
+  });
+
+  it("words a skipped step apart from a failed one", () => {
+    expect(workImportNotice(withJob({ partial: ["projects"] }))).toBe(
+      "We couldn't read your projects. Add them by hand.",
+    );
+    expect(workImportNotice(withJob({ skipped: ["projects"] }))).toBe(
+      "We didn't find a Projects section in your resume, so add any projects by hand.",
+    );
+  });
+
+  it("is null once the user has saved the step", () => {
+    expect(
+      workImportNotice(
+        withJob({ partial: ["projects"] }, [
+          row("work", { projects: [], experience: [] }, "draft"),
+        ]),
+      ),
+    ).toBeNull();
   });
 });

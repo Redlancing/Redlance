@@ -1,5 +1,11 @@
 import { basicsOutput, type BasicsOutput } from "../step-types";
-import { resumePrompt, routeText, SYSTEM, taskMarker, type StepSpec } from "./shared";
+import {
+  resumePrompt,
+  routeText,
+  SYSTEM,
+  taskMarker,
+  type StepSpec,
+} from "./shared";
 
 export const basicsStep: StepSpec<BasicsOutput> = {
   name: "basics",

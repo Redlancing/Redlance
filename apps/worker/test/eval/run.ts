@@ -10,17 +10,39 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
-import { CATEGORY_IDS, EXPERIENCE_LEVELS, SKILLS, SKILL_BY_ID } from "@redlance/core";
-import { LlmError, type AttemptRecord, type GenerateRequest, type LlmClient } from "@redlance/llm";
+import {
+  CATEGORY_IDS,
+  EXPERIENCE_LEVELS,
+  SKILLS,
+  SKILL_BY_ID,
+} from "@redlance/core";
+import {
+  LlmError,
+  type AttemptRecord,
+  type GenerateRequest,
+  type LlmClient,
+} from "@redlance/llm";
 import { parseWorkerEnv } from "../../src/env";
 import { createLlmFromEnv } from "../../src/llm";
 import { cleanResumeText } from "../../src/resume/clean";
 import { PIPELINE_VERSION, runResumePipeline } from "../../src/resume/pipeline";
-import { aggregate, percentile, score, type Expected, type Score, type Suggested } from "./score";
+import {
+  aggregate,
+  percentile,
+  score,
+  type Expected,
+  type Score,
+  type Suggested,
+} from "./score";
 
 const here = import.meta.dirname;
 
-type Fixture = { name: string; text: string; expected: Expected; isPrivate: boolean };
+type Fixture = {
+  name: string;
+  text: string;
+  expected: Expected;
+  isPrivate: boolean;
+};
 
 function loadDir(dir: string, isPrivate: boolean): Fixture[] {
   if (!existsSync(dir)) return [];
@@ -32,7 +54,9 @@ function loadDir(dir: string, isPrivate: boolean): Fixture[] {
       return {
         name,
         text: readFileSync(join(dir, f), "utf8"),
-        expected: JSON.parse(readFileSync(join(dir, `${name}.expected.json`), "utf8")) as Expected,
+        expected: JSON.parse(
+          readFileSync(join(dir, `${name}.expected.json`), "utf8"),
+        ) as Expected,
         isPrivate,
       };
     });
@@ -52,7 +76,8 @@ async function maybeTrace(llm: LlmClient): Promise<LlmClient> {
     { name: "generateStructured", run_type: "llm" },
   );
   return {
-    generateStructured: ((req: GenerateRequest<unknown>) => traced(req)) as LlmClient["generateStructured"],
+    generateStructured: ((req: GenerateRequest<unknown>) =>
+      traced(req)) as LlmClient["generateStructured"],
   };
 }
 
@@ -61,7 +86,9 @@ async function maybeTrace(llm: LlmClient): Promise<LlmClient> {
 const baselineSchema = z.object({
   categories: z.array(z.string()).max(3),
   experienceLevel: z.string(),
-  skills: z.array(z.object({ id: z.string(), level: z.enum(["core", "secondary"]) })).max(30),
+  skills: z
+    .array(z.object({ id: z.string(), level: z.enum(["core", "secondary"]) }))
+    .max(30),
 });
 
 const BASELINE_SYSTEM =
@@ -80,7 +107,12 @@ function baselinePrompt(text: string): string {
 const BASELINE_MAX_OUTPUT = 300 + 400 + 1500;
 const BASELINE_DEADLINE_MS = 20_000;
 
-async function runBaseline(llm: LlmClient, model: string, text: string, cost: Cost): Promise<Suggested> {
+async function runBaseline(
+  llm: LlmClient,
+  model: string,
+  text: string,
+  cost: Cost,
+): Promise<Suggested> {
   let res;
   try {
     res = await llm.generateStructured({
@@ -102,7 +134,9 @@ async function runBaseline(llm: LlmClient, model: string, text: string, cost: Co
   res.attempts.forEach((a) => addAttempt(cost, a));
   return {
     basics: {
-      categories: res.data.categories.filter((c) => (CATEGORY_IDS as readonly string[]).includes(c)),
+      categories: res.data.categories.filter((c) =>
+        (CATEGORY_IDS as readonly string[]).includes(c),
+      ),
       experienceLevel: res.data.experienceLevel,
     },
     skills: res.data.skills.filter((s) => SKILL_BY_ID.has(s.id)),
@@ -116,11 +150,28 @@ const pct = (n: number) => `${Math.round(n * 100)}%`.padStart(4);
 const usd = (micros: number) => `$${(micros / 1e6).toFixed(4)}`;
 const ms = (n: number) => `${Math.round(n)}ms`;
 
-type Row = { name: string; score: Score; ms: number; micros: number; partial: string[]; error?: string };
+type Row = {
+  name: string;
+  score: Score;
+  ms: number;
+  micros: number;
+  partial: string[];
+  error?: string;
+};
 
 function printTable(title: string, rows: Row[]) {
   console.log(`\n${title}`);
-  console.log("resume".padEnd(28), "prec", "recl", "cats", "lvl ", "bad", "cost".padStart(8), "latency".padStart(8), "note");
+  console.log(
+    "resume".padEnd(28),
+    "prec",
+    "recl",
+    "cats",
+    "lvl ",
+    "bad",
+    "cost".padStart(8),
+    "latency".padStart(8),
+    "note",
+  );
   for (const r of rows) {
     console.log(
       r.name.padEnd(28),
@@ -131,8 +182,14 @@ function printTable(title: string, rows: Row[]) {
       String(r.score.mustNotViolations.length).padStart(3),
       usd(r.micros).padStart(8),
       ms(r.ms).padStart(8),
-      r.error ? `ERROR ${r.error}` : r.partial.length ? `partial: ${r.partial.join(",")}` : "",
-      r.score.mustNotViolations.length ? `MUST-NOT: ${r.score.mustNotViolations.join(",")}` : "",
+      r.error
+        ? `ERROR ${r.error}`
+        : r.partial.length
+          ? `partial: ${r.partial.join(",")}`
+          : "",
+      r.score.mustNotViolations.length
+        ? `MUST-NOT: ${r.score.mustNotViolations.join(",")}`
+        : "",
     );
   }
   const t = aggregate(rows.map((r) => r.score));
@@ -168,14 +225,19 @@ async function main() {
   const env = parseWorkerEnv(process.env);
   const plain = createLlmFromEnv(env);
   const traced = await maybeTrace(plain);
-  const fixtures = [...loadDir(join(here, "fixtures"), false), ...loadDir(join(here, "private"), true)];
+  const fixtures = [
+    ...loadDir(join(here, "fixtures"), false),
+    ...loadDir(join(here, "private"), true),
+  ];
   const tracing = process.env.LANGSMITH_TRACING === "true";
   console.log(
     `Pipeline ${PIPELINE_VERSION}, fast=${env.VERTEX_MODEL_FAST}, smart=${env.VERTEX_MODEL_SMART}, ${fixtures.length} resumes` +
       (tracing ? ", LangSmith tracing on" : ""),
   );
   if (tracing) {
-    console.log("Note: only the committed synthetic fixtures are traced; private/ resumes are never sent to LangSmith.");
+    console.log(
+      "Note: only the committed synthetic fixtures are traced; private/ resumes are never sent to LangSmith.",
+    );
   }
   if (withBaseline) {
     console.log(
@@ -199,9 +261,22 @@ async function main() {
         models: { fast: env.VERTEX_MODEL_FAST, smart: env.VERTEX_MODEL_SMART },
         onAttempt: (_step, _v, a) => addAttempt(own, a),
       });
-      pipeRows.push({ name: f.name, score: score(f.expected, res.suggestions), ms: performance.now() - t0, micros: own.micros, partial: res.partial });
+      pipeRows.push({
+        name: f.name,
+        score: score(f.expected, res.suggestions),
+        ms: performance.now() - t0,
+        micros: own.micros,
+        partial: res.partial,
+      });
     } catch (e) {
-      pipeRows.push({ name: f.name, score: failed(), ms: performance.now() - t0, micros: own.micros, partial: [], error: message(e) });
+      pipeRows.push({
+        name: f.name,
+        score: failed(),
+        ms: performance.now() - t0,
+        micros: own.micros,
+        partial: [],
+        error: message(e),
+      });
     }
 
     if (withBaseline) {
@@ -209,15 +284,29 @@ async function main() {
       const b0 = performance.now();
       try {
         const s = await runBaseline(llm, env.VERTEX_MODEL_SMART, text, b);
-        baseRows.push({ name: f.name, score: score(f.expected, s), ms: performance.now() - b0, micros: b.micros, partial: [] });
+        baseRows.push({
+          name: f.name,
+          score: score(f.expected, s),
+          ms: performance.now() - b0,
+          micros: b.micros,
+          partial: [],
+        });
       } catch (e) {
-        baseRows.push({ name: f.name, score: failed(), ms: performance.now() - b0, micros: b.micros, partial: [], error: message(e) });
+        baseRows.push({
+          name: f.name,
+          score: failed(),
+          ms: performance.now() - b0,
+          micros: b.micros,
+          partial: [],
+          error: message(e),
+        });
       }
     }
   }
 
   printTable("Pipeline", pipeRows);
-  if (withBaseline) printTable(`Baseline (one call, ${env.VERTEX_MODEL_SMART})`, baseRows);
+  if (withBaseline)
+    printTable(`Baseline (one call, ${env.VERTEX_MODEL_SMART})`, baseRows);
 }
 
 main().catch((e) => {

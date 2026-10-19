@@ -5,3 +5,20 @@ export function formatMoney(amount: number, currency: string): string {
     amount,
   );
 }
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** "2 projects · 3 roles · employer names off", or "None added" when both lists are empty. */
+export function workSummary(work: {
+  projects: readonly unknown[];
+  experience: readonly unknown[];
+  mentionEmployers: boolean;
+}): string {
+  if (work.projects.length === 0 && work.experience.length === 0)
+    return "None added";
+  return [
+    plural(work.projects.length, "project"),
+    plural(work.experience.length, "role"),
+    `employer names ${work.mentionEmployers ? "on" : "off"}`,
+  ].join(" · ");
+}

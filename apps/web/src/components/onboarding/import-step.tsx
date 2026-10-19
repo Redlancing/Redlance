@@ -23,6 +23,7 @@ import { lookupGithubUser, type GithubLookup } from "./github-lookup";
 import {
   describeImports,
   liveAnnouncement,
+  reimportDialog,
   startErrorMessage,
 } from "./import-status";
 import { setImportLock } from "./import-lock";
@@ -104,6 +105,7 @@ export function ImportStep({
   useEffect(() => () => setImportLock(false), []);
   const needsConfirm =
     hasSavedProfileSteps || pageIndex(init.resumeAt) > pageIndex("basics");
+  const dialog = reimportDialog({ resume: !!file, github: !!username });
 
   async function startGithub(name: string): Promise<string | null> {
     try {
@@ -148,12 +150,17 @@ export function ImportStep({
   }
 
   /**
-   * Clears saved Basics and Skills so the new import can pre-fill them. Runs only after an
-   * import was accepted, so a refused start never costs the user their answers.
+   * Clears saved Basics and Skills (and Projects & experience when a resume import started) so
+   * the new import can pre-fill them. Runs only after an import was accepted, so a refused
+   * start never costs the user their answers.
    */
-  async function resetSavedSteps(): Promise<string | null> {
+  async function resetSavedSteps(
+    kinds: ("resume" | "github")[],
+  ): Promise<string | null> {
     const res = await fetch("/api/v1/onboarding/imports/reset", {
       method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ kinds }),
     }).catch(() => null);
     if (!res?.ok) {
       const body = (await res?.json().catch(() => ({}))) as
@@ -164,6 +171,8 @@ export function ImportStep({
     // This browser's unsaved copies of those steps would come back otherwise.
     removeLocal(localCopyKey(init.userId, "basics"));
     removeLocal(localCopyKey(init.userId, "skills"));
+    if (kinds.includes("resume"))
+      removeLocal(localCopyKey(init.userId, "work"));
     return null;
   }
 
@@ -175,14 +184,19 @@ export function ImportStep({
     try {
       clear();
       const starts = [
-        username ? startGithub(username) : null,
-        file ? startResume(file) : null,
-      ].filter((p): p is Promise<string | null> => p !== null);
-      const results = await Promise.all(starts);
-      const errors = results.filter((e): e is string => e !== null);
-      // At least one import was accepted (202): only now replace the saved steps.
-      if (reset && errors.length < results.length) {
-        const resetError = await resetSavedSteps();
+        username ? (["github", startGithub(username)] as const) : null,
+        file ? (["resume", startResume(file)] as const) : null,
+      ].filter((p) => p !== null);
+      const results = await Promise.all(
+        starts.map(async ([kind, p]) => [kind, await p] as const),
+      );
+      const errors = results
+        .map(([, e]) => e)
+        .filter((e): e is string => e !== null);
+      // The imports that were accepted (202): only now replace the steps they fill.
+      const accepted = results.filter(([, e]) => e === null).map(([k]) => k);
+      if (reset && accepted.length) {
+        const resetError = await resetSavedSteps(accepted);
         if (resetError) errors.push(resetError);
       }
       setStartErrors(errors);
@@ -363,12 +377,8 @@ export function ImportStep({
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Replace Basics and Skills?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Once the import starts, what&apos;s in Basics and Skills will be
-              replaced with suggestions from{" "}
-              {file ? "the new resume" : "GitHub"}.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{dialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{dialog.body}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

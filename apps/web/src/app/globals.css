@@ -184,7 +184,7 @@
 }
 
 /* ----------------------------------------------------------------- Motion
-   Measured from Attio (docs/research/attio-teardown.md §6). Everything here
+   Measured from Attio (docs/homepage/attio-teardown.md §6). Everything here
    animates transform, opacity, filter or stroke only, and is switched off by
    the reduced-motion rule at the end. */
 

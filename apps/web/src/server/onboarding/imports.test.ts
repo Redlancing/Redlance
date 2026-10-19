@@ -35,13 +35,33 @@ describe("toImportSummary", () => {
     const s = toImportSummary({
       ...base,
       result: {
-        v: 1,
+        v: 2,
         meta: { pipelineVersion: "x", promptVersions: {}, partial: ["skills"] },
       },
     });
-    expect(s.suggestions?.v).toBe(1);
+    expect(s.suggestions?.v).toBe(2);
     expect(s.partial).toEqual(["skills"]);
+    expect(s.skipped).toEqual([]);
     expect(s.createdAt).toBe("2026-09-29T00:00:00.000Z");
+  });
+  it("returns projects, experience and skipped steps", () => {
+    const s = toImportSummary({
+      ...base,
+      result: {
+        v: 2,
+        projects: [{ title: "Film", summary: "", links: [] }],
+        experience: [{ title: "Editor" }],
+        meta: {
+          pipelineVersion: "x",
+          promptVersions: {},
+          partial: [],
+          skipped: ["skills"],
+        },
+      },
+    });
+    expect(s.suggestions?.projects[0]?.title).toBe("Film");
+    expect(s.suggestions?.experience[0]?.title).toBe("Editor");
+    expect(s.skipped).toEqual(["skills"]);
   });
   it("exposes whether a GitHub import came from the resume", () => {
     const gh = { ...base, kind: "github" as const, result: null };

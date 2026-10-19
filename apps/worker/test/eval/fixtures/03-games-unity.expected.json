@@ -1,4 +1,7 @@
-{ "categories": ["games"], "experienceLevel": "intermediate",
+{
+  "categories": ["games"],
+  "experienceLevel": "intermediate",
   "mustSkills": ["unity", "csharp", "roblox", "game-design"],
   "maySkills": ["lua", "godot"],
-  "mustNotSkills": ["unreal", "react", "photoshop"] }
+  "mustNotSkills": ["unreal", "react", "photoshop"]
+}

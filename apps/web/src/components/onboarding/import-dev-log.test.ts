@@ -10,6 +10,7 @@ const job = (over: Partial<ImportSummary>): ImportSummary => ({
   errorCode: null,
   suggestions: null,
   partial: [],
+  skipped: [],
   createdAt: "2026-09-29T00:00:00.000Z",
   ...over,
 });
@@ -23,11 +24,13 @@ describe("logImportChanges", () => {
       status: "done",
       stage: "done",
       suggestions: {
-        v: 1,
+        v: 2,
         basics: { displayName: "A" },
         skills: [{ id: "react", level: "core" }],
         customSkills: [],
         githubUsername: null,
+        projects: [],
+        experience: [],
       },
     });
     logImportChanges([job({})], [done], out, "development");

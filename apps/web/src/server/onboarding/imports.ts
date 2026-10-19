@@ -3,6 +3,7 @@ import {
   checkGithubInput,
   suggestionsSchema,
   type ResumeStepName,
+  type StepId,
   type Suggestions,
 } from "@redlance/core";
 import {
@@ -12,6 +13,7 @@ import {
   profiles,
   users,
   type ImportJob,
+  type ImportKind,
   type ImportStage,
 } from "@redlance/db";
 import { and, eq, inArray } from "drizzle-orm";
@@ -28,6 +30,8 @@ export type ImportSummary = {
   errorCode: string | null;
   suggestions: Suggestions | null;
   partial: ResumeStepName[];
+  /** Steps the pipeline didn't run because the resume had no section for them. */
+  skipped: ResumeStepName[];
   /** A GitHub import the worker started from a link in the resume. */
   fromResume?: boolean;
   createdAt: string;
@@ -60,6 +64,7 @@ export function toImportSummary(
     errorCode: job.errorCode,
     suggestions,
     partial: suggestions?.meta?.partial ?? [],
+    skipped: suggestions?.meta?.skipped ?? [],
     fromResume:
       (job.input as { fromResume?: unknown } | null)?.fromResume === true,
     createdAt: job.createdAt.toISOString(),
@@ -197,8 +202,16 @@ export async function getImport(
   return toImportSummary(job);
 }
 
-/** Clears the basics and skills steps so a fresh import can pre-fill them again. */
-export async function resetForReimport(userId: string): Promise<void> {
+/**
+ * Clears the steps a fresh import pre-fills again: Basics and Skills always, Projects &
+ * experience only when a resume import was accepted (GitHub never fills it).
+ */
+export async function resetForReimport(
+  userId: string,
+  kinds: readonly ImportKind[],
+): Promise<void> {
+  const steps: StepId[] = ["basics", "skills"];
+  if (kinds.includes("resume")) steps.push("work");
   await getDb().transaction(async (tx) => {
     // FOR SHARE conflicts with Finish's FOR UPDATE, same as saveStep.
     const [locked] = await tx
@@ -222,7 +235,7 @@ export async function resetForReimport(userId: string): Promise<void> {
       .where(
         and(
           eq(onboardingSteps.userId, userId),
-          inArray(onboardingSteps.step, ["basics", "skills"]),
+          inArray(onboardingSteps.step, steps),
         ),
       );
   });

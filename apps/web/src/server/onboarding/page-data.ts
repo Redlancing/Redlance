@@ -16,6 +16,7 @@ import {
 import { redirect } from "next/navigation";
 import type { StepFormInit } from "@/components/onboarding/step-form-types";
 import { getCurrentUser } from "../current-user";
+import { partialNotice } from "@/components/onboarding/work-cards";
 import { getOnboardingState, type OnboardingState } from "./service";
 
 /** Guards every onboarding page (layouts don't re-render on client navigation, so pages do it). */
@@ -49,12 +50,29 @@ export function mergedSuggestions(
   return parts.length ? mergeSuggestions(parts) : null;
 }
 
+/**
+ * The note for the work step when the latest finished resume import couldn't read projects or
+ * experience (a failed step) or had no section for them (a skipped step). Hidden once the step
+ * has a saved row (the user has been through it).
+ */
+export function workImportNotice(state: OnboardingState): string | null {
+  if (state.steps.some((r) => r.step === "work")) return null;
+  const job = state.imports.resume;
+  if (job?.status !== "done") return null;
+  return partialNotice(job.partial, job.skipped);
+}
+
 function defaultsFor<S extends StepId>(
   step: S,
   state: OnboardingState,
 ): StepDraft<S> {
   const empty = emptyDraft(step);
-  if (step === "import" || step === "basics" || step === "skills") {
+  if (
+    step === "import" ||
+    step === "basics" ||
+    step === "skills" ||
+    step === "work"
+  ) {
     const merged = mergedSuggestions(state);
     if (merged) {
       // Suggestions come from validated worker output; if one no longer parses, start empty.
@@ -64,7 +82,9 @@ function defaultsFor<S extends StepId>(
             ? suggestedStepData("import", merged)
             : step === "basics"
               ? suggestedStepData("basics", merged)
-              : suggestedStepData("skills", merged);
+              : step === "skills"
+                ? suggestedStepData("skills", merged)
+                : suggestedStepData("work", merged);
         return data as StepDraft<S>;
       } catch {
         return empty;

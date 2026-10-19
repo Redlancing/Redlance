@@ -23,6 +23,7 @@ function placeholder(id: string, kind: ImportSummary["kind"]): ImportSummary {
     errorCode: null,
     suggestions: null,
     partial: [],
+    skipped: [],
     createdAt: new Date().toISOString(),
   };
 }

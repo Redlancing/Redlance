@@ -16,8 +16,21 @@ import {
   findSkill,
   normalizeSkillName,
 } from "./taxonomy";
+import {
+  WORK_LIMITS,
+  experienceSuggestion,
+  projectSuggestion,
+  type ExperienceSuggestion,
+  type ProjectSuggestion,
+} from "./work";
 
-export const RESUME_STEP_NAMES = ["basics", "jobTypes", "skills"] as const;
+export const RESUME_STEP_NAMES = [
+  "basics",
+  "jobTypes",
+  "skills",
+  "projects",
+  "experience",
+] as const;
 export type ResumeStepName = (typeof RESUME_STEP_NAMES)[number];
 
 const MAX_CUSTOM = 10;
@@ -37,13 +50,17 @@ const basicsSuggestion = z.strictObject({
   country: z.string().refine(isCountryCode, "Unknown country.").optional(),
 });
 
+// v2 (2026-10-17) added projects and experience. v1 results are refused, not upgraded:
+// there is no real data to keep (projects-experience-design.md, "Older imports").
 export const suggestionsSchema = z.strictObject({
-  v: z.literal(1),
+  v: z.literal(2),
   meta: z
     .strictObject({
       pipelineVersion: z.string(),
       promptVersions: z.record(z.string(), z.string()),
       partial: z.array(z.enum(RESUME_STEP_NAMES)),
+      // Steps that didn't run (their section had no text), as opposed to steps that failed.
+      skipped: z.array(z.enum(RESUME_STEP_NAMES)).default([]),
     })
     .optional(),
   basics: basicsSuggestion.default({}),
@@ -77,6 +94,9 @@ export const suggestionsSchema = z.strictObject({
     .refine((n) => !GITHUB_RESERVED.has(n.toLowerCase()))
     .nullable()
     .default(null),
+  // Only resume imports fill these; GitHub imports leave them empty.
+  projects: z.array(projectSuggestion).max(WORK_LIMITS.projects).default([]),
+  experience: z.array(experienceSuggestion).max(WORK_LIMITS.roles).default([]),
 });
 export type Suggestions = z.output<typeof suggestionsSchema>;
 
@@ -88,6 +108,9 @@ export type MergedSuggestions = {
   skills: { id: string; level: Level; source: SuggestionSource }[];
   customSkills: { name: string; level: Level; source: SuggestionSource }[];
   githubUsername: string | null;
+  /** From the resume only. */
+  projects: ProjectSuggestion[];
+  experience: ExperienceSuggestion[];
 };
 
 /** Merges suggestions from several sources; earlier parts win ties (pass resume first, then GitHub). */
@@ -104,6 +127,8 @@ export function mergeSuggestions(
     { name: string; level: Level; source: SuggestionSource }
   >();
   let githubUsername: string | null = null;
+  // Projects and experience come only from the resume (never GitHub repos); the first resume wins.
+  const resume = parts.find((p) => p.source === "resume")?.suggestions;
 
   for (const { source, suggestions } of parts) {
     for (const [key, value] of Object.entries(suggestions.basics))
@@ -150,6 +175,8 @@ export function mergeSuggestions(
     skills: cappedSkills,
     customSkills: cappedCustom,
     githubUsername,
+    projects: resume?.projects ?? [],
+    experience: resume?.experience ?? [],
   };
 }
 
@@ -166,7 +193,11 @@ export function suggestedStepData(
   m: MergedSuggestions,
 ): StepDraft<"skills">;
 export function suggestedStepData(
-  step: "import" | "basics" | "skills",
+  step: "work",
+  m: MergedSuggestions,
+): StepDraft<"work">;
+export function suggestedStepData(
+  step: "import" | "basics" | "skills" | "work",
   m: MergedSuggestions,
 ) {
   switch (step) {
@@ -187,6 +218,19 @@ export function suggestedStepData(
       return STEP_SCHEMAS.skills.draft.parse({
         skills: m.skills,
         customSkills: m.customSkills,
+      });
+    case "work":
+      return STEP_SCHEMAS.work.draft.parse({
+        projects: m.projects.map((p) => ({
+          ...p,
+          source: "resume",
+          hidden: false,
+        })),
+        experience: m.experience.map((r) => ({
+          ...r,
+          source: "resume",
+          hidden: false,
+        })),
       });
   }
 }

@@ -1,6 +1,12 @@
 import { SKILL_BY_ID, SKILLS } from "@redlance/core";
 import { skillsOutput, type SkillsOutput } from "../step-types";
-import { resumePrompt, routeText, SYSTEM, taskMarker, type StepSpec } from "./shared";
+import {
+  resumePrompt,
+  routeText,
+  SYSTEM,
+  taskMarker,
+  type StepSpec,
+} from "./shared";
 
 export const SHORTLIST_HEADING = "Skills found in the text (id — name):";
 export const FULL_LIST_HEADING = "You may also use any id from this full list:";

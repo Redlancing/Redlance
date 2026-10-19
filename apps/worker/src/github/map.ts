@@ -76,7 +76,7 @@ export function mapGithubToSuggestions(profile: {
 
   const name = profile.name?.trim().slice(0, LIMITS.displayName);
   return {
-    v: 1,
+    v: 2,
     basics: {
       ...(name ? { displayName: name } : {}),
       ...(categories.length ? { categories } : {}),
@@ -84,5 +84,8 @@ export function mapGithubToSuggestions(profile: {
     skills,
     customSkills: [],
     githubUsername: profile.login,
+    // Projects come only from the resume, never from repos.
+    projects: [],
+    experience: [],
   };
 }

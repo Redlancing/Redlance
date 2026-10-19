@@ -12,11 +12,13 @@ import { Progress } from "@/components/onboarding/progress";
 import { RatesStep } from "@/components/onboarding/rates-step";
 import { SkillsStep } from "@/components/onboarding/skills-step";
 import { ReviewStep } from "@/components/onboarding/review-step";
+import { WorkStep } from "@/components/onboarding/work-step";
 import {
   loadOnboardingPage,
   reviewData,
   savedDraft,
   stepInit,
+  workImportNotice,
 } from "@/server/onboarding/page-data";
 
 export async function generateMetadata(
@@ -55,7 +57,8 @@ export default async function OnboardingStepPage(
               (j) => j !== null,
             )}
             hasSavedProfileSteps={state.steps.some(
-              (r) => r.step === "basics" || r.step === "skills",
+              (r) =>
+                r.step === "basics" || r.step === "skills" || r.step === "work",
             )}
           />
         )}
@@ -70,6 +73,13 @@ export default async function OnboardingStepPage(
             key={formKey}
             init={stepInit(state, user.userId, "skills")}
             jobTypes={savedDraft(state, "basics")?.categories ?? []}
+          />
+        )}
+        {step === "work" && (
+          <WorkStep
+            key={formKey}
+            init={stepInit(state, user.userId, "work")}
+            notice={workImportNotice(state)}
           />
         )}
         {step === "rates" && (

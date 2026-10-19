@@ -116,7 +116,7 @@ export function RatesStep({ init }: { init: StepFormInit<"rates"> }) {
           Only show remote gigs
         </label>
       </fieldset>
-      <StepActions form={form} back="skills" nextLabel="Review" />
+      <StepActions form={form} back="work" nextLabel="Review" />
     </>
   );
 }

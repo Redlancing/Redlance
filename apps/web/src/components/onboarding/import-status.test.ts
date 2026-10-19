@@ -5,6 +5,7 @@ import {
   describeImports,
   importErrorMessage,
   liveAnnouncement,
+  reimportDialog,
   startErrorMessage,
 } from "./import-status";
 
@@ -16,12 +17,13 @@ const job = (over: Partial<ImportSummary> = {}): ImportSummary => ({
   errorCode: null,
   suggestions: null,
   partial: [],
+  skipped: [],
   createdAt: new Date().toISOString(),
   ...over,
 });
 
 const SUGGESTIONS = {
-  v: 1 as const,
+  v: 2 as const,
   basics: {
     displayName: "Ravi",
     categories: ["development" as const, "design" as const, "video" as const],
@@ -32,6 +34,8 @@ const SUGGESTIONS = {
   })).filter((s, i, a) => a.findIndex((x) => x.id === s.id) === i),
   customSkills: [{ name: "Descript", level: "secondary" as const }],
   githubUsername: null,
+  projects: [],
+  experience: [],
 };
 
 describe("describeImports", () => {
@@ -101,6 +105,28 @@ describe("describeImports", () => {
     );
     expect(view.tone).toBe("warning");
     expect(view.message).toContain("add your skills in Skills by hand");
+  });
+
+  it("names Projects & experience when a work step failed, but not when it was skipped", () => {
+    const view = describeImports(
+      [
+        job({
+          suggestions: SUGGESTIONS,
+          partial: ["projects", "experience"],
+          skipped: [],
+        }),
+      ],
+      null,
+    );
+    expect(view.tone).toBe("warning");
+    expect(view.message).toContain(
+      "add your projects in Projects & experience and your experience in Projects & experience by hand",
+    );
+    const skipped = describeImports(
+      [job({ suggestions: SUGGESTIONS, skipped: ["projects"] })],
+      null,
+    );
+    expect(skipped.tone).toBe("success");
   });
 
   it("uses the error message when every import failed", () => {
@@ -283,6 +309,22 @@ describe("startErrorMessage", () => {
     );
     expect(startErrorMessage(400, "INVALID_INPUT", "That file is empty.")).toBe(
       "That file is empty.",
+    );
+  });
+});
+
+describe("reimportDialog", () => {
+  it("names Projects & experience only when a resume is imported", () => {
+    expect(reimportDialog({ resume: false, github: true })).toEqual({
+      title: "Replace Basics and Skills?",
+      body: "Once the import starts, what's in Basics and Skills will be replaced with suggestions from GitHub.",
+    });
+    expect(reimportDialog({ resume: true, github: false })).toEqual({
+      title: "Replace Basics, Skills, and Projects & experience?",
+      body: "Once the import starts, what's in Basics, Skills, and Projects & experience will be replaced with suggestions from the new resume.",
+    });
+    expect(reimportDialog({ resume: true, github: true }).body).toMatch(
+      /from the new resume and GitHub\.$/,
     );
   });
 });

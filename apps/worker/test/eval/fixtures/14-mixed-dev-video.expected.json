@@ -1,4 +1,17 @@
-{ "categories": ["development", "video"], "experienceLevel": "intermediate",
-  "mustSkills": ["wordpress", "shopify", "php", "html-css", "javascript", "video-editing", "davinci-resolve", "premiere-pro", "after-effects"],
+{
+  "categories": ["development", "video"],
+  "experienceLevel": "intermediate",
+  "mustSkills": [
+    "wordpress",
+    "shopify",
+    "php",
+    "html-css",
+    "javascript",
+    "video-editing",
+    "davinci-resolve",
+    "premiere-pro",
+    "after-effects"
+  ],
   "maySkills": ["react", "motion-graphics", "subtitles", "payments"],
-  "mustNotSkills": ["unity", "kubernetes", "voice-over"] }
+  "mustNotSkills": ["unity", "kubernetes", "voice-over"]
+}

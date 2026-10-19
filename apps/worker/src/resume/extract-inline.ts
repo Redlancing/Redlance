@@ -51,7 +51,11 @@ function readDocxEntries(bytes: Uint8Array): Record<string, Uint8Array> {
   const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const decoder = new TextDecoder("utf-8", { fatal: false });
   let eocd = -1;
-  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 22 - 65535); i--)
+  for (
+    let i = bytes.length - 22;
+    i >= Math.max(0, bytes.length - 22 - 65535);
+    i--
+  )
     if (u32(v, i) === 0x06054b50) {
       eocd = i;
       break;
@@ -89,7 +93,9 @@ function readDocxEntries(bytes: Uint8Array): Record<string, Uint8Array> {
       throw unsupported("Broken zip entry.");
     const lNameLen = u16(v, local + 26);
     const lExtraLen = u16(v, local + 28);
-    const lName = decoder.decode(bytes.subarray(local + 30, local + 30 + lNameLen));
+    const lName = decoder.decode(
+      bytes.subarray(local + 30, local + 30 + lNameLen),
+    );
     const start = local + 30 + lNameLen + lExtraLen;
     if (lName !== name || start + compSize > bytes.length)
       throw unsupported("Broken zip entry.");
@@ -109,7 +115,10 @@ function readDocxEntries(bytes: Uint8Array): Record<string, Uint8Array> {
       try {
         const inflater = new Inflate((chunk) => take(chunk));
         for (let i = 0; i < data.length; i += SLICE)
-          inflater.push(data.subarray(i, Math.min(i + SLICE, data.length)), i + SLICE >= data.length);
+          inflater.push(
+            data.subarray(i, Math.min(i + SLICE, data.length)),
+            i + SLICE >= data.length,
+          );
         if (data.length === 0) inflater.push(new Uint8Array(0), true);
       } catch (e) {
         if (e instanceof ResumeError) throw e;
@@ -126,7 +135,8 @@ function readDocxEntries(bytes: Uint8Array): Record<string, Uint8Array> {
     files[name] = out;
   }
   if (pos !== eocd) throw unsupported("Broken zip directory.");
-  if (!("word/document.xml" in files)) throw unsupported("Not a Word document.");
+  if (!("word/document.xml" in files))
+    throw unsupported("Not a Word document.");
   return files;
 }
 

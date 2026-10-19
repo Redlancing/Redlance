@@ -10,6 +10,7 @@ import {
   type GenerateRequest,
   type LlmClient,
 } from "@redlance/llm";
+import { WORK_SHORTLIST_HEADING } from "../src/resume/steps/shared";
 import {
   FULL_LIST_HEADING,
   SHORTLIST_HEADING,
@@ -151,7 +152,155 @@ function skills(resume: string, task: string) {
   return { skills: out, customSkills: [] };
 }
 
-/** Deterministic, schema-valid answers for the three resume steps. */
+// ---------- projects and experience ----------
+
+/** The "[P1]" / "[E1]" blocks the work steps put inside <resume>. */
+function blocksOf(resume: string): { id: string; lines: string[] }[] {
+  const out: { id: string; lines: string[] }[] = [];
+  for (const raw of resume.split("\n")) {
+    const id = /^\[([PE]\d+)\]$/.exec(raw.trim())?.[1];
+    if (id) out.push({ id, lines: [] });
+    else if (out.length && raw.trim()) out.at(-1)!.lines.push(raw.trim());
+  }
+  return out;
+}
+
+/** The shortlist ids the work steps list under their heading (up to the first blank line). */
+function workShortlist(task: string): string[] {
+  const start = task.indexOf(WORK_SHORTLIST_HEADING);
+  if (start < 0) return [];
+  const ids: string[] = [];
+  for (const line of task
+    .slice(start + WORK_SHORTLIST_HEADING.length)
+    .split("\n")
+    .slice(1)) {
+    if (!line.trim()) break;
+    const id = /^(\S+) — /.exec(line.trim())?.[1];
+    if (id && SKILL_BY_ID.has(id)) ids.push(id);
+  }
+  return ids;
+}
+
+const BULLET = /^(?:[-–—•*▪◦●]|\d{1,2}[.)])\s*/;
+const SEPARATORS = [
+  " — ",
+  " – ",
+  " - ",
+  " | ",
+  " · ",
+  ", ",
+  " at ",
+  " (",
+  "\t",
+];
+
+/** The first line split at its first separator: [title, rest]. */
+function headParts(first: string): [string, string] {
+  let at = -1;
+  let len = 0;
+  for (const sep of SEPARATORS) {
+    const i = first.indexOf(sep);
+    if (i > 0 && (at < 0 || i < at)) [at, len] = [i, sep.length];
+  }
+  return at < 0
+    ? [first, ""]
+    : [first.slice(0, at).trim(), first.slice(at + len).trim()];
+}
+
+/** A capitalised name after "for " ("for Acme Realty's site" → "Acme Realty"), else none (lines and titles). */
+function clientNamesIn(text: string) {
+  const m =
+    /\bfor ((?:[A-Z][\p{L}\p{N}&-]*)(?:\s+[A-Z][\p{L}\p{N}&-]*){0,2})/u.exec(
+      text,
+    );
+  return m ? [{ name: m[1]!, generic: "a client" }] : [];
+}
+
+/** Bullet lines (and long body lines) after the head, as copied lines; names on the first. */
+function copiedLines(lines: string[], max: number) {
+  return lines
+    .slice(1)
+    .filter((l) => BULLET.test(l) || l.length > 120)
+    .slice(0, max)
+    .map((l, i) => {
+      const text = l.replace(BULLET, "").slice(0, MAX_QUOTE).trim();
+      return { text, clientNames: i === 0 ? clientNamesIn(text) : [] };
+    });
+}
+
+function blockSkills(text: string, shortlist: string[]): string[] {
+  return shortlist
+    .filter((id) => {
+      const s = SKILL_BY_ID.get(id)!;
+      return [s.name, ...s.aliases].some(
+        (label) => label.length >= 3 && findWord(text, label) !== null,
+      );
+    })
+    .slice(0, 10);
+}
+
+function projects(resume: string, task: string) {
+  const shortlist = workShortlist(task);
+  return {
+    projects: blocksOf(resume)
+      .slice(0, 8)
+      .map((b) => {
+        const text = b.lines.join("\n");
+        const title = headParts(b.lines[0] ?? "")[0].slice(0, 80);
+        return {
+          block: b.id,
+          title,
+          summary: "A project listed on the resume.",
+          role: "unknown",
+          kind: "unknown",
+          skills: blockSkills(text, shortlist),
+          categories: CODE_WORDS.some((w) => findWord(text, w))
+            ? ["development"]
+            : [],
+          domains: [],
+          outcomes: copiedLines(b.lines, 3),
+          clientNames: clientNamesIn(title),
+        };
+      }),
+  };
+}
+
+function experience(resume: string, task: string) {
+  const shortlist = workShortlist(task);
+  return {
+    experience: blocksOf(resume)
+      .slice(0, 6)
+      .map((b) => {
+        const text = b.lines.join("\n");
+        const [title, rest] = headParts(b.lines[0] ?? "");
+        const org = headParts(rest)[0];
+        const employmentType = /freelance/i.test(text)
+          ? "freelance"
+          : /contract/i.test(text)
+            ? "contract"
+            : /intern/i.test(text)
+              ? "internship"
+              : "unknown";
+        return {
+          block: b.id,
+          title: title.slice(0, 80),
+          // A head segment without digits (not a date) is read as the organisation.
+          organisation: org && !/\d/.test(org) ? org.slice(0, 80) : null,
+          organisationDescription:
+            employmentType === "freelance" ? "a client" : "a company",
+          employmentType,
+          summary: "A role listed on the resume.",
+          highlights: copiedLines(b.lines, 4),
+          skills: blockSkills(text, shortlist),
+          categories: [],
+          domains: [],
+          clientNames: clientNamesIn(title),
+        };
+      }),
+  };
+}
+
+/** Deterministic, schema-valid answers for the resume steps. */
 export function stubResumeResponder(req: GenerateRequest<unknown>): unknown {
   const p = parts(req);
   switch (stepOf(req)) {
@@ -161,12 +310,59 @@ export function stubResumeResponder(req: GenerateRequest<unknown>): unknown {
       return jobTypes(p!.resume);
     case "skills":
       return skills(p!.resume, p!.task);
+    case "projects":
+      return projects(p!.resume, p!.task);
+    case "experience":
+      return experience(p!.resume, p!.task);
     default:
       return {};
   }
 }
 
-/** An LlmClient that answers resume steps with the stub (no network). */
+// ---------- match re-score ----------
+
+/** The text between `<tag>\n` and `\n</tag>` in the prompt, or "". */
+function block(prompt: string, tag: string): string {
+  const open = prompt.indexOf(`<${tag}>\n`);
+  const close = prompt.indexOf(`\n</${tag}>`);
+  return open >= 0 && close > open
+    ? prompt.slice(open + tag.length + 3, close)
+    : "";
+}
+
+export const isRescoreRequest = (req: GenerateRequest<unknown>) =>
+  /^Task: match_rescore$/m.test(req.prompt);
+
+/**
+ * Deterministic re-score: 85 when the post's title or body names one of the profile's core
+ * skills, otherwise 40; the first project (and role) when there is one, with a reason naming it.
+ */
+export function stubRescoreResponder(req: GenerateRequest<unknown>): unknown {
+  const post = block(req.prompt, "post");
+  // Title and body only: the lines before our own "Analysis:" line.
+  const text = post.slice(0, post.lastIndexOf("\nAnalysis: ")).toLowerCase();
+  const profile = block(req.prompt, "profile");
+  const core = (/^Core skills: (.*)$/m.exec(profile)?.[1] ?? "none")
+    .split(", ")
+    .filter((s) => s !== "none");
+  const project = /^\[P1\] (.*?): /m.exec(profile)?.[1];
+  const hit = core.some((s) => text.includes(s.toLowerCase()));
+  return {
+    score: hit ? 85 : 40,
+    reason: project ? `You built ${project}.` : "Your skills partly fit.",
+    bestProject: project ? "P1" : null,
+    bestRole: /^\[E1\] /m.test(profile) ? "E1" : null,
+    concerns: hit ? [] : ["Core skills not named"],
+  };
+}
+
+/** An LlmClient that answers resume steps and match re-scores with the stub (no network). */
 export function stubLlm(): LlmClient {
-  return createClient(createFakeTransport(stubResumeResponder));
+  return createClient(
+    createFakeTransport((req) =>
+      isRescoreRequest(req)
+        ? stubRescoreResponder(req)
+        : stubResumeResponder(req),
+    ),
+  );
 }

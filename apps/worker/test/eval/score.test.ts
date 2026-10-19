@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { aggregate, percentile, score, type Expected, type Suggested } from "./score";
+import {
+  aggregate,
+  percentile,
+  score,
+  type Expected,
+  type Suggested,
+} from "./score";
 
 const expected: Expected = {
   categories: ["development", "design"],
@@ -21,7 +27,10 @@ function sugg(over: {
       experienceLevel: over.level,
     },
     skills: (over.skills ?? []).map((id) => ({ id, level: "core" })),
-    customSkills: (over.custom ?? []).map((name) => ({ name, level: "secondary" })),
+    customSkills: (over.custom ?? []).map((name) => ({
+      name,
+      level: "secondary",
+    })),
   };
 }
 
@@ -77,7 +86,12 @@ describe("score", () => {
 
   it("handles empty must lists", () => {
     const r = score(
-      { categories: ["admin"], experienceLevel: "beginner", mustSkills: [], mustNotSkills: [] },
+      {
+        categories: ["admin"],
+        experienceLevel: "beginner",
+        mustSkills: [],
+        mustNotSkills: [],
+      },
       sugg({}),
     );
     expect(r.skillRecall).toBe(1);
@@ -87,7 +101,14 @@ describe("score", () => {
 
 describe("aggregate", () => {
   it("averages and sums", () => {
-    const a = score(expected, sugg({ skills: ["react"], categories: ["design", "development"], level: "intermediate" }));
+    const a = score(
+      expected,
+      sugg({
+        skills: ["react"],
+        categories: ["design", "development"],
+        level: "intermediate",
+      }),
+    );
     const b = score(expected, sugg({ skills: ["unity"] }));
     const t = aggregate([a, b]);
     expect(t.levelAccuracy).toBe(0.5);

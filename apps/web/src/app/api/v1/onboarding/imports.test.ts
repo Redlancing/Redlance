@@ -1,3 +1,4 @@
+import { STEP_IDS } from "@redlance/core";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@/server/db";
@@ -66,6 +67,19 @@ const post = (
     }),
   );
 
+const postReset = (cookie: string, body: unknown) =>
+  reset(
+    req("/api/v1/onboarding/imports/reset", {
+      method: "POST",
+      headers: {
+        cookie,
+        origin: TEST_ENV.APP_ORIGIN,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    }),
+  );
+
 const put = (cookie: string, step: string, data: unknown) =>
   putStep(
     req(`/api/v1/onboarding/steps/${step}`, {
@@ -89,8 +103,7 @@ const getJob = (cookie: string, id: string) =>
   );
 
 async function finishAll(cookie: string) {
-  for (const step of ["import", "basics", "skills", "rates"] as const)
-    await put(cookie, step, VALID[step]);
+  for (const step of STEP_IDS) await put(cookie, step, VALID[step]);
   expect((await post(finish, "/api/v1/onboarding/finish", cookie)).status).toBe(
     200,
   );
@@ -215,6 +228,7 @@ describe("import status", () => {
       stage: "queued",
       suggestions: null,
       partial: [],
+      skipped: [],
     });
     const other = await cookieFor("other@example.com");
     expect((await getJob(other, jobId)).status).toBe(404);
@@ -223,14 +237,26 @@ describe("import status", () => {
 });
 
 describe("reset", () => {
-  it("deletes basics and skills but keeps other steps and imports", async () => {
+  async function filled() {
     const cookie = await cookieFor();
     await gh(cookie, "octocat");
     await put(cookie, "import", VALID.import);
     await put(cookie, "basics", VALID.basics);
     await put(cookie, "skills", VALID.skills);
+    await put(cookie, "work", VALID.work);
+    return cookie;
+  }
+  const savedSteps = async (cookie: string) =>
+    (
+      await (
+        await getState(req("/api/v1/onboarding", { headers: { cookie } }))
+      ).json()
+    ).steps.map((s: { id: string }) => s.id);
+
+  it("deletes basics, skills and work after a resume import, keeping other steps and imports", async () => {
+    const cookie = await filled();
     expect(
-      (await post(reset, "/api/v1/onboarding/imports/reset", cookie)).status,
+      (await postReset(cookie, { kinds: ["resume", "github"] })).status,
     ).toBe(204);
     const state = await (
       await getState(req("/api/v1/onboarding", { headers: { cookie } }))
@@ -239,12 +265,29 @@ describe("reset", () => {
     expect(state.imports).toHaveLength(1);
   });
 
+  it("keeps work after a GitHub-only import, and by default", async () => {
+    const cookie = await filled();
+    expect((await postReset(cookie, { kinds: ["github"] })).status).toBe(204);
+    expect(await savedSteps(cookie)).toEqual(["import", "work"]);
+    expect((await postReset(cookie, {})).status).toBe(204);
+    expect(await savedSteps(cookie)).toEqual(["import", "work"]);
+  });
+
+  it("refuses unknown kinds", async () => {
+    const cookie = await filled();
+    expect((await postReset(cookie, { kinds: ["linkedin"] })).status).toBe(400);
+    expect(await savedSteps(cookie)).toEqual([
+      "import",
+      "basics",
+      "skills",
+      "work",
+    ]);
+  });
+
   it("409s after Finish", async () => {
     const cookie = await cookieFor();
     await finishAll(cookie);
-    expect(
-      (await post(reset, "/api/v1/onboarding/imports/reset", cookie)).status,
-    ).toBe(409);
+    expect((await postReset(cookie, { kinds: ["resume"] })).status).toBe(409);
   });
 });
 

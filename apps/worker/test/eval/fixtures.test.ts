@@ -15,7 +15,9 @@ describe("eval fixtures", () => {
     expect(names.length).toBeGreaterThanOrEqual(14);
     const cats = new Set<string>();
     for (const n of names) {
-      const e = JSON.parse(readFileSync(join(dir, `${n}.expected.json`), "utf8")) as Expected;
+      const e = JSON.parse(
+        readFileSync(join(dir, `${n}.expected.json`), "utf8"),
+      ) as Expected;
       e.categories.forEach((c) => cats.add(c));
     }
     expect([...cats].sort()).toEqual([...CATEGORY_IDS].sort());
@@ -23,8 +25,12 @@ describe("eval fixtures", () => {
 
   it.each(names)("%s is well formed", (n) => {
     const text = readFileSync(join(dir, `${n}.txt`), "utf8");
-    const e = JSON.parse(readFileSync(join(dir, `${n}.expected.json`), "utf8")) as Expected;
-    expect(cleanResumeText(text).length).toBeGreaterThanOrEqual(MIN_RESUME_CHARS);
+    const e = JSON.parse(
+      readFileSync(join(dir, `${n}.expected.json`), "utf8"),
+    ) as Expected;
+    expect(cleanResumeText(text).length).toBeGreaterThanOrEqual(
+      MIN_RESUME_CHARS,
+    );
     expect(text).not.toMatch(/@(?!example\.com)[a-z0-9-]+\.[a-z]/i);
     expect(EXPERIENCE_LEVELS).toContain(e.experienceLevel);
     for (const c of e.categories) expect(CATEGORY_IDS).toContain(c);
