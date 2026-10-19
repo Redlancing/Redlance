@@ -18,7 +18,7 @@ const { db, pool } = createDb(url, { max: 5 });
 const reset = async () => {
   await db.execute(sql`truncate table users cascade`);
   await db.execute(
-    sql`truncate table match_events, matches, job_post_analyses, job_posts, llm_usage`,
+    sql`truncate table match_events, matches, job_post_analyses, job_posts, llm_usage cascade`,
   );
 };
 

@@ -17,6 +17,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { v7 as uuidv7 } from "uuid";
@@ -275,10 +276,7 @@ export const profiles = pgTable(
     ),
     check("profiles_plan_check", sql`${t.plan} in (${sqlList(PLANS)})`),
     check("profiles_profile_version_check", sql`${t.profileVersion} >= 1`),
-    check(
-      "profiles_rematch_attempts_check",
-      sql`${t.rematchAttempts} >= 0`,
-    ),
+    check("profiles_rematch_attempts_check", sql`${t.rematchAttempts} >= 0`),
     index("profiles_rematch_idx")
       .on(t.rematchSince)
       .where(sql`${t.rematchSince} is not null`),
@@ -622,6 +620,8 @@ export const llmUsage = pgTable(
       sql`${t.outcome} in (${sqlList(LLM_OUTCOMES)})`,
     ),
     index("llm_usage_created_idx").on(t.createdAt),
+    // Per-user daily cost checks run on every draft request.
+    index("llm_usage_user_created_idx").on(t.userId, t.createdAt),
   ],
 );
 
@@ -855,9 +855,15 @@ export const jobPostAnalyses = pgTable(
     redFlags: text("red_flags").array().notNull(),
     summary: text("summary").notNull(),
     model: text("model").notNull(),
+    /** How the post says to apply (e.g. "email X with Y"); null when it doesn't say. */
+    applyInstructions: text("apply_instructions"),
     createdAt: createdAt(),
   },
   (t) => [
+    check(
+      "job_post_analyses_apply_instructions_check",
+      sql`${t.applyInstructions} is null or char_length(${t.applyInstructions}) <= 300`,
+    ),
     check(
       "job_post_analyses_kind_check",
       sql`${t.kind} in (${sqlList(POST_KINDS)})`,
@@ -1030,5 +1036,427 @@ export const rescoreUsage = pgTable(
   (t) => [
     primaryKey({ columns: [t.userId, t.day] }),
     check("rescore_usage_used_check", sql`${t.used} >= 0`),
+  ],
+);
+
+// ---- Drafts and the reply tracker (docs/drafts/README.md §13) ----
+
+// Literal lists mirror @redlance/core (checked by drafts-schema.test.ts).
+export const DRAFT_STATUS_VALUES = [
+  "pending",
+  "running",
+  "done",
+  "failed",
+] as const;
+export const DRAFT_KIND_VALUES = ["draft", "rewrite"] as const;
+export const REWRITE_OPTION_VALUES = [
+  "shorter",
+  "casual",
+  "formal",
+  "different_project",
+  "custom",
+] as const;
+export const REPLY_KIND_VALUES = ["comment", "dm"] as const;
+export const REPLY_STATUS_VALUES = [
+  "sent",
+  "replied",
+  "hired",
+  "lost",
+  "no_reply",
+  "ghosted",
+] as const;
+export const OUTCOME_TYPE_VALUES = [
+  "replied",
+  "hired",
+  "lost",
+  "no_reply",
+  "ghosted",
+  "unpaid",
+] as const;
+export const LEDGER_REASON_VALUES = [
+  "grant",
+  "reserve",
+  "refund",
+  "expire",
+  "adjust",
+] as const;
+export const EVAL_CANDIDATE_REASON_VALUES = [
+  "validator_failed_twice",
+  "heavy_edit",
+  "many_rewrites",
+  "thumbs_down",
+] as const;
+export const EVAL_REVIEW_STATUS_VALUES = [
+  "pending",
+  "added",
+  "skipped",
+] as const;
+export const VOICE_UPDATE_STATUS_VALUES = [
+  "idle",
+  "pending",
+  "running",
+] as const;
+export const EXAMPLE_SOURCE_VALUES = ["handwritten", "winning"] as const;
+
+/** One AI-written comment + DM for a match; a rewrite is a new row (version 2-5). */
+export const drafts = pgTable(
+  "drafts",
+  {
+    id: v7Id(),
+    userId: userId(),
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    jobPostId: uuid("job_post_id")
+      .notNull()
+      .references(() => jobPosts.id),
+    version: smallint("version").notNull(),
+    parentId: uuid("parent_id").references((): AnyPgColumn => drafts.id, {
+      onDelete: "set null",
+    }),
+    kind: text("kind", { enum: DRAFT_KIND_VALUES }).notNull(),
+    option: text("option", { enum: REWRITE_OPTION_VALUES }),
+    instruction: text("instruction"),
+    status: text("status", { enum: DRAFT_STATUS_VALUES })
+      .notNull()
+      .default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    runAfter: timestamp("run_after", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    /** An error code only, never text from the model or the post. */
+    error: text("error"),
+    /** The model's plan: what the client needs, and the one fact it cites. */
+    problem: text("problem"),
+    citedFact: text("cited_fact"),
+    applyFollowed: boolean("apply_followed"),
+    comment: text("comment"),
+    dm: text("dm"),
+    /** core `Evidence`: the facts the draft was written from. */
+    evidence: jsonb("evidence").$type<Record<string, unknown>>(),
+    styleTags: text("style_tags").array(),
+    warning: boolean("warning").notNull().default(false),
+    /** core `Problem[]`: what the validators found. */
+    problems: jsonb("problems").$type<{ code: string; detail?: string }[]>(),
+    model: text("model"),
+    promptVersion: text("prompt_version"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    costMicros: integer("cost_micros"),
+    timings: jsonb("timings").$type<Record<string, number>>(),
+    /** Credits reserved for this draft (0 once refunded). */
+    credits: integer("credits").notNull().default(0),
+    idempotencyKey: text("idempotency_key"),
+    createdAt: createdAt(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+  },
+  (t) => [
+    // A failed version frees its number: a retry of v1 (or a rewrite) takes the same number
+    // as a new row, and failed rows don't count toward MAX_VERSIONS.
+    uniqueIndex("drafts_user_match_version_idx")
+      .on(t.userId, t.matchId, t.version)
+      .where(sql`${t.status} <> 'failed'`),
+    uniqueIndex("drafts_user_idempotency_idx")
+      .on(t.userId, t.idempotencyKey)
+      .where(sql`${t.idempotencyKey} is not null`),
+    check("drafts_version_check", sql`${t.version} between 1 and 5`),
+    check(
+      "drafts_instruction_check",
+      sql`${t.instruction} is null or char_length(${t.instruction}) <= 200`,
+    ),
+    check("drafts_credits_check", sql`${t.credits} >= 0`),
+    check(
+      "drafts_kind_check",
+      sql`${t.kind} in (${sqlList(DRAFT_KIND_VALUES)})`,
+    ),
+    check(
+      "drafts_option_check",
+      sql`${t.option} is null or ${t.option} in (${sqlList(REWRITE_OPTION_VALUES)})`,
+    ),
+    check(
+      "drafts_status_check",
+      sql`${t.status} in (${sqlList(DRAFT_STATUS_VALUES)})`,
+    ),
+    // The worker's claim: pending drafts that are due, and running ones to requeue.
+    index("drafts_queue_idx")
+      .on(t.status, t.runAfter)
+      .where(sql`${t.status} in ('pending', 'running')`),
+    index("drafts_user_created_idx").on(t.userId, t.createdAt),
+  ],
+);
+
+export type Draft = typeof drafts.$inferSelect;
+
+/** One row per user: credits left in the current plan period. */
+export const creditBalances = pgTable(
+  "credit_balances",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    plan: text("plan", { enum: PLANS }).notNull(),
+    balance: integer("balance").notNull(),
+    periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+    periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check("credit_balances_balance_check", sql`${t.balance} >= 0`),
+    check("credit_balances_plan_check", sql`${t.plan} in (${sqlList(PLANS)})`),
+  ],
+);
+
+/** Every change to a balance. */
+export const creditLedger = pgTable(
+  "credit_ledger",
+  {
+    id: v7Id(),
+    userId: userId(),
+    delta: integer("delta").notNull(),
+    reason: text("reason", { enum: LEDGER_REASON_VALUES }).notNull(),
+    draftId: uuid("draft_id").references(() => drafts.id, {
+      onDelete: "set null",
+    }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check(
+      "credit_ledger_reason_check",
+      sql`${t.reason} in (${sqlList(LEDGER_REASON_VALUES)})`,
+    ),
+    index("credit_ledger_user_created_idx").on(t.userId, t.createdAt),
+    // A draft is refunded at most once (refundCredits relies on this).
+    uniqueIndex("credit_ledger_refund_once_idx")
+      .on(t.draftId)
+      .where(sql`${t.reason} = 'refund'`),
+  ],
+);
+
+/** What the user actually sent (the tracker). One per post and kind. */
+export const replies = pgTable(
+  "replies",
+  {
+    id: v7Id(),
+    userId: userId(),
+    // Kept (as null) if the match or draft is deleted: a sent reply is history.
+    matchId: uuid("match_id").references(() => matches.id, {
+      onDelete: "set null",
+    }),
+    jobPostId: uuid("job_post_id")
+      .notNull()
+      .references(() => jobPosts.id),
+    draftId: uuid("draft_id").references(() => drafts.id, {
+      onDelete: "set null",
+    }),
+    kind: text("kind", { enum: REPLY_KIND_VALUES }).notNull(),
+    sentText: text("sent_text").notNull(),
+    /** 0-1: how much of the draft the user changed; null when there was no draft. */
+    editRatio: real("edit_ratio"),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull(),
+    status: text("status", { enum: REPLY_STATUS_VALUES })
+      .notNull()
+      .default("sent"),
+    remindAt: timestamp("remind_at", { withTimezone: true }),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique("replies_user_post_kind_unique").on(t.userId, t.jobPostId, t.kind),
+    check("replies_sent_text_check", sql`char_length(${t.sentText}) <= 10000`),
+    check(
+      "replies_kind_check",
+      sql`${t.kind} in (${sqlList(REPLY_KIND_VALUES)})`,
+    ),
+    check(
+      "replies_status_check",
+      sql`${t.status} in (${sqlList(REPLY_STATUS_VALUES)})`,
+    ),
+    index("replies_user_status_sent_idx").on(t.userId, t.status, t.sentAt),
+  ],
+);
+
+export type Reply = typeof replies.$inferSelect;
+
+/**
+ * Every time the user marks a reply as sent (rule 3: store everything). `replies` holds the
+ * latest send per post and kind; this keeps each one, append-only.
+ */
+export const replySends = pgTable(
+  "reply_sends",
+  {
+    id: v7Id(),
+    replyId: uuid("reply_id")
+      .notNull()
+      .references(() => replies.id, { onDelete: "cascade" }),
+    userId: userId(),
+    draftId: uuid("draft_id").references(() => drafts.id, {
+      onDelete: "set null",
+    }),
+    sentText: text("sent_text").notNull(),
+    editRatio: real("edit_ratio"),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    check(
+      "reply_sends_sent_text_check",
+      sql`char_length(${t.sentText}) <= 10000`,
+    ),
+    index("reply_sends_reply_sent_idx").on(t.replyId, t.sentAt),
+  ],
+);
+
+export type ReplySend = typeof replySends.$inferSelect;
+
+/** Every reported outcome of a reply (rule 3: store everything). */
+export const outcomes = pgTable(
+  "outcomes",
+  {
+    id: v7Id(),
+    replyId: uuid("reply_id")
+      .notNull()
+      .references(() => replies.id, { onDelete: "cascade" }),
+    userId: userId(),
+    type: text("type", { enum: OUTCOME_TYPE_VALUES }).notNull(),
+    /** In minor units of `currency` (cents, pence, paise). */
+    agreedRateMinor: integer("agreed_rate_minor"),
+    currency: text("currency"),
+    reportedAt: timestamp("reported_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check(
+      "outcomes_type_check",
+      sql`${t.type} in (${sqlList(OUTCOME_TYPE_VALUES)})`,
+    ),
+    check(
+      "outcomes_rate_check",
+      sql`${t.agreedRateMinor} is null or ${t.agreedRateMinor} >= 0`,
+    ),
+    index("outcomes_reply_idx").on(t.replyId),
+  ],
+);
+
+/** What we've learned about how a user writes, from their edits. */
+export const voiceProfiles = pgTable(
+  "voice_profiles",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    notes: text("notes"),
+    previousNotes: text("previous_notes"),
+    /** core `VoiceStats`. */
+    stats: jsonb("stats").$type<Record<string, unknown>>(),
+    sendsCounted: integer("sends_counted").notNull().default(0),
+    sendsSinceUpdate: integer("sends_since_update").notNull().default(0),
+    version: integer("version").notNull().default(0),
+    bestReplyIds: uuid("best_reply_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
+    updateStatus: text("update_status", { enum: VOICE_UPDATE_STATUS_VALUES })
+      .notNull()
+      .default("idle"),
+    updateRunAfter: timestamp("update_run_after", { withTimezone: true }),
+    updateLockedAt: timestamp("update_locked_at", { withTimezone: true }),
+    /** The UTC day `updates_today` counts for. */
+    updatesDay: date("updates_day", { mode: "string" }),
+    updatesToday: integer("updates_today").notNull().default(0),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check(
+      "voice_profiles_notes_check",
+      sql`${t.notes} is null or char_length(${t.notes}) <= 600`,
+    ),
+    check(
+      "voice_profiles_best_replies_check",
+      sql`cardinality(${t.bestReplyIds}) <= 2`,
+    ),
+    check(
+      "voice_profiles_update_status_check",
+      sql`${t.updateStatus} in (${sqlList(VOICE_UPDATE_STATUS_VALUES)})`,
+    ),
+    index("voice_profiles_queue_idx")
+      .on(t.updateStatus, t.updateRunAfter)
+      .where(sql`${t.updateStatus} <> 'idle'`),
+  ],
+);
+
+export type VoiceProfile = typeof voiceProfiles.$inferSelect;
+
+/** Example replies shown to the model. The id is a stable key like `webdev-dm-1`. */
+export const draftExamples = pgTable(
+  "draft_examples",
+  {
+    id: text("id").primaryKey(),
+    /** A job type id from the taxonomy, or `general`. */
+    jobType: text("job_type").notNull(),
+    channel: text("channel", { enum: REPLY_KIND_VALUES }).notNull(),
+    style: text("style").notNull(),
+    postExcerpt: text("post_excerpt").notNull(),
+    text: text("text").notNull(),
+    source: text("source", { enum: EXAMPLE_SOURCE_VALUES }).notNull(),
+    active: boolean("active").notNull().default(true),
+  },
+  (t) => [
+    check(
+      "draft_examples_channel_check",
+      sql`${t.channel} in (${sqlList(REPLY_KIND_VALUES)})`,
+    ),
+    check(
+      "draft_examples_source_check",
+      sql`${t.source} in (${sqlList(EXAMPLE_SOURCE_VALUES)})`,
+    ),
+  ],
+);
+
+/** Drafts worth a human look when building the eval set. */
+export const draftEvalCandidates = pgTable(
+  "draft_eval_candidates",
+  {
+    id: v7Id(),
+    draftId: uuid("draft_id")
+      .notNull()
+      .references(() => drafts.id, { onDelete: "cascade" }),
+    reason: text("reason", { enum: EVAL_CANDIDATE_REASON_VALUES }).notNull(),
+    reviewStatus: text("review_status", { enum: EVAL_REVIEW_STATUS_VALUES })
+      .notNull()
+      .default("pending"),
+    note: text("note"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("draft_eval_candidates_draft_reason_unique").on(t.draftId, t.reason),
+    check(
+      "draft_eval_candidates_reason_check",
+      sql`${t.reason} in (${sqlList(EVAL_CANDIDATE_REASON_VALUES)})`,
+    ),
+    check(
+      "draft_eval_candidates_review_status_check",
+      sql`${t.reviewStatus} in (${sqlList(EVAL_REVIEW_STATUS_VALUES)})`,
+    ),
+  ],
+);
+
+/** A thumbs-down on a draft, with an optional reason. */
+export const draftFeedback = pgTable(
+  "draft_feedback",
+  {
+    id: v7Id(),
+    userId: userId(),
+    draftId: uuid("draft_id")
+      .notNull()
+      .references(() => drafts.id, { onDelete: "cascade" }),
+    reason: text("reason"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("draft_feedback_user_draft_unique").on(t.userId, t.draftId),
+    check(
+      "draft_feedback_reason_check",
+      sql`${t.reason} is null or char_length(${t.reason}) <= 300`,
+    ),
   ],
 );

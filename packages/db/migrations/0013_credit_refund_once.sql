@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX "credit_ledger_refund_once_idx" ON "credit_ledger" USING btree ("draft_id") WHERE "credit_ledger"."reason" = 'refund';--> statement-breakpoint
+CREATE INDEX "llm_usage_user_created_idx" ON "llm_usage" USING btree ("user_id","created_at");
