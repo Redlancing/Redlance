@@ -25,6 +25,9 @@ import {
   checkBudget,
   checkDeadline,
   postSkillShortlist,
+  PIPELINE_VERSION,
+  PROMPT_VERSION,
+  SYSTEM,
   type PostAnalysisOutput,
 } from "./analyse-post";
 import { classifyAnalysisError, createAnalyser } from "./analyser";
@@ -49,6 +52,8 @@ const output = (
   deadline: "2026-10-14",
   redFlags: [],
   summary: "React developer to build a small admin dashboard.",
+  applyInstructions: null,
+  quote: null,
   ...over,
 });
 
@@ -214,7 +219,81 @@ describe("analysePost", () => {
       budgetMin: 600,
       currency: "USD",
       deadline: "2026-10-14",
-      pipelineVersion: "post@2",
+      pipelineVersion: "post@3",
+    });
+  });
+
+  describe("apply instructions", () => {
+    const body =
+      "We need a React developer.\nHow to apply: DM only,\ninclude your rate. Budget: $600 fixed";
+    const quote = "DM only, include your rate";
+    const run = (o: Partial<PostAnalysisOutput>, r: Partial<JobPostRow> = {}) =>
+      analysePost(row({ body, ...r }), {
+        llm: llm(() => output(o)),
+        model: "m",
+      });
+
+    it("9: keeps instructions whose quote is in the post", async () => {
+      const a = await run({
+        applyInstructions: "DM only, include your rate",
+        quote,
+      });
+      expect(a.applyInstructions).toBe("DM only, include your rate");
+    });
+
+    it("10: drops them when the quote is not in the post", async () => {
+      const a = await run({
+        applyInstructions: "Email me",
+        quote: "email me at once",
+      });
+      expect(a.applyInstructions).toBeNull();
+      const b = await run({ applyInstructions: "Email me", quote: null });
+      expect(b.applyInstructions).toBeNull();
+    });
+
+    it("11: null stays null", async () => {
+      expect((await run({})).applyInstructions).toBeNull();
+    });
+
+    it("12: a 400-character value is refused by the schema", async () => {
+      await expect(
+        run({ applyInstructions: "x".repeat(400), quote }),
+      ).rejects.toMatchObject({ kind: "invalid_output" });
+    });
+
+    it("13: saves a multi-line value as one line", async () => {
+      const a = await run({
+        applyInstructions: "DM only,\n  include   your rate\n",
+        quote,
+      });
+      expect(a.applyInstructions).toBe("DM only, include your rate");
+    });
+
+    it("14: stays null for a for_hire post", async () => {
+      const a = await run({
+        kind: "for_hire",
+        applyInstructions: "DM only, include your rate",
+        quote,
+      });
+      expect(a.applyInstructions).toBeNull();
+      const b = await run({
+        kind: "other",
+        applyInstructions: "DM only, include your rate",
+        quote,
+      });
+      expect(b.applyInstructions).toBeNull();
+    });
+
+    it("15: the prompt asks for it and still calls the post untrusted", () => {
+      const p = buildPrompt(row(), []);
+      expect(p).toContain("- applyInstructions:");
+      expect(p).toContain("Never invent instructions");
+      expect(SYSTEM).toContain("untrusted");
+    });
+
+    it("16: PIPELINE_VERSION and PROMPT_VERSION are bumped", () => {
+      expect(PIPELINE_VERSION).toBe("post@3");
+      expect(PROMPT_VERSION).toBe("post-extract@3");
     });
   });
 
@@ -322,12 +401,12 @@ describe("analyser (database)", () => {
   });
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table match_events, matches, job_post_analyses, job_posts, feed_polls, feeds, llm_usage`,
+      sql`truncate table match_events, matches, job_post_analyses, job_posts, feed_polls, feeds, llm_usage cascade`,
     );
   });
   afterAll(async () => {
     await db.execute(
-      sql`truncate table match_events, matches, job_post_analyses, job_posts, feed_polls, feeds, llm_usage`,
+      sql`truncate table match_events, matches, job_post_analyses, job_posts, feed_polls, feeds, llm_usage cascade`,
     );
     await pool.end();
   });

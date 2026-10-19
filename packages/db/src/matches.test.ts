@@ -65,7 +65,7 @@ const { db, pool } = createDb(url, { max: 5 });
 const reset = async () => {
   await db.execute(sql`truncate table users cascade`);
   await db.execute(
-    sql`truncate table match_events, matches, job_post_analyses, job_posts, llm_usage`,
+    sql`truncate table match_events, matches, job_post_analyses, job_posts, llm_usage cascade`,
   );
 };
 
@@ -224,6 +224,7 @@ type PostSpec = Partial<MatchPost> & {
   /** false = no analysis row. */
   analysed?: boolean;
   summary?: string;
+  applyInstructions?: string | null;
 };
 
 async function seedPost(spec: PostSpec = {}): Promise<string> {
@@ -268,6 +269,7 @@ async function seedPost(spec: PostSpec = {}): Promise<string> {
       deadline: spec.deadline ?? null,
       redFlags: spec.redFlags ?? [],
       summary: spec.summary ?? `Gig ${seq}`,
+      applyInstructions: spec.applyInstructions ?? null,
       model: "gemini-test",
     };
     await db.insert(jobPostAnalyses).values({ jobPostId: row!.id, ...a });
@@ -2199,6 +2201,28 @@ describe("feedPage", () => {
     ).toEqual([]);
   });
 
+  it("apply instructions: the feed item carries them, and null for old rows", async () => {
+    const priya = await seedUser(PRIYA);
+    const withIns = await seedMatch(
+      priya,
+      await seedPost({
+        ...POST_A,
+        postedAt: ago(DAY),
+        applyInstructions: "DM only, include your rate",
+      }),
+    );
+    const without = await seedMatch(
+      priya,
+      await seedPost({ ...POST_A, postedAt: ago(2 * DAY) }),
+    );
+    const { items } = await feedPage(db, priya, { view: "all", limit: 20 });
+    const by = (id: string) => items.find((i) => i.matchId === id)!;
+    expect(by(withIns).post.applyInstructions).toBe(
+      "DM only, include your rate",
+    );
+    expect(by(without).post.applyInstructions).toBeNull();
+  });
+
   it("32: keyset pages have no overlap or gap, even when a newer match arrives", async () => {
     const priya = await seedUser(PRIYA);
     const ids: string[] = [];
@@ -2361,6 +2385,7 @@ describe("feedPage", () => {
         remote: "remote",
         deadline: "2026-12-01",
         redFlags: ["upfront_fee"],
+        applyInstructions: null,
         alsoPostedIn: [],
       },
     });

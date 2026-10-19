@@ -205,6 +205,7 @@ describe("GET /api/v1/feed", () => {
     expect(Object.keys(item.post).sort()).toEqual(
       [
         "alsoPostedIn",
+        "applyInstructions",
         "budget",
         "categories",
         "community",
@@ -226,6 +227,20 @@ describe("GET /api/v1/feed", () => {
       unit: "fixed",
     });
     expect(new Date(item.post.postedAt).toISOString()).toBe(item.post.postedAt);
+    // An analysis without instructions (all old rows) gives null.
+    expect(item.post.applyInstructions).toBeNull();
+  });
+
+  it("applyInstructions are passed through", async () => {
+    const { cookie, userId } = await setup();
+    await seedMatch(
+      userId,
+      await seedPost({ applyInstructions: "DM only, include your rate" }),
+    );
+    const body = await (await get(cookie)).json();
+    expect(body.items[0].post.applyInstructions).toBe(
+      "DM only, include your rate",
+    );
   });
 
   it("11: alsoPostedIn lists duplicate communities", async () => {

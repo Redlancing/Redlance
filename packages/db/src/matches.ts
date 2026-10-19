@@ -1152,6 +1152,8 @@ export type FeedItem = {
     /** YYYY-MM-DD */
     deadline: string | null;
     redFlags: string[];
+    /** How the post says to apply; null when it doesn't say (or an older analysis). */
+    applyInstructions: string | null;
     /** Other communities the same gig was cross-posted to (its duplicates), sorted. */
     alsoPostedIn: string[];
   };
@@ -1216,6 +1218,7 @@ export async function feedPage(
     remote: RemoteType;
     deadline: string | null;
     red_flags: string[];
+    apply_instructions: string | null;
     also_posted_in: string[];
   }>(sql`
     select m.id, m.score, m.broad, m.status, m.ai_status, m.posted_at,
@@ -1223,7 +1226,7 @@ export async function feedPage(
       bp.id as bp_id, bp.title as bp_title, br.id as br_id, br.title as br_title,
       j.id as post_id, j.title, j.community, j.url,
       a.summary, a.categories, a.budget_min, a.budget_max, a.currency, a.budget_unit,
-      a.pay_type, a.remote, a.deadline, a.red_flags,
+      a.pay_type, a.remote, a.deadline, a.red_flags, a.apply_instructions,
       coalesce((
         select array_agg(distinct d.community order by d.community) from job_posts d
         where d.duplicate_of = j.id and d.community <> j.community), '{}'::text[]) as also_posted_in
@@ -1268,6 +1271,7 @@ export async function feedPage(
         remote: r.remote,
         deadline: toDay(r.deadline),
         redFlags: r.red_flags,
+        applyInstructions: r.apply_instructions,
         alsoPostedIn: r.also_posted_in,
       },
     };
