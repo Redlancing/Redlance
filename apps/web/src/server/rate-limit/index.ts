@@ -13,6 +13,8 @@ export const BUCKETS = {
   api: { capacity: 30, refillPerSec: 2 },
   "alerts-settings": { capacity: 20, refillPerSec: 20 / 60 },
   "alerts-link": { capacity: 5, refillPerSec: 5 / 60 },
+  /** Per-IP pre-limit, checked before the session lookup. Generous: shared IPs must never hit it. */
+  ip: { capacity: 120, refillPerSec: 4 },
   health: { capacity: 10, refillPerSec: 0.2 },
 } satisfies Record<string, BucketConfig>;
 

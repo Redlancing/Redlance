@@ -5,7 +5,8 @@ export const TEST_ENV = {
   DATABASE_URL:
     process.env.WEB_TEST_DATABASE_URL ??
     "postgres://redlance:redlance@127.0.0.1:5432/redlance_test",
-  REDIS_URL: "redis://127.0.0.1:6379/15",
+  // Override (WEB_TEST_REDIS_URL, another db number) alongside WEB_TEST_DATABASE_URL.
+  REDIS_URL: process.env.WEB_TEST_REDIS_URL ?? "redis://127.0.0.1:6379/15",
   AUTH_MODE: "dev",
   DEV_SESSION_SECRET: "test-secret-that-is-at-least-32-characters",
   LOG_LEVEL: "silent",

@@ -38,6 +38,7 @@ Each check is **one Redis command**: a small Lua script runs inside Redis, so re
 
 - **Token bucket** (`consume`). A bucket holds up to `capacity` tokens and refills at a steady rate; each request takes one. Key: `rl:{u:<userId>}:<bucket>`, or `rl:{ip:<ip>}:<bucket>` when signed out. The clock is Redis's own `TIME`, so several servers agree.
   - `api`: 30 burst, refills 2 a second.
+  - `ip`: 120 burst, refills 4 a second. The per-IP **pre-limit**: checked first in `apiRoute()` for every `/api/v1` route, before the session lookup, so floods of junk or forged cookies cost one Redis command instead of a database read. Key `rl:{ip:<ip>}:ip`, IP from `clientIp()` (CloudFront-Viewer-Address, else the last X-Forwarded-For entry). Skipped when no IP can be determined (local tests) and for `/api/v1/health`; fails open; 429 `RATE_LIMITED` with `Retry-After`.
   - `health`: 10 burst, one every 5 s.
   - **Fails open:** if Redis is down, the request is allowed. Better to lose rate limiting for a minute than take the site down.
 - **Daily quota** (`consumeQuota`). A counter per user per day (UTC), key `q:{u:<id>}:<name>:<yyyymmdd>`. Used by onboarding imports (5 resumes a day, 10 GitHub imports a day).
@@ -49,6 +50,7 @@ Signing in, then calling `GET /api/v1/me`:
 
 1. The login form sends `POST /api/v1/dev/session {"email": "…"}`. The browser adds the `Origin` header.
 2. `apiRoute()` runs its steps in order:
+   0. **IP pre-limit** (see above), before anything else.
    1. Pick a request ID (`x-request-id` header or a new UUID) and make a logger for it.
    2. **Session:** read the cookie. There is none, which is allowed because this route has `auth: false`.
    3. **Origin:** for POST/PUT/PATCH/DELETE, `Origin` must equal `APP_ORIGIN`, or 403. This stops other sites from making your browser call our API (CSRF).
@@ -88,7 +90,7 @@ Tests need the containers running (`npm run db:up`).
 
 ## Known gaps (from the code review; none block work)
 
-- The rate limit runs **after** the session lookup, origin check and body read. A flood of bad requests still costs a database lookup each. Idea: a per-IP pre-limit first.
+- The per-user limit runs after the session lookup, origin check and body read; the generous per-IP pre-limit (120 burst, 4/s) now guards the session lookup.
 - `x-request-id` from the client isn't validated.
 - A database outage during the session lookup returns 500, not 503. Error logs can contain email addresses (no pino redaction).
 - `AUTH_MODE=cognito` throws in `getSessionFromToken()` for **every** wrapped route until the Cognito login is built.
