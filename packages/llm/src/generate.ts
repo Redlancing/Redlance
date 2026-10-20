@@ -1,9 +1,16 @@
 import { z } from "zod";
 import { LlmError } from "./errors";
 import { costMicros } from "./prices";
-import type { AttemptRecord, GenerateRequest, GenerateResult, LlmClient, Transport } from "./types";
+import type {
+  AttemptRecord,
+  GenerateRequest,
+  GenerateResult,
+  LlmClient,
+  Transport,
+} from "./types";
 
-const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const defaultSleep = (ms: number) =>
+  new Promise<void>((r) => setTimeout(r, ms));
 
 /** Resolves true after the delay, false if the signal aborts first. */
 async function sleepUnlessAborted(
@@ -33,8 +40,12 @@ export function createClient(
   const now = opts.now ?? Date.now;
 
   return {
-    async generateStructured<T>(req: GenerateRequest<T>): Promise<GenerateResult<T>> {
-      const { $schema: _omit, ...jsonSchema } = z.toJSONSchema(req.schema) as Record<string, unknown>;
+    async generateStructured<T>(
+      req: GenerateRequest<T>,
+    ): Promise<GenerateResult<T>> {
+      const { $schema: _omit, ...jsonSchema } = z.toJSONSchema(
+        req.schema,
+      ) as Record<string, unknown>;
       const maxAttempts = 1 + (req.retries ?? 1);
       const attempts: AttemptRecord[] = [];
       let last: LlmError | undefined;
@@ -56,9 +67,17 @@ export function createClient(
         try {
           // Race so the attempt ends when its controller aborts, even if the transport ignores the signal.
           const abortedP = new Promise<never>((_, reject) => {
-            ctrl.signal.addEventListener("abort", () => reject(new Error("attempt aborted")), { once: true });
+            ctrl.signal.addEventListener(
+              "abort",
+              () => reject(new Error("attempt aborted")),
+              { once: true },
+            );
           });
-          const call = transport(req as GenerateRequest<unknown>, jsonSchema, ctrl.signal);
+          const call = transport(
+            req as GenerateRequest<unknown>,
+            jsonSchema,
+            ctrl.signal,
+          );
           call.catch(() => {}); // avoid unhandled rejection if we stop waiting
           const raw = await Promise.race([call, abortedP]);
           const usage = {
@@ -71,8 +90,17 @@ export function createClient(
           try {
             parsed = req.schema.parse(JSON.parse(raw.text));
           } catch (e) {
-            attempts.push({ attempt: n, outcome: "invalid_output", usage, error: "invalid_output" });
-            last = new LlmError("invalid_output", "model output failed validation", { cause: e });
+            attempts.push({
+              attempt: n,
+              outcome: "invalid_output",
+              usage,
+              error: "invalid_output",
+            });
+            last = new LlmError(
+              "invalid_output",
+              "model output failed validation",
+              { cause: e },
+            );
             parsedOk = false;
           }
           if (parsedOk) {
@@ -81,10 +109,19 @@ export function createClient(
           }
         } catch (e) {
           let err: LlmError;
-          if (req.signal?.aborted) err = new LlmError("aborted", "aborted by caller", { cause: e });
-          else if (timedOut) err = new LlmError("timeout", `timed out after ${req.timeoutMs} ms`, { cause: e });
+          if (req.signal?.aborted)
+            err = new LlmError("aborted", "aborted by caller", { cause: e });
+          else if (timedOut)
+            err = new LlmError(
+              "timeout",
+              `timed out after ${req.timeoutMs} ms`,
+              { cause: e },
+            );
           else if (e instanceof LlmError) err = e;
-          else err = new LlmError("server", "unexpected LLM failure", { cause: e });
+          else
+            err = new LlmError("server", "unexpected LLM failure", {
+              cause: e,
+            });
           attempts.push({
             attempt: n,
             outcome: err.kind === "timeout" ? "timeout" : "error",
@@ -97,7 +134,11 @@ export function createClient(
         }
         if (!last!.retryable) break;
         if (n < maxAttempts) {
-          const slept = await sleepUnlessAborted(sleep, req.retryDelayMs ?? 1000, req.signal);
+          const slept = await sleepUnlessAborted(
+            sleep,
+            req.retryDelayMs ?? 1000,
+            req.signal,
+          );
           if (!slept) {
             last = new LlmError("aborted", "aborted by caller");
             break;

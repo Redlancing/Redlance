@@ -23,7 +23,11 @@ export class LlmError extends Error {
   readonly kind: LlmErrorKind;
   readonly retryable: boolean;
   attempts: AttemptRecord[] = [];
-  constructor(kind: LlmErrorKind, message: string, options?: { cause?: unknown }) {
+  constructor(
+    kind: LlmErrorKind,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
     super(message, options);
     this.name = "LlmError";
     this.kind = kind;

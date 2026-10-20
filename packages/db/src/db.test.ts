@@ -48,20 +48,16 @@ describe("users table", () => {
   });
 
   it("rejects a duplicate normalized email with a unique violation", async () => {
-    await db
-      .insert(users)
-      .values({
-        authSub: "dev|a",
-        email: "a@example.com",
-        emailNormalized: "a@example.com",
-      });
-    const attempt = db
-      .insert(users)
-      .values({
-        authSub: "dev|b",
-        email: "A@example.com",
-        emailNormalized: "a@example.com",
-      });
+    await db.insert(users).values({
+      authSub: "dev|a",
+      email: "a@example.com",
+      emailNormalized: "a@example.com",
+    });
+    const attempt = db.insert(users).values({
+      authSub: "dev|b",
+      email: "A@example.com",
+      emailNormalized: "a@example.com",
+    });
     await expect(attempt).rejects.toSatisfy(
       (err: unknown) => pgErrorCode(err) === "23505",
     );

@@ -233,7 +233,12 @@ describe("budgetFit", () => {
   it("rounds the converted amount to cents ($33 is exactly EUR 30 at 1.1)", () => {
     const eur = mp({ currency: "EUR", minRateMinor: 3000, rateType: "hourly" });
     expect(budgetFit(hourly(33), eur)).toBe("fits");
-    expect(budgetFit(hourly(55), mp({ currency: "EUR", minRateMinor: 5000, rateType: "hourly" }))).toBe("fits");
+    expect(
+      budgetFit(
+        hourly(55),
+        mp({ currency: "EUR", minRateMinor: 5000, rateType: "hourly" }),
+      ),
+    ).toBe("fits");
   });
   it("a reversed range (min above max) uses the higher figure", () => {
     expect(budgetFit(hourly(20, { budgetMin: 50 }), priya)).toBe("fits");
