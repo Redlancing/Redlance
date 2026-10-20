@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { ALERT_MAX_AGE_HOURS_DEFAULT } from "@redlance/core";
 import { z } from "zod";
 
 export type WorkerEnv = {
@@ -51,6 +52,17 @@ export type WorkerEnv = {
   DRAFT_BUDGET_ALERT_USD: number;
   /** Daily drafting spend across all users (USD, UTC day) at which new drafts pause. */
   DRAFT_BUDGET_PAUSE_USD: number;
+  /** Run the alert router, and the Telegram sender and bot when a token is set (docs/alerts/). */
+  ALERTS_ENABLED: boolean;
+  /** From @BotFather. Unset: no sender or bot, and the router records skipped_no_channel. */
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_BOT_USERNAME?: string;
+  /** Bot-wide sends per second (Telegram allows about 30). */
+  TELEGRAM_MAX_PER_SECOND: number;
+  /** A match older than this many hours is not alerted. */
+  ALERT_MAX_AGE_HOURS: number;
+  /** The web app's origin, for the links in messages. Required when a bot token is set. */
+  APP_ORIGIN?: string;
   /**
    * How the worker signs in to Vertex AI. "adc" = Application Default Credentials
    * (gcloud login locally, Workload Identity Federation on EC2). "service-account-key" =
@@ -149,6 +161,41 @@ const schema = z.object({
     empty,
     z.coerce.number().min(0).max(10_000).default(80),
   ),
+  ALERTS_ENABLED: z.preprocess(
+    empty,
+    z.enum(["true", "false"]).default("true"),
+  ),
+  // The message never includes the value: a token in a log is a leaked token.
+  TELEGRAM_BOT_TOKEN: z.preprocess(
+    empty,
+    z
+      .string()
+      .regex(
+        /^\d+:[A-Za-z0-9_-]{30,}$/,
+        "does not look like a bot token (expected <digits>:<30+ characters>)",
+      )
+      .optional(),
+  ),
+  TELEGRAM_BOT_USERNAME: optional,
+  TELEGRAM_MAX_PER_SECOND: z.preprocess(
+    empty,
+    z.coerce.number().int().min(1).max(30).default(25),
+  ),
+  ALERT_MAX_AGE_HOURS: z.preprocess(
+    empty,
+    z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(168)
+      .default(ALERT_MAX_AGE_HOURS_DEFAULT),
+  ),
+  APP_ORIGIN: z.preprocess(
+    empty,
+    z
+      .url({ protocol: /^https?$/, message: "must be an http(s) URL" })
+      .optional(),
+  ),
   REDDIT_UA_CONTACT: z.preprocess(
     empty,
     z
@@ -201,6 +248,11 @@ export function parseWorkerEnv(
         "DRAFT_BUDGET_ALERT_USD must not be above DRAFT_BUDGET_PAUSE_USD",
       );
     }
+    if (env.TELEGRAM_BOT_TOKEN && !env.APP_ORIGIN) {
+      problems.push(
+        "APP_ORIGIN is required when TELEGRAM_BOT_TOKEN is set (the links in alerts)",
+      );
+    }
     const keyPath = env.GOOGLE_APPLICATION_CREDENTIALS;
     if (keyPath && !fileExists(keyPath)) {
       problems.push(
@@ -217,6 +269,8 @@ export function parseWorkerEnv(
         RESCORE_ENABLED: env.RESCORE_ENABLED === "true",
         DRAFTS_ENABLED: env.DRAFTS_ENABLED === "true",
         VOICE_ENABLED: env.VOICE_ENABLED === "true",
+        ALERTS_ENABLED: env.ALERTS_ENABLED === "true",
+        APP_ORIGIN: env.APP_ORIGIN ? new URL(env.APP_ORIGIN).origin : undefined,
         DRAFT_MODEL: env.DRAFT_MODEL ?? env.VERTEX_MODEL_FAST,
         REWRITE_MODEL: env.REWRITE_MODEL ?? env.VERTEX_MODEL_FAST,
         credentials: keyPath

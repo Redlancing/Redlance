@@ -17,3 +17,40 @@ Running notes while building the phases in `plan/`. They feed `conclusion.md` at
 - New inserts are detected with `xmax = 0` in `returning`; `NOTIFY match_alerts` fires only for a `post` batch that inserted at least one row.
 - Test overrides in `matcher.test.ts` forward the caller's options instead of hard-coding one.
 - Tests: db 304 (+3), worker 561 (matcher tests 1 and 9 now check the alert outcome), web 377.
+
+## Phase 3: the alert queue (2026-10-20)
+
+- `packages/db/src/alerts.ts` holds all the queue SQL (routing batch, claims, completes, fails, linking, upkeep, stats).
+- The routing batch locks each user with `pg_advisory_xact_lock` (users sorted, so two routers can't deadlock), so concurrent routers can't exceed the daily cap.
+- Claims skip users who already have a delivery in `sending`: one message per user at a time. The sender's 403 test found this.
+- The linking upsert disables another account's link to the same chat, with reason `user_stop`.
+
+## Phase 4: the router (2026-10-20)
+
+- Built by a Sonnet subagent.
+- Routing 1,000 matches across 100 users takes about 107 ms (5 batches of 200).
+
+## Phase 5: Telegram client, sender and bot (2026-10-20)
+
+- The client is fetch-based. Its errors never carry the URL or the token.
+- The sender paces itself with an evenly spaced limiter (40 ms between sends at 25 a second) plus 1.1 s spacing per chat.
+- A circuit breaker opens after 5 outages in a row (60 s, doubling, up to 15 min).
+- Bot replies are plain text.
+- A 401 or 404 from Telegram becomes `TG_UNAUTHORIZED`: retryable, and the attempt is not counted, so a bad token never kills alerts.
+
+## Phase 6: web API (2026-10-20)
+
+- Built by a Sonnet subagent.
+- Without a profile the API answers 403 "Finish onboarding first". With no bot configured it answers 503 `TELEGRAM_UNAVAILABLE`.
+- `DELETE` reuses the alerts-settings rate-limit bucket.
+- The copy in `review-step.tsx` is NOT changed yet (waiting for the user).
+
+## Phase 7: wiring, env, upkeep, CLIs (2026-10-20)
+
+- Env (`apps/worker/src/env.ts`): `ALERTS_ENABLED` (default true), `TELEGRAM_BOT_TOKEN` (shape-checked; the error message never contains the value), `TELEGRAM_BOT_USERNAME`, `TELEGRAM_MAX_PER_SECOND` (1-30, 25), `ALERT_MAX_AGE_HOURS` (1-168, 24), `APP_ORIGIN` (http(s) URL, normalised to its origin; required when a token is set). The worker had no `APP_ORIGIN` before, so this is new there.
+- `createAlertsFromEnv` (`apps/worker/src/alerts/index.ts`) returns null when disabled, builds the router always, and the sender and bot only with a token. It logs one "alerts started" line saying which parts run. The bot's lock key is `redlance:telegram-bot`. The listeners and the lock use their own connections.
+- `index.ts` starts alerts after the voice updater, stops them with the others (the sender gets 3 s to finish sends, inside the existing shutdown budget), adds `alerts` and `telegram` to the "worker started" line, and the pool `max` goes up by 2.
+- Upkeep: a `prune-alerts` step calls `pruneAlerts` (failed deliveries over 30 days, link tokens expired over a day) and logs counts when above 0. It has no test of its own (upkeep has none; `pruneAlerts` is tested in `packages/db`).
+- `npm run alerts:status -w @redlance/worker`: backlog, outcomes in 24 h, deliveries pending/sending/failed, oldest pending `run_after`, sent in 24 h, linked/disabled channels. Counts only.
+- `npm run alerts:test -w @redlance/worker -- --user <uuid>` (`scripts/alert-test.ts`): refuses unless `APP_ENV` is local or test. Inserts a fake fresh hiring post (marked already matched, so the real matcher ignores it), its analysis, and a match scored 90 with `alert_outcome` null, then NOTIFYs `match_alerts` and prints the match id. The user needs a profile.
+- Still to do: the live run in `plan/07-wiring-ops.md` (needs a @BotFather token).

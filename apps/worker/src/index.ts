@@ -3,6 +3,7 @@ import { basename } from "node:path";
 import { JOB_POSTS_CHANNEL, createDb } from "@redlance/db";
 import { acquireSessionLock, createPgListener } from "./db";
 import { parseWorkerEnv, redditUserAgent } from "./env";
+import { createAlertsFromEnv } from "./alerts";
 import { createAnalyser } from "./ingest/analyser";
 import { createPoller } from "./ingest/poller";
 import { UPKEEP_INTERVAL_MS, runUpkeep } from "./ingest/upkeep";
@@ -47,8 +48,9 @@ async function main() {
   }
   const { db, pool } = createDb(env.DATABASE_URL, {
     // import jobs + post analysis + matching (posts and one re-match) + AI re-scores + the
-    // poller and upkeep, plus drafts and voice updates (each holds at most one connection at a time)
-    max: env.WORKER_CONCURRENCY * 4 + env.DRAFT_CONCURRENCY + 6,
+    // poller and upkeep, plus drafts and voice updates (each holds at most one connection at a time),
+    // plus the alert router and sender (the listeners and the bot's lock use their own connections)
+    max: env.WORKER_CONCURRENCY * 4 + env.DRAFT_CONCURRENCY + 8,
     onError: (err) =>
       log.error({ err: err.message }, "postgres idle client error"),
   });
@@ -117,6 +119,11 @@ async function main() {
     llm,
     log: log.child({ part: "voice" }),
   });
+  // Alert router (always) and Telegram sender + bot (only with a bot token), after the matcher.
+  const alerts = createAlertsFromEnv(env, {
+    db,
+    log: log.child({ part: "alerts" }),
+  });
 
   let shuttingDown = false;
   const shutdown = async (signal: string) => {
@@ -131,6 +138,7 @@ async function main() {
       rescorer?.stop(),
       drafter?.stop(),
       voice?.stop(),
+      alerts?.stop(),
     ]);
     await Promise.race([
       pool.end().catch(() => {}),
@@ -148,6 +156,7 @@ async function main() {
   await rescorer?.start();
   await drafter?.start();
   await voice?.start();
+  await alerts?.start();
   log.info(
     {
       appEnv: env.APP_ENV,
@@ -161,6 +170,8 @@ async function main() {
       rescore: rescorer !== null,
       drafts: drafter !== null,
       voice: voice !== null,
+      alerts: alerts !== null,
+      telegram: alerts !== null && Boolean(env.TELEGRAM_BOT_TOKEN),
       draftModel: env.DRAFT_MODEL,
       rewriteModel: env.REWRITE_MODEL,
     },

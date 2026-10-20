@@ -1,6 +1,7 @@
 import {
   activeFeeds,
   applyFeedPlan,
+  pruneAlerts,
   pruneFeedPolls,
   refreshSubredditStats,
   requeueOutdatedAnalyses,
@@ -17,7 +18,7 @@ import { planFeeds, requestsPerDay, type PlannerOptions } from "./planner";
 
 // Daily upkeep (docs/ingestion/plan.md, Phase 4), run by whichever worker holds the poller
 // lock: our own volume numbers → dormancy → a fresh feed plan (keeping groups that still fit)
-// → re-queue posts that failed through no fault of their own → prune the poll log → the
+// → re-queue posts that failed through no fault of their own → prune the poll log and old alerts → the
 // discovery report. Each step runs on its own: one failing doesn't skip the rest.
 
 export const UPKEEP_INTERVAL_MS = 24 * 60 * 60_000;
@@ -87,6 +88,9 @@ export async function runUpkeep(
     outdated: await requeueOutdatedAnalyses(db, PIPELINE_VERSION),
   }));
   const pruned = await step("prune", () => pruneFeedPolls(db));
+  const prunedAlerts = await step("prune-alerts", () =>
+    pruneAlerts(db, new Date()),
+  );
   const discovery = await step("discovery", () =>
     uncataloguedCommunities(db, 7, 15),
   );
@@ -94,6 +98,8 @@ export async function runUpkeep(
     { statsUpdated: stats, ...plan, requeued: retried, prunedPolls: pruned },
     "ingestion upkeep done",
   );
+  if (prunedAlerts && (prunedAlerts.deliveries > 0 || prunedAlerts.tokens > 0))
+    log.info(prunedAlerts, "pruned old alert deliveries and link tokens");
   if (discovery?.some((d) => d.hiring > 0))
     log.info(
       { subreddits: discovery.filter((d) => d.hiring > 0) },
