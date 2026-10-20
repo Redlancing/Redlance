@@ -107,7 +107,7 @@ Constraints worth knowing:
    - availability: a deadline within 7 days gives "can start this week", otherwise nothing;
    - red flags (including unpaid, commission-only and revshare pay types): shown to the **user**, never put in the prompt.
 5. **Privacy.** Employer names are used only when `mentionEmployers` is on; otherwise only the organisation description. Names are scrubbed (`scrubOrganisations`) from summaries and highlights using the names of **every** role, hidden ones included (`allOrganisations`).
-6. **The call.** `generateDraft` calls `DRAFT_MODEL` (Flash by default), temperature 0.7, thinking off, 800 output tokens, 15 s timeout, one LLM-level retry for provider errors. Prompt order: fixed system and playbook, then `<examples>` (2 or 3 for the post's job type), `<voice>`, `<post>` (body cut at 3,000 characters), `<apply>`, `<evidence>`, then the task line with the DM word range. The fixed part is about 1,400 tokens and the variable part about 300, so Gemini can cache the front. Outside text has `<` and `>` swapped for look-alike characters (nothing is deleted). Output (zod) is in this order, so the model plans before writing: `problem`, `citedFact`, `applyInstructions`, `comment`, `dm`.
+6. **The call.** `generateDraft` calls `DRAFT_MODEL` (Flash-Lite by default since 2026-10-20; was Flash), temperature 0.7, thinking off, 800 output tokens, 15 s timeout, one LLM-level retry for provider errors. Prompt order: fixed system and playbook, then `<examples>` (2 or 3 for the post's job type), `<voice>`, `<post>` (body cut at 3,000 characters), `<apply>`, `<evidence>`, then the task line with the DM word range. The fixed part is about 1,400 tokens and the variable part about 300, so Gemini can cache the front. Outside text has `<` and `>` swapped for look-alike characters (nothing is deleted). Output (zod) is in this order, so the model plans before writing: `problem`, `citedFact`, `applyInstructions`, `comment`, `dm`.
 7. **Validators.** `validateDraft` returns problems:
 
    | Code | Meaning |
@@ -136,7 +136,7 @@ A failed v1 does not block the match: the next `POST /drafts` with a new key mak
 | Step | What happens |
 |---|---|
 | Pre-checks | The draft is the user's and `done` (else 409 `DRAFT_NOT_READY`). Fewer than 5 versions (else 409 `MAX_VERSIONS`). The match is not withdrawn (409 `MATCH_WITHDRAWN`) and, for `different_project`, another project exists (409 `NO_OTHER_PROJECT`). These last two charge nothing. A rewrite race gives 409 `VERSION_CONFLICT`. |
-| Cost | `different_project` is 7 credits on Flash (`DRAFT_MODEL`). The others are 1 credit on Flash-Lite (`REWRITE_MODEL`). |
+| Cost | `different_project` is 7 credits (`DRAFT_MODEL`). The others are 1 credit (`REWRITE_MODEL`). Both are Flash-Lite by default since 2026-10-20; the credit amounts were set for Flash and are unchanged. |
 | Evidence | **Rebuilt from the current profile** on every rewrite, so a project hidden since the parent was written is not cited. The parent's project and role are pinned while they are still visible. `different_project` excludes the ones already cited. A now-hidden project's title and link are stripped from the `<previous>` block. |
 | Prompt | The same fixed part, plus the previous version, the option or instruction, and "write a clearly different version". The typed instruction counts as evidence, so a number the user typed may appear. |
 | Retry | A Flash-Lite rewrite that fails validation is retried once on Flash, with no extra credits. |
@@ -208,6 +208,7 @@ Prices in `packages/llm/src/prices.ts` are **not confirmed** (Flash is from a th
 
 | Call | Cost |
 |---|---|
+| Flash-Lite draft (default since 2026-10-20; about 3,500 in, 600 out, placeholder prices) | about $0.0006 |
 | Flash draft (about 3,500 in, 600 out, retries included) | about $0.005 |
 | Flash-Lite rewrite | about $0.0007 |
 | Voice update | about $0.0003 |
@@ -225,7 +226,7 @@ Worker (`apps/worker/.env.local`):
 |---|---|---|
 | `DRAFTS_ENABLED` | true | Run the drafter |
 | `VOICE_ENABLED` | true | Run the voice updater (needs `DRAFTS_ENABLED`) |
-| `DRAFT_MODEL` | `VERTEX_MODEL_SMART` (Flash) | First drafts and "different project" rewrites |
+| `DRAFT_MODEL` | `VERTEX_MODEL_FAST` (Flash-Lite, since 2026-10-20; was `VERTEX_MODEL_SMART`, Flash) | First drafts and "different project" rewrites |
 | `REWRITE_MODEL` | `VERTEX_MODEL_FAST` (Flash-Lite) | Style rewrites and voice notes |
 | `DRAFT_CONCURRENCY` | 4 | Drafts in flight at once |
 | `DRAFT_BUDGET_ALERT_USD` | 40 | Log an alert once a day above this |
@@ -261,7 +262,8 @@ npm run credits:grant -w @redlance/worker -- --email you@example.com --plan tria
 
 ## Known gaps and deferred items
 
-- **No live Vertex run.** `report.json` is a **stub run** (`"stub": true`, 50 scored, validators 100%, judge means 4). It satisfies the guard test, but says nothing about real quality. Run `eval:drafts` live, then replace it. The playbook, the judge prompt and the voice prompt are untested against a real model.
+- **First live eval (2026-10-20), same 50 cases, Flash judge.** Flash: 45 of 50 ran (4 timed out at 15 s), validators 91.8%, judge means specific 4.80, follows instructions 3.88, sounds human 4.16, cited work fits 4.07, $0.19. Flash-Lite: 50 of 50, validators 100%, means 4.74 / 3.77 / 3.98 / 3.94, $0.10, about 2.5 times faster (1.5 s against 3.8 s a draft). Decision: **Flash-Lite for drafts** (`DRAFT_MODEL` now defaults to `VERTEX_MODEL_FAST`; the resume Skills step stays on Flash); `report.json` is the Flash-Lite run. The judge stays on Flash.
+- **Judge bug: links counted as invented.** The judge sees only `evidenceText`, which leaves out the project link (it is in `allowedLinks`), so a draft citing the allowed link is marked "invented" (25 Flash and 31 Flash-Lite flags, almost all links). Pass the allowed links to the judge and rerun; after removing link flags, about 1 (Flash) and 3 (Flash-Lite) real inventions remained, for example Flash-Lite saying a Node project was built in Python.
 - **Flash-Lite and Flash prices are unverified** (see Cost). Confirm them on the official Vertex page before launch.
 - **All 50 eval cases are hand-written.** The dev database had no posts. After the ingestion soak run, use `eval:export-cases` to swap in real posts.
 - **L6: the plan is stored twice** (`profiles.plan` and `credit_balances.plan`). Unify them when payments are built.

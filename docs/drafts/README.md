@@ -137,9 +137,9 @@ Google credentials stay in the worker only. Retries and crash recovery work the 
            different_project ─► rebuilt, excluding projects already cited
  prompt:   same fixed part + the previous version + the instruction
            + "write a clearly different version"
- model:    different_project ─► DRAFT_MODEL (Flash)
+ model:    different_project ─► DRAFT_MODEL (Flash-Lite)
            style / typed     ─► REWRITE_MODEL (Flash-Lite);
-                                failing validation ─► one retry on Flash
+                                failing validation ─► one retry on DRAFT_MODEL
           │
           ▼
  validators ─► save vN ─► the user can switch between v1…v5
@@ -255,11 +255,11 @@ The evidence is saved on the draft row as JSON, so rewrites reuse it and we can 
 - **Broad match:** lean on general experience; never claim skills that aren't in the evidence.
 
 **Models** (worker env):
-- `DRAFT_MODEL` = `VERTEX_MODEL_SMART` (Flash);
+- `DRAFT_MODEL` = `VERTEX_MODEL_FAST` (Flash-Lite, since 2026-10-20);
 - `REWRITE_MODEL` = `VERTEX_MODEL_FAST` (Flash-Lite);
 - thinking `"off"`, temperature 0.7, `maxOutputTokens` 800, `timeoutMs` 15 s, LLM-level `retries` 1 (provider errors only).
 
-Switch `DRAFT_MODEL` to Flash-Lite if the eval shows it scores close to Flash.
+Decided 2026-10-20: the live eval scored Flash-Lite close to Flash, so `DRAFT_MODEL` now defaults to `VERTEX_MODEL_FAST` (Flash-Lite). Set `DRAFT_MODEL=gemini-3.8-flash` to go back.
 
 ## 8. Validators
 

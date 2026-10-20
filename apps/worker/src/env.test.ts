@@ -223,22 +223,22 @@ describe("drafting budget settings", () => {
 });
 
 describe("drafting settings", () => {
-  it("21: defaults: on, Flash for drafts, Flash-Lite for rewrites, 4 at a time", () => {
+  it("21: defaults: on, Flash-Lite for drafts and rewrites, 4 at a time", () => {
     const env = parseWorkerEnv(base);
     expect(env.DRAFTS_ENABLED).toBe(true);
     expect(env.VOICE_ENABLED).toBe(true);
-    expect(env.DRAFT_MODEL).toBe("gemini-3.8-flash");
+    expect(env.DRAFT_MODEL).toBe("gemini-3.5-flash-lite");
     expect(env.REWRITE_MODEL).toBe("gemini-3.5-flash-lite");
     expect(env.DRAFT_CONCURRENCY).toBe(4);
   });
 
-  it("21: the models default to whatever VERTEX_MODEL_SMART / _FAST are", () => {
+  it("21: the models default to VERTEX_MODEL_FAST", () => {
     const env = parseWorkerEnv({
       ...base,
       VERTEX_MODEL_SMART: "smart-x",
       VERTEX_MODEL_FAST: "fast-x",
     });
-    expect(env.DRAFT_MODEL).toBe("smart-x");
+    expect(env.DRAFT_MODEL).toBe("fast-x");
     expect(env.REWRITE_MODEL).toBe("fast-x");
     const own = parseWorkerEnv({
       ...base,

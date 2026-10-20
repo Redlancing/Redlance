@@ -41,7 +41,7 @@ export type WorkerEnv = {
   DRAFTS_ENABLED: boolean;
   /** Learn each user's voice from what they send (docs/drafts/plan/09-voice.md); needs DRAFTS_ENABLED. */
   VOICE_ENABLED: boolean;
-  /** First drafts and "different project" rewrites. Defaults to VERTEX_MODEL_SMART. */
+  /** First drafts and "different project" rewrites. Defaults to VERTEX_MODEL_FAST (Flash-Lite, since 2026-10-20). */
   DRAFT_MODEL: string;
   /** Style and typed rewrites. Defaults to VERTEX_MODEL_FAST. */
   REWRITE_MODEL: string;
@@ -217,7 +217,7 @@ export function parseWorkerEnv(
         RESCORE_ENABLED: env.RESCORE_ENABLED === "true",
         DRAFTS_ENABLED: env.DRAFTS_ENABLED === "true",
         VOICE_ENABLED: env.VOICE_ENABLED === "true",
-        DRAFT_MODEL: env.DRAFT_MODEL ?? env.VERTEX_MODEL_SMART,
+        DRAFT_MODEL: env.DRAFT_MODEL ?? env.VERTEX_MODEL_FAST,
         REWRITE_MODEL: env.REWRITE_MODEL ?? env.VERTEX_MODEL_FAST,
         credentials: keyPath
           ? { kind: "service-account-key", path: keyPath }
