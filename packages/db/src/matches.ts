@@ -1160,6 +1160,8 @@ export type FeedOptions = {
   /** Only posts sharing one of these job types. */
   categories?: string[];
   pay?: "paid" | "any";
+  /** Only gigs posted in this subreddit, or cross-posted to it. */
+  community?: string;
   limit: number;
 };
 
@@ -1287,6 +1289,11 @@ export async function feedPage(
   if (opts.categories?.length)
     where.push(sql`a.categories && ${textArray(opts.categories)}`);
   if (opts.pay === "paid") where.push(sql`a.pay_type = 'paid'`);
+  if (opts.community)
+    where.push(
+      sql`(j.community = ${opts.community} or exists (
+        select 1 from job_posts c where c.duplicate_of = j.id and c.community = ${opts.community}))`,
+    );
   const res = await feedRows(db, where, { limit: opts.limit + 1 });
   const items = res.rows.slice(0, opts.limit).map(toFeedItem);
   const last = items[items.length - 1];

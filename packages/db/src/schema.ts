@@ -1632,3 +1632,73 @@ export const profileChanges = pgTable(
     index("profile_changes_user_created_idx").on(t.userId, t.createdAt),
   ],
 );
+
+/**
+ * Shared subreddit insights (docs/insights/design.md): one row per subreddit, replaced by the
+ * worker's hourly refresh (refreshSubredditInsights). Raw counts only; the 20-data-point rule
+ * and the wording are applied when reading. No foreign key: a row exists for any community
+ * with posts in the last 56 days, catalogue or not.
+ */
+export const subredditInsights = pgTable(
+  "subreddit_insights",
+  {
+    subreddit: text("subreddit").primaryKey(),
+    computedAt: timestamp("computed_at", { withTimezone: true }).notNull(),
+    /** Start of the 28-day window these counts cover; the previous window ends here. */
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    hiringPosts: integer("hiring_posts").notNull(),
+    hiringPostsPrev: integer("hiring_posts_prev").notNull(),
+    forHirePosts: integer("for_hire_posts").notNull(),
+    budgetStated: integer("budget_stated").notNull(),
+    /** { paid: n, revshare: n, … } over the window's hiring posts. */
+    payCounts: jsonb("pay_counts").$type<Record<string, number>>().notNull(),
+    remoteCounts: jsonb("remote_counts")
+      .$type<Record<string, number>>()
+      .notNull(),
+    redFlagPosts: integer("red_flag_posts").notNull(),
+    redFlagCounts: jsonb("red_flag_counts")
+      .$type<Record<string, number>>()
+      .notNull(),
+    /** Top 20: [{ skillId, n }], most mentioned first. */
+    skillCounts: jsonb("skill_counts")
+      .$type<{ skillId: string; n: number }[]>()
+      .notNull(),
+    /** Top 6 groups by n: [{ currency, unit, n, p25, median, p75 }]; never converted. */
+    budgets: jsonb("budgets")
+      .$type<
+        {
+          currency: string;
+          unit: string;
+          n: number;
+          p25: number;
+          median: number;
+          p75: number;
+        }[]
+      >()
+      .notNull(),
+    /** Hiring posts per UTC half-hour of the week, Monday 00:00 = 0 (336 slots). */
+    hourSlots: integer("hour_slots").array().notNull(),
+    knownAuthorPosts: integer("known_author_posts").notNull(),
+    repeatAuthorPosts: integer("repeat_author_posts").notNull(),
+    /** Oldest stored post (any subreddit): repeat clients need history behind the window. */
+    historyStart: timestamp("history_start", { withTimezone: true }),
+  },
+  (t) => [
+    check(
+      "subreddit_insights_subreddit_check",
+      sql`${t.subreddit} ~ '^[a-z0-9_]{2,21}$'`,
+    ),
+    check(
+      "subreddit_insights_hour_slots_check",
+      sql`cardinality(${t.hourSlots}) = 336`,
+    ),
+    check(
+      "subreddit_insights_counts_check",
+      sql`${t.hiringPosts} >= 0 and ${t.hiringPostsPrev} >= 0 and ${t.forHirePosts} >= 0
+        and ${t.budgetStated} between 0 and ${t.hiringPosts}
+        and ${t.redFlagPosts} between 0 and ${t.hiringPosts}
+        and ${t.repeatAuthorPosts} between 0 and ${t.knownAuthorPosts}
+        and ${t.knownAuthorPosts} <= ${t.hiringPosts}`,
+    ),
+  ],
+);
