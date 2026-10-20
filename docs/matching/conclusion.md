@@ -214,8 +214,8 @@ After the upsert, `withdrawPostMatches` sets `withdrawn_at` on **`new` and `seen
 
 ### 10. Backfill and re-match
 
-Users need matches for posts that were analysed before they existed, and after they change their profile. This is the same scoring run from the user's side:
-- `requestRematch(userId, since)` writes `profiles.rematch_since` (requests merge: the earliest `since` wins). `finishOnboarding` calls it with the last **3 days** (`BACKFILL_DAYS`). `bumpProfileVersion` (version +1, then a re-match over **7 days**, `REMATCH_DAYS`) is the hook for profile edits; **no web code calls it yet** (there is no profile edit UI).
+Users need matches for posts that were analysed before they existed. This is the same scoring run from the user's side:
+- `requestRematch(userId, since)` writes `profiles.rematch_since` (requests merge: the earliest `since` wins). `finishOnboarding` calls it with the last **3 days** (`BACKFILL_DAYS`). **A profile edit does not re-match** (decided 2026-10-20; the `bumpProfileVersion` hook and `REMATCH_DAYS` were removed): existing matches keep the scores from the old profile, and posts that arrive after the edit are scored with the new one. The backfill is the only caller.
 - Every matcher poll serves up to 20 requests, one at a time. `claimRematch` takes a **lease** (`rematch_claimed_at`, valid 5 minutes), so a crashed matcher loses nothing: the lease expires and the request is claimed again.
 - `candidatePostsForUser` is the reverse of step 4: this user's candidate posts since `since`, newest first, from originals whose `match_status` is `done`, `pending` or `running` (upserts are idempotent, so racing the post's own matcher is harmless). It is driven by the `posted_at` index, so its cost follows the window, not the table.
 - Then `upsertMatches`, then `withdrawStaleUserMatches` (the user's matches in that window that are still on an older `profile_version` were not produced by the new profile, so they are withdrawn), then `completeRematch`.
@@ -330,7 +330,7 @@ Prices in `packages/llm/src/prices.ts` for Flash-Lite ($0.10 per million input t
 | `WORKER_CONCURRENCY` | 4 | Shared by the analyser, import runner, matcher and re-scorer |
 | `VERTEX_MODEL_FAST` | `gemini-3.5-flash-lite` | The re-score model |
 
-Fixed in code, not env: the plan caps (`RESCORE_DAILY_CAP` in core), `BEST_MIN_SCORE` 60, `BACKFILL_DAYS` 3, `REMATCH_DAYS` 7, the rule weights, 3 attempts per post and per pair, 5 per re-match request.
+Fixed in code, not env: the plan caps (`RESCORE_DAILY_CAP` in core), `BEST_MIN_SCORE` 60, `BACKFILL_DAYS` 3, the rule weights, 3 attempts per post and per pair, 5 per re-match request.
 
 Wiring in `index.ts`: the matcher and the re-scorer each get their own `LISTEN` connection (`post_analysed`, `matches`), start after the analyser and stop with the others (20 s grace). The database pool is `WORKER_CONCURRENCY * 4 + 4`.
 
@@ -378,7 +378,7 @@ To try a user by hand: set `profiles.plan` in SQL (`update profiles set plan = '
 
 - **No live end-to-end run** with real Reddit posts, real Vertex calls and a real onboarded profile, and the Flash-Lite prices are placeholders.
 - **No UI, alerts or drafts.** The API exists; nothing in the web app calls it yet.
-- **No profile edit UI**, so `bumpProfileVersion` (the re-match hook) is called only by tests. Editing a profile later must call it.
+- **No re-match after a profile edit** (decided 2026-10-20). `profile_version` is never bumped now (it stays 1); the fencing on `(profile_version, analysed_at)` and `withdrawStaleUserMatches` still work and would only matter if re-matching comes back.
 - **`ai_status` is decided when a row is written.** An unchanged row (same `profile_version`, same analysis) isn't written again, so changing a user's `plan` or the threshold doesn't re-evaluate existing matches until the next profile version or a re-analysis.
 - **`match_events` has no `new` event.** `new` is the starting state; a row is written only when `setMatchStatus` changes the status.
 - **Rule weights are starting guesses.** The breakdown is stored in `features` so they can be tuned from saves and dismissals.

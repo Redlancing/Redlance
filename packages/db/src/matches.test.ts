@@ -12,7 +12,6 @@ import {
   GIVE_BACK_DELAY_MS,
   MATCHES_CHANNEL,
   MAX_REMATCH_ATTEMPTS,
-  bumpProfileVersion,
   candidatePostsForUser,
   candidateUsersForPost,
   claimPairsForRescore,
@@ -1491,13 +1490,6 @@ describe("re-match requests", () => {
       attempts: 0,
       after: null,
     });
-  });
-
-  it("bumpProfileVersion bumps the version and asks for a 7-day re-match", async () => {
-    const priya = await seedUser(PRIYA);
-    expect(await bumpProfileVersion(db, priya, now)).toBe(2);
-    expect(await sinceOf(priya)).toEqual(ago(7 * DAY));
-    expect((await loadMatchUser(db, priya))!.profileVersion).toBe(2);
   });
 });
 

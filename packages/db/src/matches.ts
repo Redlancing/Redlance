@@ -1,6 +1,5 @@
 import {
   BEST_MIN_SCORE,
-  REMATCH_DAYS,
   scrubOrganisations,
   type AiStatus,
   type BudgetUnit,
@@ -539,32 +538,6 @@ export async function requestRematch(
       rematch_after = null,
       rematch_attempts = 0
     where user_id = ${userId}`);
-}
-
-/**
- * The hook for profile edits: bumps profile_version (so existing matches get re-scored) and
- * requests a re-match over the last REMATCH_DAYS. Returns the new version, or null without a
- * profile.
- */
-export async function bumpProfileVersion(
-  db: Database,
-  userId: string,
-  now: Date,
-): Promise<number | null> {
-  return db.transaction(async (tx) => {
-    const res = await tx.execute<{ profile_version: number }>(sql`
-      update profiles set profile_version = profile_version + 1, updated_at = now()
-      where user_id = ${userId}
-      returning profile_version`);
-    const version = res.rows[0]?.profile_version;
-    if (version === undefined) return null;
-    await requestRematch(
-      tx,
-      userId,
-      new Date(now.getTime() - REMATCH_DAYS * 86_400_000),
-    );
-    return version;
-  });
 }
 
 /** A claimed re-match request. `claimedAt` is the lease that fences completeRematch / failRematch. */

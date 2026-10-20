@@ -2,7 +2,6 @@ import type { MatchPost, MatchProfile } from "@redlance/core";
 import {
   MAX_REMATCH_ATTEMPTS,
   POST_ANALYSED_CHANNEL,
-  bumpProfileVersion,
   candidateUsersForPost,
   claimPostsForMatching,
   completePostAnalysis,
@@ -581,20 +580,18 @@ describe("matcher (database)", () => {
     });
   });
 
-  it("8: a dismissed match stays dismissed after a profile change", async () => {
+  it("8: a dismissed match stays dismissed after a re-analysis", async () => {
     const a = await analysedPost(POST_A);
     await runOnce();
     const row = await matchFor(priya, a);
     expect(row!.aiStatus).toBe("pending");
     await setMatchStatus(db, priya, row!.id, "dismissed");
-    expect(await bumpProfileVersion(db, priya, new Date())).toBe(2);
     await reanalyse(a, POST_A);
     await runOnce();
     expect(await matchFor(priya, a)).toMatchObject({
       id: row!.id,
       status: "dismissed",
       aiStatus: "not_needed",
-      profileVersion: 2,
       ruleScore: 80,
     });
   });
@@ -622,29 +619,6 @@ describe("matcher (database)", () => {
       .from(profiles)
       .where(eq(profiles.userId, priya));
     expect(p!.since).toBeNull();
-  });
-
-  it("10: a re-match after a profile change updates the row in place", async () => {
-    const b = await analysedPost(POST_B);
-    await runOnce();
-    const before = (await matchFor(priya, b))!;
-    expect(before.ruleScore).toBe(0);
-    await db
-      .update(profileSkills)
-      .set({ level: "core" })
-      .where(
-        and(
-          eq(profileSkills.userId, priya),
-          eq(profileSkills.skillId, "postgresql"),
-        ),
-      );
-    expect(await bumpProfileVersion(db, priya, new Date())).toBe(2);
-    await runOnce();
-    const after = (await matchFor(priya, b))!;
-    expect(after.id).toBe(before.id);
-    expect(after.ruleScore).toBeGreaterThan(before.ruleScore);
-    expect(after.profileVersion).toBe(2);
-    expect(await matchesOf(b)).toHaveLength(1);
   });
 
   it("11: a failed post goes back to pending, then succeeds; the log has no post text", async () => {
