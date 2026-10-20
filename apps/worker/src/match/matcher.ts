@@ -246,7 +246,7 @@ export function createMatcher(deps: MatcherDeps): Matcher {
           const row = score(post, u, u.existingStatus, at);
           if (row) rows.push(row);
         }
-        written = await ops.upsertMatches(db, rows);
+        written = await ops.upsertMatches(db, rows, { origin: "post" });
         // Users who were matched before but aren't candidates any more.
         withdrawn = await ops.withdrawPostMatches(
           db,
@@ -317,7 +317,8 @@ export function createMatcher(deps: MatcherDeps): Matcher {
         if (row) rows.push(row);
       }
       checkpoint();
-      const written = await ops.upsertMatches(db, rows);
+      // Backfill rows never alert (skipped_backfill).
+      const written = await ops.upsertMatches(db, rows, { origin: "backfill" });
       const withdrawn = await ops.withdrawStaleUserMatches(
         db,
         req.userId,

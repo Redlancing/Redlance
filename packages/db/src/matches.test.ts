@@ -11,6 +11,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   GIVE_BACK_DELAY_MS,
   MATCHES_CHANNEL,
+  MATCH_ALERTS_CHANNEL,
   MAX_REMATCH_ATTEMPTS,
   candidatePostsForUser,
   candidateUsersForPost,
@@ -309,7 +310,9 @@ async function seedMatch(
   jobPostId: string,
   over: Partial<NewMatch> = {},
 ): Promise<string> {
-  await upsertMatches(db, [newMatch(userId, jobPostId, over)]);
+  await upsertMatches(db, [newMatch(userId, jobPostId, over)], {
+    origin: "post",
+  });
   const [m] = await db
     .select({ id: matches.id })
     .from(matches)
@@ -868,7 +871,9 @@ describe("upsertMatches", () => {
     const before = await matchRow(id);
     await new Promise((r) => setTimeout(r, 20));
     expect(
-      await upsertMatches(db, [newMatch(priya, postId, { ruleScore: 10 })]),
+      await upsertMatches(db, [newMatch(priya, postId, { ruleScore: 10 })], {
+        origin: "post",
+      }),
     ).toBe(0);
     const after = await matchRow(id);
     expect(after).toEqual(before);
@@ -886,15 +891,19 @@ describe("upsertMatches", () => {
         ai_scored_at = now(), ai_finished_at = now(), ai_unit_day = current_date, score = 91
       where id = ${id}`);
     expect(
-      await upsertMatches(db, [
-        newMatch(priya, postId, {
-          ruleScore: 55,
-          ruleReason: "1 core skill",
-          features: [{ signal: "core_skill", points: 20 }],
-          aiStatus: "pending",
-          profileVersion: 2,
-        }),
-      ]),
+      await upsertMatches(
+        db,
+        [
+          newMatch(priya, postId, {
+            ruleScore: 55,
+            ruleReason: "1 core skill",
+            features: [{ signal: "core_skill", points: 20 }],
+            aiStatus: "pending",
+            profileVersion: 2,
+          }),
+        ],
+        { origin: "post" },
+      ),
     ).toBe(1);
     const row = await matchRow(id);
     expect(row).toMatchObject({
@@ -922,9 +931,11 @@ describe("upsertMatches", () => {
     const postId = await seedPost(POST_A);
     const id = await seedMatch(priya, postId);
     await setMatchStatus(db, priya, id, "dismissed");
-    await upsertMatches(db, [
-      newMatch(priya, postId, { aiStatus: "pending", profileVersion: 2 }),
-    ]);
+    await upsertMatches(
+      db,
+      [newMatch(priya, postId, { aiStatus: "pending", profileVersion: 2 })],
+      { origin: "post" },
+    );
     expect(await matchRow(id)).toMatchObject({
       status: "dismissed",
       aiStatus: "not_needed",
@@ -949,22 +960,109 @@ describe("upsertMatches", () => {
     const p2 = await seedPost(POST_A);
     expect(
       await notifications(MATCHES_CHANNEL, () =>
-        upsertMatches(db, [newMatch(priya, p1), newMatch(priya, p2)]),
+        upsertMatches(db, [newMatch(priya, p1), newMatch(priya, p2)], {
+          origin: "post",
+        }),
       ),
     ).toBe(0);
     const p3 = await seedPost(POST_A);
     expect(
       await notifications(MATCHES_CHANNEL, () =>
-        upsertMatches(db, [
-          newMatch(priya, p3, { aiStatus: "pending" }),
-          newMatch(priya, p1), // unchanged: not written
-        ]),
+        upsertMatches(
+          db,
+          [
+            newMatch(priya, p3, { aiStatus: "pending" }),
+            newMatch(priya, p1), // unchanged: not written
+          ],
+          { origin: "post" },
+        ),
       ),
     ).toBe(1);
     // A pending row that isn't written (same version) wakes nobody.
     expect(
       await notifications(MATCHES_CHANNEL, () =>
-        upsertMatches(db, [newMatch(priya, p3, { aiStatus: "pending" })]),
+        upsertMatches(db, [newMatch(priya, p3, { aiStatus: "pending" })], {
+          origin: "post",
+        }),
+      ),
+    ).toBe(0);
+  });
+
+  it("a new-post insert is waiting for the router; a backfill insert is skipped", async () => {
+    const priya = await seedUser(PRIYA);
+    const p1 = await seedPost(POST_A);
+    const p2 = await seedPost(POST_A);
+    await upsertMatches(db, [newMatch(priya, p1)], { origin: "post" });
+    await upsertMatches(db, [newMatch(priya, p2)], { origin: "backfill" });
+    const rows = await db
+      .select({ jobPostId: matches.jobPostId, outcome: matches.alertOutcome })
+      .from(matches);
+    expect(
+      Object.fromEntries(rows.map((r) => [r.jobPostId, r.outcome])),
+    ).toEqual({ [p1]: null, [p2]: "skipped_backfill" });
+  });
+
+  it("a re-analysis never touches the alert columns", async () => {
+    const t1 = ago(DAY);
+    const t2 = ago(DAY - 60_000);
+    const priya = await seedUser(PRIYA);
+    const postId = await seedPost(POST_A);
+    const id = await seedMatch(priya, postId, { analysedAt: t1 });
+    await db.execute(sql`
+      update matches set alert_outcome = 'sent', alert_routed_at = now(), alerted_at = now(),
+        alert_channels = array['telegram'], alert_score = 80, alert_template = 'tg@1',
+        telegram_message_id = 4242
+      where id = ${id}`);
+    const before = await matchRow(id);
+    for (const origin of ["post", "backfill"] as const) {
+      await upsertMatches(
+        db,
+        [
+          newMatch(priya, postId, {
+            ruleScore: origin === "post" ? 60 : 65,
+            analysedAt: origin === "post" ? t2 : now,
+          }),
+        ],
+        { origin },
+      );
+      const after = await matchRow(id);
+      expect(after.ruleScore).toBe(origin === "post" ? 60 : 65);
+      expect(after).toMatchObject({
+        alertOutcome: before.alertOutcome,
+        alertRoutedAt: before.alertRoutedAt,
+        alertedAt: before.alertedAt,
+        alertChannels: ["telegram"],
+        alertScore: 80,
+        alertTemplate: "tg@1",
+        telegramMessageId: 4242,
+      });
+    }
+  });
+
+  it("wakes the router only when a new post inserts a row", async () => {
+    const priya = await seedUser(PRIYA);
+    const designer = await seedUser(DESIGNER);
+    const p1 = await seedPost(POST_A);
+    expect(
+      await notifications(MATCH_ALERTS_CHANNEL, () =>
+        upsertMatches(db, [newMatch(priya, p1), newMatch(designer, p1)], {
+          origin: "post",
+        }),
+      ),
+    ).toBe(1);
+    // An update of existing rows (a re-analysis) is not a new match.
+    expect(
+      await notifications(MATCH_ALERTS_CHANNEL, () =>
+        upsertMatches(db, [newMatch(priya, p1, { profileVersion: 2 })], {
+          origin: "post",
+        }),
+      ),
+    ).toBe(0);
+    // A backfill insert never alerts.
+    const p2 = await seedPost(POST_A);
+    expect(
+      await notifications(MATCH_ALERTS_CHANNEL, () =>
+        upsertMatches(db, [newMatch(priya, p2)], { origin: "backfill" }),
       ),
     ).toBe(0);
   });
@@ -990,15 +1088,19 @@ describe("upsertMatches", () => {
     const t2 = ago(DAY - 60_000);
     const { priya, postId, id } = await aiDoneMatch(t1);
     expect(
-      await upsertMatches(db, [
-        newMatch(priya, postId, {
-          ruleScore: 50,
-          ruleReason: "2 core skills; red flags",
-          features: [{ signal: "red_flags", points: -30 }],
-          aiStatus: "pending",
-          analysedAt: t2,
-        }),
-      ]),
+      await upsertMatches(
+        db,
+        [
+          newMatch(priya, postId, {
+            ruleScore: 50,
+            ruleReason: "2 core skills; red flags",
+            features: [{ signal: "red_flags", points: -30 }],
+            aiStatus: "pending",
+            analysedAt: t2,
+          }),
+        ],
+        { origin: "post" },
+      ),
     ).toBe(1);
     expect(await matchRow(id)).toMatchObject({
       ruleScore: 50,
@@ -1019,9 +1121,11 @@ describe("upsertMatches", () => {
     const t2 = ago(DAY - 60_000);
     const { priya, postId, id } = await aiDoneMatch(t1);
     expect(
-      await upsertMatches(db, [
-        newMatch(priya, postId, { aiStatus: "pending", analysedAt: t2 }),
-      ]),
+      await upsertMatches(
+        db,
+        [newMatch(priya, postId, { aiStatus: "pending", analysedAt: t2 })],
+        { origin: "post" },
+      ),
     ).toBe(1);
     expect(await matchRow(id)).toMatchObject({
       ruleScore: 80,
@@ -1040,34 +1144,46 @@ describe("upsertMatches", () => {
     const before = await matchRow(id);
     // An older analysis on the same version: a slow matcher's stale snapshot.
     expect(
-      await upsertMatches(db, [
-        newMatch(priya, postId, {
-          ruleScore: 10,
-          analysedAt: t1,
-          profileVersion: 2,
-        }),
-      ]),
+      await upsertMatches(
+        db,
+        [
+          newMatch(priya, postId, {
+            ruleScore: 10,
+            analysedAt: t1,
+            profileVersion: 2,
+          }),
+        ],
+        { origin: "post" },
+      ),
     ).toBe(0);
     // An older profile version, even with a later analysis: the version never moves back.
     expect(
-      await upsertMatches(db, [
-        newMatch(priya, postId, {
-          ruleScore: 10,
-          analysedAt: t3,
-          profileVersion: 1,
-        }),
-      ]),
+      await upsertMatches(
+        db,
+        [
+          newMatch(priya, postId, {
+            ruleScore: 10,
+            analysedAt: t3,
+            profileVersion: 1,
+          }),
+        ],
+        { origin: "post" },
+      ),
     ).toBe(0);
     expect(await matchRow(id)).toEqual(before);
     // A newer version with the same analysis goes through.
     expect(
-      await upsertMatches(db, [
-        newMatch(priya, postId, {
-          ruleScore: 30,
-          analysedAt: t2,
-          profileVersion: 3,
-        }),
-      ]),
+      await upsertMatches(
+        db,
+        [
+          newMatch(priya, postId, {
+            ruleScore: 30,
+            analysedAt: t2,
+            profileVersion: 3,
+          }),
+        ],
+        { origin: "post" },
+      ),
     ).toBe(1);
     expect(await matchRow(id)).toMatchObject({
       ruleScore: 30,
@@ -1083,9 +1199,11 @@ describe("upsertMatches", () => {
     await db.execute(
       sql`update matches set withdrawn_at = now() where id = ${id}`,
     );
-    await upsertMatches(db, [
-      newMatch(priya, postId, { analysedAt: ago(DAY - 1000) }),
-    ]);
+    await upsertMatches(
+      db,
+      [newMatch(priya, postId, { analysedAt: ago(DAY - 1000) })],
+      { origin: "post" },
+    );
     expect((await matchRow(id)).withdrawnAt).toBeNull();
   });
 });
@@ -1790,9 +1908,11 @@ describe("AI re-score queue", () => {
     const postId = await seedPost(POST_A);
     const id = await seedMatch(priya, postId, { aiStatus: "pending" });
     const [old] = await claimPairsForRescore(db, 1);
-    await upsertMatches(db, [
-      newMatch(priya, postId, { aiStatus: "pending", profileVersion: 2 }),
-    ]);
+    await upsertMatches(
+      db,
+      [newMatch(priya, postId, { aiStatus: "pending", profileVersion: 2 })],
+      { origin: "post" },
+    );
     const [fresh] = await claimPairsForRescore(db, 1);
     expect(fresh!.claim).toEqual({ attempts: 1, profileVersion: 2 });
     const result = {

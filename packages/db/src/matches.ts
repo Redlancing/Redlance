@@ -24,6 +24,8 @@ import { matchEvents, matches } from "./schema";
 
 /** NOTIFY channel: a match is waiting for an AI re-score. */
 export const MATCHES_CHANNEL = "matches";
+/** NOTIFY channel: new-post matches are waiting for the alert router. */
+export const MATCH_ALERTS_CHANNEL = "match_alerts";
 export const MAX_MATCH_ATTEMPTS = 3;
 export const MAX_RESCORE_ATTEMPTS = 3;
 /** A given-back re-score (provider error, shutdown, budget pause) is due again after this, so a pair-specific error cannot hot-loop. */
@@ -382,15 +384,25 @@ const UPSERT_CHUNK = 500;
  * clears withdrawn_at. A dismissed match keeps its status and gets ai_status not_needed. Wakes the
  * re-scorer (NOTIFY matches, on commit) when a written row is pending. Returns how many rows
  * were written.
+ *
+ * Alerts: `origin` says why the rows were matched. A new post's matches are inserted with
+ * alert_outcome null (the router picks them up, woken by NOTIFY match_alerts); a backfill's
+ * (a new user's last few days) are inserted as skipped_backfill and never alert. An update
+ * never touches the alert columns, so a re-analysis can't alert twice. When a new-post match
+ * and a backfill race for the same pair, whichever inserts first decides.
  */
 export async function upsertMatches(
   db: Database,
   rows: NewMatch[],
+  opts: { origin: "post" | "backfill" },
 ): Promise<number> {
   if (rows.length === 0) return 0;
+  const alertOutcome =
+    opts.origin === "backfill" ? ("skipped_backfill" as const) : null;
   return db.transaction(async (tx) => {
     let written = 0;
     let wake = false;
+    let inserted = false;
     for (let i = 0; i < rows.length; i += UPSERT_CHUNK) {
       const chunk = rows.slice(i, i + UPSERT_CHUNK);
       const res = await tx
@@ -410,10 +422,12 @@ export async function upsertMatches(
             analysedAt:
               r.analysedAt ??
               sql`(select date_trunc('milliseconds', created_at) from job_post_analyses where job_post_id = ${r.jobPostId}::uuid)`,
+            alertOutcome,
           })),
         )
         .onConflictDoUpdate({
           target: [matches.userId, matches.jobPostId],
+          // Never add alert_* or telegram_message_id here: an alert is decided once per match.
           set: {
             ruleScore: sql`excluded.rule_score`,
             broad: sql`excluded.broad`,
@@ -444,11 +458,19 @@ export async function upsertMatches(
           // analysis. Never `<>`, which would let a stale snapshot overwrite a newer one.
           setWhere: sql`(${matches.profileVersion}, ${matches.analysedAt}) < (excluded.profile_version, excluded.analysed_at)`,
         })
-        .returning({ aiStatus: matches.aiStatus });
+        // xmax = 0 only on a freshly inserted row (an update sets it).
+        .returning({
+          aiStatus: matches.aiStatus,
+          inserted: sql<boolean>`xmax = 0`,
+        });
       written += res.length;
       if (res.some((r) => r.aiStatus === "pending")) wake = true;
+      if (res.some((r) => r.inserted)) inserted = true;
     }
     if (wake) await tx.execute(sql`select pg_notify(${MATCHES_CHANNEL}, '')`);
+    if (inserted && opts.origin === "post") {
+      await tx.execute(sql`select pg_notify(${MATCH_ALERTS_CHANNEL}, '')`);
+    }
     return written;
   });
 }

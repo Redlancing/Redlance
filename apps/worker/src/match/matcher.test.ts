@@ -451,6 +451,8 @@ describe("matcher (database)", () => {
       aiStatus: "pending",
       status: "new",
       profileVersion: 1,
+      // A new post's match waits for the alert router.
+      alertOutcome: null,
     });
     expect((await matchFor(priya, a))!.ruleReason).toContain("Next.js");
     // Old's trial ended: rule score only.
@@ -468,9 +470,9 @@ describe("matcher (database)", () => {
     });
     await runOnce({
       ops: {
-        upsertMatches: async (d, rows) => {
+        upsertMatches: async (d, rows, opts) => {
           written.push(...rows);
-          return upsertMatches(d, rows);
+          return upsertMatches(d, rows, opts);
         },
       },
     });
@@ -606,11 +608,17 @@ describe("matcher (database)", () => {
     await requestRematch(db, priya, ago(3 * DAY));
     await runOnce();
     const mine = await db
-      .select({ postId: matches.jobPostId, aiStatus: matches.aiStatus })
+      .select({
+        postId: matches.jobPostId,
+        aiStatus: matches.aiStatus,
+        alertOutcome: matches.alertOutcome,
+      })
       .from(matches)
       .where(eq(matches.userId, priya));
     expect(mine.map((r) => r.postId).sort()).toEqual([...recent].sort());
     expect(mine.every((r) => r.aiStatus === "pending")).toBe(true);
+    // Backfilled matches never alert.
+    expect(mine.every((r) => r.alertOutcome === "skipped_backfill")).toBe(true);
     expect(mine.map((r) => r.postId)).not.toContain(older);
     // Only Priya asked for a backfill.
     expect(await db.$count(matches)).toBe(3);
@@ -731,11 +739,11 @@ describe("matcher (database)", () => {
           inFlight--;
           return candidateUsersForPost(d, post);
         },
-        upsertMatches: async (d, rows) => {
+        upsertMatches: async (d, rows, opts) => {
           for (const r of rows)
             if (r.userId === priya)
               upserts.set(r.jobPostId, (upserts.get(r.jobPostId) ?? 0) + 1);
-          return upsertMatches(d, rows);
+          return upsertMatches(d, rows, opts);
         },
       },
     });

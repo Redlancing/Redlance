@@ -10,3 +10,10 @@ Running notes while building the phases in `plan/`. They feed `conclusion.md` at
 - `telegramAlert(items, appOrigin, now)` takes `now` (for "posted 6 min ago"), strips a leading `[Hiring]` tag from titles, and cuts titles at 120 characters. Several matches: each title links to its draft page and one "Open Redlance" button goes to `/feed`.
 - `startOfLocalDay` falls back to UTC for an unknown zone (profiles store a validated zone, so this is a guard only).
 - Tests: core 305 (+23), db 301 (+11), worker 561, web 377. Typecheck and lint clean.
+
+## Phase 2: matcher origin (2026-10-20)
+
+- `upsertMatches(db, rows, { origin })` takes a required `origin`, so every caller has to say whether its rows are from a new post or a backfill. The matcher passes `post` from `matchPost` and `backfill` from `runRematch` (only onboarding's backfill requests a re-match now that profile edits don't).
+- New inserts are detected with `xmax = 0` in `returning`; `NOTIFY match_alerts` fires only for a `post` batch that inserted at least one row.
+- Test overrides in `matcher.test.ts` forward the caller's options instead of hard-coding one.
+- Tests: db 304 (+3), worker 561 (matcher tests 1 and 9 now check the alert outcome), web 377.

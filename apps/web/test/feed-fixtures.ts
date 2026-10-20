@@ -78,19 +78,23 @@ export async function seedMatch(
   over: Partial<NewMatch> = {},
 ): Promise<string> {
   const db = getDb();
-  await upsertMatches(db, [
-    {
-      userId,
-      jobPostId,
-      ruleScore: 80,
-      broad: false,
-      features: [{ signal: "core_skill", points: 40, detail: ["nextjs"] }],
-      ruleReason: "Rule reason",
-      aiStatus: "not_needed",
-      profileVersion: 1,
-      ...over,
-    },
-  ]);
+  await upsertMatches(
+    db,
+    [
+      {
+        userId,
+        jobPostId,
+        ruleScore: 80,
+        broad: false,
+        features: [{ signal: "core_skill", points: 40, detail: ["nextjs"] }],
+        ruleReason: "Rule reason",
+        aiStatus: "not_needed",
+        profileVersion: 1,
+        ...over,
+      },
+    ],
+    { origin: "post" },
+  );
   const [m] = await db
     .select({ id: matches.id })
     .from(matches)
