@@ -29,6 +29,8 @@ const MESSAGES: Record<string, string> = {
   MATCH_WITHDRAWN:
     "This post no longer fits your profile, so it can't be drafted.",
   NO_OTHER_PROJECT: "There's no other project to cite for this gig.",
+  PROFILE_EDIT_LIMIT:
+    "You've used all 5 profile changes for this week. Older changes free up 7 days after they were made.",
   UNAVAILABLE: "This isn't available right now. Please try again in a minute.",
   TELEGRAM_UNAVAILABLE: "Telegram alerts aren't available right now.",
   INTERNAL: FALLBACK,

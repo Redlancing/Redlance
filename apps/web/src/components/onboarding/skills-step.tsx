@@ -20,6 +20,7 @@ import { enterAction } from "./skill-search";
 import { nextSkillLevel, type SkillLevel } from "./skill-levels";
 import { RestoreBanner, StepActions } from "./step-actions";
 import { StepHeader } from "./step-header";
+import type { FieldsForm } from "./step-form-types";
 import { useStepForm, type StepFormInit } from "./use-step-form";
 
 type Kind = "skills" | "customSkills";
@@ -42,6 +43,28 @@ export function SkillsStep({
   jobTypes: CategoryId[];
 }) {
   const form = useStepForm(init);
+  return (
+    <>
+      <StepHeader
+        title="Your skills"
+        description={`Mark the ones you'd most like to be hired for as core (up to ${LIMITS.coreSkills}).`}
+      />
+      <RestoreBanner form={form} />
+      <SkillsFields form={form} jobTypes={jobTypes} />
+      <StepActions form={form} back="basics" />
+    </>
+  );
+}
+
+/** The Skills fields, shared by onboarding and the profile page. */
+export function SkillsFields({
+  form,
+  jobTypes,
+}: {
+  form: FieldsForm<"skills">;
+  /** Ranks search results and picks the "Popular" suggestions. */
+  jobTypes: CategoryId[];
+}) {
   const searchId = useId();
   const [query, setQuery] = useState("");
   const v = form.value;
@@ -174,132 +197,117 @@ export function SkillsStep({
   const otherChips = chips.filter((c) => c.level !== "core");
 
   return (
-    <>
-      <StepHeader
-        title="Your skills"
-        description={`Mark the ones you'd most like to be hired for as core (up to ${LIMITS.coreSkills}).`}
-      />
-      <RestoreBanner form={form} />
-      <fieldset disabled={!!form.pending} className="space-y-6">
-        <div className="space-y-2">
-          <label htmlFor={searchId} className="text-sm font-medium">
-            Add skills
-          </label>
-          <Input
-            {...controlProps(searchId)}
-            aria-describedby={full ? `${searchId}-hint` : undefined}
-            value={query}
-            disabled={full}
-            placeholder="Search skills, tools or software"
-            autoComplete="off"
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter") return;
-              e.preventDefault();
-              const action = enterAction(query, {
-                results,
-                chosen,
-                canAddCustom,
-              });
-              if (action.type === "skill") addSkill(action.id);
-              else if (action.type === "custom") addCustom();
-            }}
-            className="h-11 text-base md:text-sm"
-          />
-          {full && (
-            <p
-              id={`${searchId}-hint`}
-              className="text-xs text-muted-foreground"
-            >
-              That&apos;s the maximum
-            </p>
-          )}
-          {!full && query.trim() && (
-            <ul className="space-y-1">
-              {results.map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    onClick={() => addSkill(s.id)}
-                    className="flex w-full items-center gap-2 rounded-lg border border-border px-3 py-2 text-left text-sm outline-none hover:bg-bone focus-visible:ring-3 focus-visible:ring-ring/50"
-                  >
-                    <Plus className="size-3.5" aria-hidden="true" />
-                    <span>{s.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {categoryName(s.category)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-              {canAddCustom && (
-                <li>
-                  <button
-                    type="button"
-                    onClick={addCustom}
-                    className="flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-left text-sm outline-none hover:bg-bone focus-visible:ring-3 focus-visible:ring-ring/50"
-                  >
-                    <Plus className="size-3.5" aria-hidden="true" />
-                    Add &quot;{customName}&quot; as your own skill
-                  </button>
-                </li>
-              )}
-            </ul>
-          )}
-        </div>
-
-        {!full && !query.trim() && popular.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Popular for your job types</p>
-            <ul className="flex flex-wrap gap-2">
-              {popular.map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    onClick={() => addSkill(s.id)}
-                    className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-sm outline-none hover:border-foreground/25 focus-visible:ring-3 focus-visible:ring-ring/50"
-                  >
-                    <Plus className="size-3.5" aria-hidden="true" />
-                    {s.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+    <fieldset disabled={!!form.pending} className="space-y-6">
+      <div className="space-y-2">
+        <label htmlFor={searchId} className="text-sm font-medium">
+          Add skills
+        </label>
+        <Input
+          {...controlProps(searchId)}
+          aria-describedby={full ? `${searchId}-hint` : undefined}
+          value={query}
+          disabled={full}
+          placeholder="Search skills, tools or software"
+          autoComplete="off"
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            const action = enterAction(query, {
+              results,
+              chosen,
+              canAddCustom,
+            });
+            if (action.type === "skill") addSkill(action.id);
+            else if (action.type === "custom") addCustom();
+          }}
+          className="h-11 text-base md:text-sm"
+        />
+        {full && (
+          <p id={`${searchId}-hint`} className="text-xs text-muted-foreground">
+            That&apos;s the maximum
+          </p>
         )}
+        {!full && query.trim() && (
+          <ul className="space-y-1">
+            {results.map((s) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => addSkill(s.id)}
+                  className="flex w-full items-center gap-2 rounded-lg border border-border px-3 py-2 text-left text-sm outline-none hover:bg-bone focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <Plus className="size-3.5" aria-hidden="true" />
+                  <span>{s.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {categoryName(s.category)}
+                  </span>
+                </button>
+              </li>
+            ))}
+            {canAddCustom && (
+              <li>
+                <button
+                  type="button"
+                  onClick={addCustom}
+                  className="flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-left text-sm outline-none hover:bg-bone focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <Plus className="size-3.5" aria-hidden="true" />
+                  Add &quot;{customName}&quot; as your own skill
+                </button>
+              </li>
+            )}
+          </ul>
+        )}
+      </div>
 
-        <FieldGroup
-          legend={`Core skills (${coreCount}/${LIMITS.coreSkills})`}
-          error={skillsError}
-          errorKey="skills"
-        >
-          {coreChips.length > 0 ? (
-            <ul className="flex flex-wrap gap-2">
-              {coreChips.map(renderChip)}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">None yet.</p>
-          )}
-        </FieldGroup>
+      {!full && !query.trim() && popular.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Popular for your job types</p>
+          <ul className="flex flex-wrap gap-2">
+            {popular.map((s) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => addSkill(s.id)}
+                  className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-sm outline-none hover:border-foreground/25 focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <Plus className="size-3.5" aria-hidden="true" />
+                  {s.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-        <FieldGroup
-          legend="Other skills"
-          error={customError}
-          errorKey="customSkills"
-        >
-          {otherChips.length > 0 ? (
-            <ul className="flex flex-wrap gap-2">
-              {otherChips.map(renderChip)}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">None yet.</p>
-          )}
-        </FieldGroup>
+      <FieldGroup
+        legend={`Core skills (${coreCount}/${LIMITS.coreSkills})`}
+        error={skillsError}
+        errorKey="skills"
+      >
+        {coreChips.length > 0 ? (
+          <ul className="flex flex-wrap gap-2">{coreChips.map(renderChip)}</ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">None yet.</p>
+        )}
+      </FieldGroup>
 
-        <p className="text-xs text-muted-foreground">
-          {total}/{LIMITS.totalSkills} skills
-        </p>
-      </fieldset>
-      <StepActions form={form} back="basics" />
-    </>
+      <FieldGroup
+        legend="Other skills"
+        error={customError}
+        errorKey="customSkills"
+      >
+        {otherChips.length > 0 ? (
+          <ul className="flex flex-wrap gap-2">{otherChips.map(renderChip)}</ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">None yet.</p>
+        )}
+      </FieldGroup>
+
+      <p className="text-xs text-muted-foreground">
+        {total}/{LIMITS.totalSkills} skills
+      </p>
+    </fieldset>
   );
 }

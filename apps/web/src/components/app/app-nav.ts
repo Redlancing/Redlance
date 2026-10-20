@@ -19,11 +19,11 @@ export const appNav: AppNavItem[] = [
   { title: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { title: "Matches", href: "/feed", icon: Inbox },
   { title: "Tracker", href: "/tracker", icon: ListChecks },
-  { title: "Profile", href: "/profile", icon: UserRound, soon: true },
+  { title: "Profile", href: "/profile", icon: UserRound },
   { title: "Settings", href: "/settings", icon: Settings },
 ];
 
-/** The mobile tab bar: the nav items that are built (Profile joins when it ships). */
+/** The mobile tab bar: the nav items that are built. */
 export const appTabs: AppNavItem[] = appNav.filter((item) => !item.soon);
 
 /** A page is under an item when its path is the item's href or a sub-path (`/feed/x` → `/feed`). */

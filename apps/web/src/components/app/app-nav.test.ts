@@ -14,13 +14,15 @@ describe("isActiveHref", () => {
 });
 
 describe("appNav", () => {
-  it("keeps Profile as coming soon and out of the tab bar", () => {
+  it("has Profile live, in the sidebar and the tab bar", () => {
     const profile = appNav.find((i) => i.title === "Profile");
-    expect(profile).toMatchObject({ href: "/profile", soon: true });
+    expect(profile).toEqual(expect.objectContaining({ href: "/profile" }));
+    expect(profile?.soon).toBeUndefined();
     expect(appTabs.map((i) => i.href)).toEqual([
       "/dashboard",
       "/feed",
       "/tracker",
+      "/profile",
       "/settings",
     ]);
   });

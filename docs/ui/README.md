@@ -43,7 +43,7 @@ The Telegram alert buttons already link to `${APP_ORIGIN}/feed/<matchId>` and `/
 | `/feed/[matchId]` | Match detail + draft composer (desktop: list stays on the left) | Matches |
 | `/tracker` | Replies the user marked as sent, with their outcome | Tracker |
 | `/settings` | Alerts (Telegram link, threshold, daily cap); account (email, plan, credits) | Settings |
-| `/profile` | Not built (needs a profile-edit API with the 5-changes-a-week limit) | Profile (stays "Soon") |
+| `/profile` | Profile edit, 5 changes a week (built later: `docs/onboarding/profile-edit.md`) | Profile |
 
 - `app-nav.ts` changes to these hrefs. The sidebar becomes a client component that marks the active item by `usePathname()` prefix (today `activeHref` is hard-coded).
 - **Mobile:** a fixed bottom tab bar (Overview, Matches, Tracker, Settings) replaces the header-only shell, which has no nav at all today.

@@ -1595,3 +1595,40 @@ export const telegramLinkTokens = pgTable(
     index("telegram_link_tokens_user_idx").on(t.userId),
   ],
 );
+
+/** Profile sections a user can edit after onboarding (apps/web `/profile`). */
+export const PROFILE_SECTIONS = [
+  "basics",
+  "skills",
+  "work",
+  "rates",
+  "github",
+] as const;
+
+/**
+ * One row per saved profile edit that changed something. The weekly limit (5 changes in any
+ * 7 days) counts these rows; no-op saves write none. Kept in Postgres, not Redis: it is a
+ * rule the user is held to, not rebuildable data.
+ */
+export const profileChanges = pgTable(
+  "profile_changes",
+  {
+    id: v7Id(),
+    userId: userId(),
+    section: text("section", { enum: PROFILE_SECTIONS }).notNull(),
+    /** profiles.profile_version after this change. */
+    profileVersion: integer("profile_version").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check(
+      "profile_changes_section_check",
+      sql`${t.section} in (${sqlList(PROFILE_SECTIONS)})`,
+    ),
+    check(
+      "profile_changes_profile_version_check",
+      sql`${t.profileVersion} >= 1`,
+    ),
+    index("profile_changes_user_created_idx").on(t.userId, t.createdAt),
+  ],
+);

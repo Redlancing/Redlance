@@ -378,7 +378,7 @@ To try a user by hand: set `profiles.plan` in SQL (`update profiles set plan = '
 
 - **No live end-to-end run** with real Reddit posts, real Vertex calls and a real onboarded profile, and the Flash-Lite prices are placeholders.
 - **No UI, alerts or drafts.** The API exists; nothing in the web app calls it yet.
-- **No re-match after a profile edit** (decided 2026-10-20). `profile_version` is never bumped now (it stays 1); the fencing on `(profile_version, analysed_at)` and `withdrawStaleUserMatches` still work and would only matter if re-matching comes back.
+- **No re-match after a profile edit** (decided 2026-10-20). A profile edit (`/profile`, `docs/onboarding/profile-edit.md`) bumps `profile_version` without requesting a re-match: new posts are scored and stored with the new version, existing matches keep theirs (and a re-analysed post's match is replaced by the newer version, as the fencing allows). `withdrawStaleUserMatches` only runs on the backfill path.
 - **`ai_status` is decided when a row is written.** An unchanged row (same `profile_version`, same analysis) isn't written again, so changing a user's `plan` or the threshold doesn't re-evaluate existing matches until the next profile version or a re-analysis.
 - **`match_events` has no `new` event.** `new` is the starting state; a row is written only when `setMatchStatus` changes the status.
 - **Rule weights are starting guesses.** The breakdown is stored in `features` so they can be tuned from saves and dismissals.

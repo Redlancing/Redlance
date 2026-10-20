@@ -23,6 +23,7 @@ import { DateFields, DomainChips, LineList, SkillPicker } from "./entry-fields";
 import { Field, FieldGroup, controlProps } from "./field";
 import { RestoreBanner, StepActions } from "./step-actions";
 import { StepHeader } from "./step-header";
+import type { FieldsForm } from "./step-form-types";
 import { useStepForm, type StepFormInit } from "./use-step-form";
 import {
   addProject,
@@ -223,13 +224,46 @@ export function WorkStep({
   notice?: string | null;
 }) {
   const form = useStepForm(init);
+  const empty =
+    form.value.projects.length === 0 && form.value.experience.length === 0;
+  return (
+    <>
+      <StepHeader
+        title="Projects & experience"
+        description="Past work helps your replies show proof. Everything here is optional."
+      />
+      <RestoreBanner form={form} />
+      {notice && (
+        <p role="status" className="mb-4 rounded-lg bg-bone px-3 py-2 text-sm">
+          {notice}
+        </p>
+      )}
+      <WorkFields form={form} />
+      <StepActions
+        form={form}
+        back="skills"
+        nextLabel={empty ? "Skip for now" : "Next"}
+      />
+    </>
+  );
+}
+
+/** The Projects & experience fields, shared by onboarding and the profile page. */
+export function WorkFields({
+  form,
+  emptyText = "No resume? Add a project or a role by hand, or skip this for now.",
+}: {
+  form: FieldsForm<"work">;
+  /** Shown while both lists are empty. */
+  emptyText?: string;
+}) {
   const v = form.value;
   // Local keys for the cards (never saved). Restore and discard can change the lists, so the
   // keys are always fitted to the lists' lengths.
-  const [stored, setKeys] = useState<Keys>({
-    projects: init.data.projects.map((_, i) => `project-${i}`),
-    experience: init.data.experience.map((_, i) => `role-${i}`),
-  });
+  const [stored, setKeys] = useState<Keys>(() => ({
+    projects: v.projects.map((_, i) => `project-${i}`),
+    experience: v.experience.map((_, i) => `role-${i}`),
+  }));
   const keys: Keys = {
     projects: fitKeys(stored.projects, v.projects.length, "project"),
     experience: fitKeys(stored.experience, v.experience.length, "role"),
@@ -627,26 +661,12 @@ export function WorkStep({
 
   return (
     <>
-      <StepHeader
-        title="Projects & experience"
-        description="Past work helps your replies show proof. Everything here is optional."
-      />
-      <RestoreBanner form={form} />
-      {notice && (
-        <p role="status" className="mb-4 rounded-lg bg-bone px-3 py-2 text-sm">
-          {notice}
-        </p>
-      )}
       <p className="mb-6 rounded-lg bg-bone px-3 py-2 text-sm">
         Replies are public. We remove client names we find; check nothing is
         left.
       </p>
       <fieldset disabled={!!form.pending} className="space-y-8">
-        {empty && (
-          <p className="text-sm text-muted-foreground">
-            No resume? Add a project or a role by hand, or skip this for now.
-          </p>
-        )}
+        {empty && <p className="text-sm text-muted-foreground">{emptyText}</p>}
 
         <section aria-labelledby="work-projects" className="space-y-3">
           <h2 id="work-projects" className="text-base font-semibold">
@@ -723,11 +743,6 @@ export function WorkStep({
           </FieldGroup>
         </section>
       </fieldset>
-      <StepActions
-        form={form}
-        back="skills"
-        nextLabel={empty ? "Skip for now" : "Next"}
-      />
     </>
   );
 }

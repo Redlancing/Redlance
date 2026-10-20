@@ -29,5 +29,6 @@ export const config = {
     "/feed/:path*",
     "/tracker/:path*",
     "/settings/:path*",
+    "/profile/:path*",
   ],
 };
