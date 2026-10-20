@@ -436,10 +436,38 @@ describe("claimDueDeliveries", () => {
     });
     const sizes = (gs: typeof first) =>
       Object.fromEntries(gs.map((g) => [g.userId, g.deliveries.length]));
-    // The longest-waiting user first, capped at perUser; the rest of a's rows come next time.
+    // The longest-waiting user first, capped at perUser.
     expect(sizes(first)).toEqual({ [a]: 5 });
-    // c is not due yet.
-    expect(sizes(rest)).toEqual({ [a]: 2, [b]: 2 });
+    // a's first message is still being sent, so a waits; c is not due yet.
+    expect(sizes(rest)).toEqual({ [b]: 2 });
+  });
+
+  it("skips a user whose earlier message is still being sent", async () => {
+    const a = await seedUser();
+    const b = await seedUser();
+    await queued(a, 7);
+    await queued(b, 1);
+    const first = await claimDueDeliveries(db, "telegram", {
+      maxUsers: 1,
+      perUser: 5,
+    });
+    expect(first.map((g) => g.userId)).toEqual([a]);
+    // a's other 2 rows wait until the first message is done.
+    const second = await claimDueDeliveries(db, "telegram", {
+      maxUsers: 25,
+      perUser: 5,
+    });
+    expect(second.map((g) => g.userId)).toEqual([b]);
+    await completeDeliveries(db, first[0]!.deliveries, {
+      channel: "telegram",
+      messageId: 1,
+      template: "tg@1",
+    });
+    const third = await claimDueDeliveries(db, "telegram", {
+      maxUsers: 25,
+      perUser: 5,
+    });
+    expect(third.map((g) => [g.userId, g.deliveries.length])).toEqual([[a, 2]]);
   });
 
   it("25 concurrent claimers never share a row", async () => {

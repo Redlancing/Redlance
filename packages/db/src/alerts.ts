@@ -285,7 +285,10 @@ type ClaimedRow = {
 /**
  * Claims due pending deliveries for `channel`: at most `perUser` per user (oldest first) and
  * `maxUsers` users (the longest-waiting first). Each claimed row becomes `sending`, with its
- * attempt counted. Returns them grouped by user with what the message needs.
+ * attempt counted. A user who already has a delivery being sent on this channel is skipped,
+ * so their messages go one at a time (and a 403 stops the rest). Two claims racing on the same
+ * user can still each take rows; per-chat spacing keeps those apart. Returns them grouped by
+ * user with what the message needs.
  */
 export async function claimDueDeliveries(
   db: Database,
@@ -297,8 +300,12 @@ export async function claimDueDeliveries(
   const scan = opts.maxUsers * opts.perUser * 4;
   const claimed = await db.execute<{ id: string }>(sql`
     with locked as (
-      select id, user_id, run_after, created_at from alert_deliveries
+      select id, user_id, run_after, created_at from alert_deliveries d
       where channel = ${channel} and status = 'pending' and run_after <= now()
+        -- One message per user at a time: a user with a send in flight waits for it.
+        and not exists (
+          select 1 from alert_deliveries s
+          where s.user_id = d.user_id and s.channel = d.channel and s.status = 'sending')
       order by run_after, id
       limit ${scan}
       for update skip locked
