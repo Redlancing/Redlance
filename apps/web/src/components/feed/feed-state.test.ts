@@ -139,6 +139,35 @@ describe("feedReducer", () => {
   });
 });
 
+describe("rollback and restore from the match page", () => {
+  it("a rollback only applies while the row still has the optimistic status", () => {
+    let s = ready([item("a", T(10))]);
+    s = feedReducer(s, { type: "status", matchId: "a", status: "saved" });
+    s = feedReducer(s, { type: "status", matchId: "a", status: "seen" });
+    // The first request (to saved) failed after the second succeeded: no rollback.
+    s = feedReducer(s, {
+      type: "status",
+      matchId: "a",
+      status: "new",
+      ifStatus: "saved",
+    });
+    expect(s.items[0]!.status).toBe("seen");
+  });
+
+  it("insert puts a restored match back in order, unless it's beyond the loaded pages", () => {
+    let s = ready([item("c", T(12)), item("a", T(10))], "cursor");
+    s = feedReducer(s, { type: "insert", item: item("b", T(11)) });
+    expect(ids(s)).toEqual(["c", "b", "a"]);
+    expect(feedReducer(s, { type: "insert", item: item("b", T(11)) })).toBe(s);
+    // Older than the last loaded row while more pages exist: it'll come with its page.
+    expect(feedReducer(s, { type: "insert", item: item("z", T(1)) })).toBe(s);
+    const all = ready([item("c", T(12))], null);
+    expect(
+      ids(feedReducer(all, { type: "insert", item: item("z", T(1)) })),
+    ).toEqual(["c", "z"]);
+  });
+});
+
 describe("filters", () => {
   const allowed = ["development", "design"];
 

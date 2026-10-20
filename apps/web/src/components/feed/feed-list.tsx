@@ -65,18 +65,21 @@ export function FeedList({ categories }: { categories: string[] }) {
   const [refreshing, setRefreshing] = useState(false);
   const listRef = useRef<HTMLUListElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const itemsRef = useRef(state.items);
+  const stateRef = useRef(state);
   useEffect(() => {
-    itemsRef.current = state.items;
+    stateRef.current = state;
   });
+  // Bumped whenever the list starts over (new filters, retry): responses for an older
+  // generation are dropped, so a slow page from the old view can't land in the new one.
+  const generation = useRef(0);
 
   // First page whenever the filters change.
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    let live = true;
+    const mine = ++generation.current;
     dispatch({ type: "reset" });
     void apiFetch<FeedResponse>(`${query}&limit=${PAGE}`).then((r) => {
-      if (!live) return;
+      if (mine !== generation.current) return;
       if (r.ok)
         dispatch({
           type: "loaded",
@@ -85,17 +88,16 @@ export function FeedList({ categories }: { categories: string[] }) {
         });
       else dispatch({ type: "failed", error: errorMessage(r) });
     });
-    return () => {
-      live = false;
-    };
   }, [query, attempt]);
 
   const loadMore = useCallback(async () => {
     if (!state.nextCursor || state.loadingMore) return;
+    const mine = generation.current;
     dispatch({ type: "loadingMore" });
     const r = await apiFetch<FeedResponse>(
       `${feedQuery(filters, state.nextCursor)}&limit=${PAGE}`,
     );
+    if (mine !== generation.current) return;
     if (r.ok)
       dispatch({
         type: "appended",
@@ -121,9 +123,13 @@ export function FeedList({ categories }: { categories: string[] }) {
 
   /** Fetches the first page again; newer matches wait behind the "new gigs" bar. */
   const refresh = useCallback(async () => {
+    // Only a loaded list can hold matches back; a loading or failed one starts over anyway.
+    if (stateRef.current.phase !== "ready") return;
+    const mine = generation.current;
     setRefreshing(true);
     const r = await apiFetch<FeedResponse>(`${query}&limit=${PAGE}`);
     setRefreshing(false);
+    if (mine !== generation.current) return;
     if (r.ok) dispatch({ type: "refreshed", items: r.data.items });
     else toast.error(errorMessage(r));
   }, [query]);
@@ -140,9 +146,13 @@ export function FeedList({ categories }: { categories: string[] }) {
   // Status changes made on the match page.
   useEffect(
     () =>
-      onMatchStatus(({ matchId, status }) => {
+      onMatchStatus(({ matchId, status, item }) => {
         if (status === "dismissed") dispatch({ type: "remove", matchId });
-        else dispatch({ type: "status", matchId, status });
+        else {
+          // Restored on the match page after the list dropped it: put it back.
+          if (item) dispatch({ type: "insert", item: { ...item, status } });
+          dispatch({ type: "status", matchId, status });
+        }
       }),
     [],
   );
@@ -158,7 +168,12 @@ export function FeedList({ categories }: { categories: string[] }) {
       });
       if (r.ok) announceMatchStatus({ matchId: item.matchId, status });
       else {
-        dispatch({ type: "status", matchId: item.matchId, status: before });
+        dispatch({
+          type: "status",
+          matchId: item.matchId,
+          status: before,
+          ifStatus: status,
+        });
         toast.error(errorMessage(r));
       }
     },
@@ -166,7 +181,9 @@ export function FeedList({ categories }: { categories: string[] }) {
   );
 
   const dismiss = useCallback(async (item: FeedItemResponse) => {
-    const index = itemsRef.current.findIndex((i) => i.matchId === item.matchId);
+    const index = stateRef.current.items.findIndex(
+      (i) => i.matchId === item.matchId,
+    );
     dispatch({ type: "remove", matchId: item.matchId });
     const r = await apiFetch(`/api/v1/feed/${item.matchId}/status`, {
       method: "POST",
@@ -199,12 +216,11 @@ export function FeedList({ categories }: { categories: string[] }) {
     });
   }, []);
 
-  const open = useCallback(
-    (item: FeedItemResponse) => {
-      if (item.status === "new") void setStatus(item, "seen");
-    },
-    [setStatus],
-  );
+  // Opening a row: the match page records "seen" (also for alert links); the dot goes at once.
+  const open = useCallback((item: FeedItemResponse) => {
+    if (item.status === "new")
+      dispatch({ type: "status", matchId: item.matchId, status: "seen" });
+  }, []);
 
   const changeFilters = (next: Filters) => {
     const p = filtersToParams(next).toString();
@@ -241,7 +257,7 @@ export function FeedList({ categories }: { categories: string[] }) {
         return;
       }
       const id = current >= 0 ? links[current]!.dataset.matchId : undefined;
-      const item = itemsRef.current.find((i) => i.matchId === id);
+      const item = stateRef.current.items.find((i) => i.matchId === id);
       if (!item) return;
       e.preventDefault();
       if (e.key === "s")

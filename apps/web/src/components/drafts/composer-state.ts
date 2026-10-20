@@ -74,14 +74,17 @@ export function textFor(
   return edits[draft.id]?.[kind] ?? draft[kind] ?? "";
 }
 
-/** True when any version has an edit that differs from what was drafted. */
-export function hasUnsentEdits(versions: DraftView[], edits: Edits): boolean {
+/** True when any version has an edit, for a kind not yet marked sent, that differs from the draft. */
+export function hasUnsentEdits(
+  versions: DraftView[],
+  edits: Edits,
+  sent: Partial<Record<ReplyKind, boolean>> = {},
+): boolean {
   return versions.some((v) => {
     const e = edits[v.id];
     if (!e) return false;
-    return (
-      (e.comment !== undefined && e.comment !== (v.comment ?? "")) ||
-      (e.dm !== undefined && e.dm !== (v.dm ?? ""))
+    return (["comment", "dm"] as const).some(
+      (k) => !sent[k] && e[k] !== undefined && e[k] !== (v[k] ?? ""),
     );
   });
 }

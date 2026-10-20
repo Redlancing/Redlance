@@ -100,6 +100,17 @@ describe("edits", () => {
     expect(hasUnsentEdits(v, {})).toBe(false);
     expect(hasUnsentEdits(v, { a: { comment: "comment a" } })).toBe(false);
     expect(hasUnsentEdits(v, { a: { comment: "changed" } })).toBe(true);
+    // A sent comment doesn't hide an unsent DM edit.
+    expect(
+      hasUnsentEdits(
+        v,
+        { a: { comment: "changed", dm: "edited" } },
+        { comment: true },
+      ),
+    ).toBe(true);
+    expect(
+      hasUnsentEdits(v, { a: { comment: "changed" } }, { comment: true }),
+    ).toBe(false);
   });
 
   it("opens the DM tab when the post only wants a DM", () => {

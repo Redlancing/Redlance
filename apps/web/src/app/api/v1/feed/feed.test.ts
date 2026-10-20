@@ -372,12 +372,10 @@ describe("GET /api/v1/feed/:matchId", () => {
     expect(body.post.postedAt).toMatch(/Z$/);
     // Same fields as a feed item, plus the two extras.
     const feed = await (await get(cookie, "?view=all")).json();
-    const {
-      withdrawn: _w,
-      post: { body: _b, ...post },
-      ...rest
-    } = body;
-    expect(feed.items[0]).toEqual({ ...rest, post });
+    const item = structuredClone(body);
+    delete item.withdrawn;
+    delete item.post.body;
+    expect(feed.items[0]).toEqual(item);
   });
 
   it("dismissed matches still open", async () => {

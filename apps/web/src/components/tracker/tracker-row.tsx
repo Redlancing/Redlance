@@ -73,10 +73,14 @@ export function TrackerRow({
           {SETTABLE_STATUSES.map((s) => (
             <DropdownMenuItem
               key={s}
-              disabled={s === item.status}
+              disabled={s === item.status && s !== "hired"}
               onClick={() => onChoose(item, s)}
             >
-              {s === "hired" ? "Hired…" : STATUS_LABELS[s]}
+              {s === "hired"
+                ? item.status === "hired"
+                  ? "Add hired details…"
+                  : "Hired…"
+                : STATUS_LABELS[s]}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

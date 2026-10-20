@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, RotateCw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -78,9 +78,13 @@ export function TrackerList({ filter }: { filter: StatusFilter }) {
     }
   }
 
+  const latest = useRef(new Map<string, number>());
+
   async function update(item: ReplyItem, body: PatchBody) {
     const previous: ReplyStatus = item.status;
     const previousUpdatedAt = item.updatedAt;
+    const mine = (latest.current.get(item.id) ?? 0) + 1;
+    latest.current.set(item.id, mine);
     setList((s) => patchItem(s, item.id, { status: body.status }));
     const res = await apiFetch<{ status: ReplyStatus; updatedAt: string }>(
       `/api/v1/replies/${item.id}`,
@@ -94,12 +98,15 @@ export function TrackerList({ filter }: { filter: StatusFilter }) {
         }),
       );
     } else {
-      setList((s) =>
-        patchItem(s, item.id, {
-          status: previous,
-          updatedAt: previousUpdatedAt,
-        }),
-      );
+      // Only roll back if no newer change to this row has been made since.
+      if (latest.current.get(item.id) === mine) {
+        setList((s) =>
+          patchItem(s, item.id, {
+            status: previous,
+            updatedAt: previousUpdatedAt,
+          }),
+        );
+      }
       toast.error(errorMessage(res));
     }
   }

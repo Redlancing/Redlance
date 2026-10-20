@@ -41,7 +41,7 @@ export function TelegramSection({
 
   usePoll<SettingsResponse | null>({
     enabled: local.phase === "waiting",
-    intervalMs: 2000,
+    intervalMs: 4000,
     timeoutMs: local.waitMs,
     fn: async () => {
       const res = await apiFetch<SettingsResponse>("/api/v1/alerts/settings");
@@ -70,13 +70,14 @@ export function TelegramSection({
       });
       return;
     }
-    // Opened here, a moment after the click; if the browser blocks it we show the link instead.
-    const opened = window.open(res.data.url, "_blank", "noopener,noreferrer");
+    // Best effort (may be blocked after the await); the link below is always shown.
+    // With noopener the return value is always null, so it can't tell us anything.
+    window.open(res.data.url, "_blank", "noopener,noreferrer");
     dispatch({
       type: "linkCreated",
       now: Date.now(),
       expiresAt: new Date(res.data.expiresAt).getTime(),
-      fallbackUrl: opened ? null : res.data.url,
+      fallbackUrl: res.data.url,
     });
   }
 
@@ -131,6 +132,11 @@ export function TelegramSection({
           <p className="text-sm text-foreground">
             Press Start in Telegram. Waiting…
           </p>
+          {view.fallbackUrl && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              If Telegram didn&apos;t open, use this link.
+            </p>
+          )}
           {view.fallbackUrl && (
             <a
               href={view.fallbackUrl}

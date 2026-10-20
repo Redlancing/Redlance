@@ -3,6 +3,7 @@
 import {
   INSTRUCTION_MAX,
   REWRITE_OPTIONS,
+  SENT_TEXT_MAX,
   type RewriteOption,
 } from "@redlance/core";
 import {
@@ -62,6 +63,11 @@ function problemFrom(r: ApiFail): Problem {
   };
 }
 
+// Edits and what was marked sent live for the browser session, outside the component: moving to
+// another match (the composer remounts) and back keeps them.
+const editsByMatch = new Map<string, Edits>();
+const sentByMatch = new Map<string, Partial<Record<ReplyKind, boolean>>>();
+
 const TABS: { kind: ReplyKind; label: string }[] = [
   { kind: "comment", label: "Comment" },
   { kind: "dm", label: "DM" },
@@ -93,13 +99,27 @@ export function DraftComposer({
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [tab, setTab] = useState<ReplyKind>("comment");
-  const [edits, setEdits] = useState<Edits>({});
-  const [sent, setSent] = useState<Partial<Record<ReplyKind, boolean>>>({});
+  const [edits, setEdits] = useState<Edits>(
+    () => editsByMatch.get(matchId) ?? {},
+  );
+  const [sent, setSent] = useState<Partial<Record<ReplyKind, boolean>>>(
+    () => sentByMatch.get(matchId) ?? {},
+  );
+  useEffect(() => {
+    editsByMatch.set(matchId, edits);
+    sentByMatch.set(matchId, sent);
+  }, [matchId, edits, sent]);
   const [credits, setCredits] = useState(initialCredits);
   const [custom, setCustom] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
-  // Reused when a request has to be retried, so a retry is never charged twice.
-  const keyRef = useRef<string | null>(null);
+  // Reused only when the same request is retried after a network failure, so a retry is never
+  // charged twice and a different request never replays an earlier one.
+  const keyRef = useRef<{ request: string; key: string } | null>(null);
+  const keyFor = (request: string) => {
+    if (keyRef.current?.request !== request)
+      keyRef.current = { request, key: crypto.randomUUID() };
+    return keyRef.current.key;
+  };
 
   const current = versions.find((v) => v.id === currentId) ?? null;
 
@@ -154,13 +174,20 @@ export function DraftComposer({
     [show, refreshCredits],
   );
 
+  /** Stops waiting for a version, removing its placeholder from the list. */
+  const dropPending = () => {
+    setVersions((v) => v.filter((d) => d.id !== pendingId || !isWorking(d)));
+    setPendingId(null);
+    setSlow(false);
+  };
+
   // Drafts take 2–4 s: poll fast for 30 s, then slowly up to the server's 10-minute expiry.
   const poll = () => apiFetch<DraftView>(`/api/v1/drafts/${pendingId}`);
   const pollDone = (r: Awaited<ReturnType<typeof poll>>) =>
     r.ok ? !isWorking(r.data) : r.status === 404;
   const onPoll = (r: Awaited<ReturnType<typeof poll>>) => {
     if (r.ok) settle(r.data);
-    else if (r.status === 404) setPendingId(null);
+    else if (r.status === 404) dropPending();
   };
   usePoll({
     enabled: pendingId !== null && !slow,
@@ -180,8 +207,7 @@ export function DraftComposer({
     isDone: pollDone,
     onResult: onPoll,
     onTimeout: () => {
-      setPendingId(null);
-      setSlow(false);
+      dropPending();
       setProblem({
         message: failedDraftMessage("EXPIRED"),
         settingsLink: false,
@@ -189,22 +215,23 @@ export function DraftComposer({
     },
   });
 
-  // Leaving with edits that weren't marked as sent asks first.
-  const anySent = Boolean(sent.comment || sent.dm);
+  // Closing the tab with edits that weren't marked as sent asks first (moving between matches
+  // keeps them, see editsByMatch).
+  const unsent = hasUnsentEdits(versions, edits, sent);
   useEffect(() => {
-    if (anySent || !hasUnsentEdits(versions, edits)) return;
+    if (!unsent) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [versions, edits, anySent]);
+  }, [unsent]);
 
   async function startDraft() {
     setBusy(true);
     setProblem(null);
-    keyRef.current ??= crypto.randomUUID();
+    const idempotencyKey = keyFor(`draft:${matchId}`);
     const r = await apiFetch<{ draftId: string; slowDown: boolean }>(
       "/api/v1/drafts",
-      { method: "POST", json: { matchId, idempotencyKey: keyRef.current } },
+      { method: "POST", json: { matchId, idempotencyKey } },
     );
     setBusy(false);
     if (!r.ok) {
@@ -223,10 +250,12 @@ export function DraftComposer({
     if (!current) return;
     setBusy(true);
     setProblem(null);
-    keyRef.current ??= crypto.randomUUID();
+    const idempotencyKey = keyFor(
+      `rewrite:${current.id}:${JSON.stringify(choice)}`,
+    );
     const r = await apiFetch<{ draftId: string; version: number }>(
       `/api/v1/drafts/${current.id}/rewrite`,
-      { method: "POST", json: { ...choice, idempotencyKey: keyRef.current } },
+      { method: "POST", json: { ...choice, idempotencyKey } },
     );
     setBusy(false);
     if (!r.ok) {
@@ -462,6 +491,7 @@ export function DraftComposer({
                   }))
                 }
                 rows={tab === "comment" ? 6 : 8}
+                maxLength={SENT_TEXT_MAX}
                 className="mt-3 block w-full resize-y rounded-[10px] border border-input bg-background px-3 py-2.5 text-[15px] leading-relaxed text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               />
             )}

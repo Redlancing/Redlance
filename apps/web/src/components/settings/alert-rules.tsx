@@ -30,13 +30,6 @@ export function AlertRules({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seq = useRef(0);
 
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
-
   function queue(patch: Partial<Saved>) {
     pending.current = { ...pending.current, ...patch };
     if (timer.current) clearTimeout(timer.current);
@@ -66,11 +59,7 @@ export function AlertRules({
       json: body,
     });
     if (mine !== seq.current && res.ok) {
-      // A newer save is in flight; it will report the final state.
-      saved.current = {
-        minScore: res.data.minScore,
-        dailyCap: res.data.dailyCap,
-      };
+      // A newer save is in flight; only the newest updates saved.current.
       return;
     }
     if (res.ok) {
@@ -86,6 +75,21 @@ export function AlertRules({
       toast.error(errorMessage(res));
     }
   }
+
+  const flushRef = useRef<() => Promise<void>>(async () => {});
+  useEffect(() => {
+    flushRef.current = flush;
+  });
+  useEffect(
+    () => () => {
+      // Leaving the page: send any change still waiting out the debounce.
+      if (timer.current) {
+        clearTimeout(timer.current);
+        void flushRef.current();
+      }
+    },
+    [],
+  );
 
   return (
     <section
@@ -134,6 +138,11 @@ export function AlertRules({
           {scoreBandLabel(score)}. You&apos;re alerted for matches scoring{" "}
           <span className="tabular-nums">{score}</span> or more.
         </p>
+        {minScore < ALERT_MIN_SCORE && (
+          <p className="mt-1 text-sm text-muted-foreground">
+            Currently {minScore}; moving the slider will save a new value.
+          </p>
+        )}
       </div>
 
       <div className="mt-6 max-w-md">

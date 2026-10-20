@@ -25,7 +25,14 @@ export type FeedAction =
   | { type: "moreFailed"; error: string }
   | { type: "refreshed"; items: FeedItemResponse[] }
   | { type: "insertIncoming" }
-  | { type: "status"; matchId: string; status: MatchStatus }
+  | {
+      type: "status";
+      matchId: string;
+      status: MatchStatus;
+      /** Only apply while the row still has this status (a rollback that a later change beat). */
+      ifStatus?: MatchStatus;
+    }
+  | { type: "insert"; item: FeedItemResponse }
   | { type: "remove"; matchId: string }
   | { type: "restore"; item: FeedItemResponse; index: number };
 
@@ -111,9 +118,25 @@ export function feedReducer(state: FeedState, action: FeedAction): FeedState {
       return {
         ...state,
         items: state.items.map((i) =>
-          i.matchId === action.matchId ? { ...i, status: action.status } : i,
+          i.matchId === action.matchId &&
+          (action.ifStatus === undefined || i.status === action.ifStatus)
+            ? { ...i, status: action.status }
+            : i,
         ),
       };
+    case "insert": {
+      // A match restored elsewhere: back into its sorted place, if it falls within the loaded
+      // range (an older one belongs to a page not loaded yet).
+      if (state.items.some((i) => i.matchId === action.item.matchId))
+        return state;
+      const last = state.items[state.items.length - 1];
+      if (last && state.nextCursor && newerFirst(action.item, last) > 0)
+        return state;
+      return {
+        ...state,
+        items: [...state.items, action.item].sort(newerFirst),
+      };
+    }
     case "remove":
       return {
         ...state,

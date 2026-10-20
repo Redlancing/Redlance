@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ScoreChip } from "@/components/app/score-chip";
 import {
@@ -72,18 +72,27 @@ export function MatchDetail({
     [item.matchId],
   );
 
+  // The latest status, for rollbacks and undo that run after later changes.
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  });
+
   async function change(next: MatchStatus, undoable = false) {
-    const before = status;
+    const before = statusRef.current;
+    if (before === next) return;
     setStatus(next);
     const r = await apiFetch(`/api/v1/feed/${item.matchId}/status`, {
       method: "POST",
       json: { status: next },
     });
     if (!r.ok) {
-      setStatus(before);
+      // Roll back only if nothing changed it since.
+      setStatus((s) => (s === next ? before : s));
       return toast.error(errorMessage(r));
     }
-    announceMatchStatus({ matchId: item.matchId, status: next });
+    // The whole match goes along, so a list that dropped it on dismiss can put it back.
+    announceMatchStatus({ matchId: item.matchId, status: next, item });
     if (undoable)
       toast("Dismissed", {
         action: {
@@ -137,6 +146,7 @@ export function MatchDetail({
             {post.title}
           </h1>
         </div>
+        {/* "5m" can tick to "6m" between the server render and hydration. */}
         <p className="mt-2 text-sm text-stone tabular-nums">
           {metaParts(item).map((part, i) =>
             i === 0 ? (
@@ -150,7 +160,10 @@ export function MatchDetail({
                 {part}
               </a>
             ) : (
-              <span key={part}> · {part}</span>
+              <span key={i} suppressHydrationWarning>
+                {" "}
+                · {part}
+              </span>
             ),
           )}
         </p>

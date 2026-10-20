@@ -6,11 +6,11 @@ type Executor = Pick<Database, "execute">;
 export type DashboardStats = {
   /** Matches created since midnight in the user's time zone, not dismissed or withdrawn. */
   newToday: number;
-  /** Replies marked as sent in the last 7 days. */
+  /** Gigs replied to in the last 7 days (a comment and a DM on one gig count once). */
   sentThisWeek: number;
-  /** Replies ever sent (for the setup checklist). */
+  /** Gigs ever replied to (for the setup checklist). */
   sentEver: number;
-  /** Replies the user marked as hired. */
+  /** Gigs where a reply was marked as hired. */
   won: number;
   /** Telegram is linked and on. */
   telegramOn: boolean;
@@ -41,11 +41,11 @@ export async function dashboardStats(
       (select count(*)::int from matches m, day
         where m.user_id = ${userId} and m.created_at >= day.start
           and m.status <> 'dismissed' and m.withdrawn_at is null) as new_today,
-      (select count(*)::int from replies r
+      (select count(distinct r.job_post_id)::int from replies r
         where r.user_id = ${userId}
           and r.sent_at >= ${now}::timestamptz - interval '7 days') as sent_week,
-      (select count(*)::int from replies r where r.user_id = ${userId}) as sent_ever,
-      (select count(*)::int from replies r
+      (select count(distinct r.job_post_id)::int from replies r where r.user_id = ${userId}) as sent_ever,
+      (select count(distinct r.job_post_id)::int from replies r
         where r.user_id = ${userId} and r.status = 'hired') as won,
       exists (select 1 from alert_channels c
         where c.user_id = ${userId} and c.kind = 'telegram' and c.enabled
