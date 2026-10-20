@@ -9,7 +9,7 @@ Start here. `PROJECT.md` is the product spec (the "why"). Each feature has a fol
 | 3 | **Onboarding**: profile steps, resume and GitHub import, the worker, the model client | `onboarding/` | ✅ Built on `feat/onboarding` (not merged). Browser click-through and a live resume eval are still to do. Projects & experience extraction is designed (`projects-experience-design.md`) |
 | 4 | **Ingestion**: collect Reddit hiring posts by RSS, analyse each with Gemini | `ingestion/` | ✅ Built on `feat/ingestion` (stacked on onboarding, not merged). 24 h soak run and Phase 0.1/0.4 checks still open |
 | 5 | **Matching**: score each post 0–100 for each user, with a reason, plus the feed API | `matching/` | ✅ Backend built and verified 2026-10-18 (`matching/conclusion.md`); not run live end to end yet. Feed UI later |
-| 6 | **Alerts**: Telegram (email deferred) | `alerts/` | Built 2026-10-20 (not run live yet): `alerts/README.md`, build plan in `alerts/plan/`, build notes in `alerts/build-notes.md` |
+| 6 | **Alerts**: Telegram (email deferred) | `alerts/` | Built 2026-10-20 on feat/alerts, reviewed and fixed; not run live yet: `alerts/conclusion.md`, design in `alerts/README.md`, build plan in `alerts/plan/`, build notes in `alerts/build-notes.md` |
 | 7 | **Drafts**: comment and first DM in the user's voice | `docs/drafts/` | Backend built (2026-10-20), `conclusion.md`; UI not built |
 | 8 | **Tracker and learning**: outcomes, edits feed back, follow-ups | `docs/drafts/` | Backend built with drafts (2026-10-20); follow-ups and reminders wait for email |
 | 9 | **Deployment**: AWS (EC2, CloudFront, WAF) with CDK | `deployment/` | Not started. `cdn-waf-design.md` is an early, partly outdated draft |

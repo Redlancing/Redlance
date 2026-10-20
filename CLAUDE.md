@@ -105,11 +105,12 @@ Handover for the next chat. Update this section as things change.
   - slices 1–7 are built, the review is done and all 11 fixes are in;
   - still to do: the user's manual check on real resumes (slice 8 in `docs/onboarding/projects-experience-plan.md`) and `conclusion.md`;
   - build notes are in `docs/onboarding/projects-experience-build-notes.md`.
+- **Alerts (Telegram) backend** (on `feat/alerts`, not merged): router, delivery queue, sender, linking bot, web API (settings and Telegram link), `alerts:status` and `alerts:test`; reviewed and fixed. Not run live yet. Read `docs/alerts/conclusion.md`. It needs a dev bot token from @BotFather, and the user must approve the new wording for the onboarding review step (it still says matches are emailed). Delete `docs/alerts/plan/` once the user has read the conclusion.
 - **Matching + job feed backend:** built, reviewed and fixed (F1–F5), verified 2026-10-18: `docs/matching/conclusion.md`. The phase plan and build notes are still in `docs/matching/plan/` (delete them once the user has read the conclusion). Not run live end to end yet (real posts + Vertex re-scores + an onboarded profile). The AI re-scorer is **off** for the MVP (2026-10-19); when it's on, trial/Standard get 15 AI re-scores a day and Max ($20/month) gets 50.
 
 ### Next
 
-- Live end-to-end run: the 24 h ingestion soak (fills the dev db with real posts), then matching and the first live draft eval.
+- Live end-to-end run: the 24 h ingestion soak (fills the dev db with real posts), then matching and the first live draft eval. Then the alerts live run (steps in `docs/alerts/plan/07-wiring-ops.md`).
 - The feed + drafts UI (polling `GET /api/v1/drafts/:id`: 1.5 s, then every 1 s, give up at 30 s). Reminders and follow-ups wait for the email system; the monthly credit grant waits for payments (unify `profiles.plan` and `credit_balances.plan` then).
 - When building the profile edit page, limit profile changes to 5 per user per week. A profile edit does not re-match existing posts (decided 2026-10-20); only new posts use the new profile.
 

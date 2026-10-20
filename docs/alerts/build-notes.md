@@ -65,3 +65,7 @@ Running notes while building the phases in `plan/`. They feed `conclusion.md` at
 - **L8 (bot replies and the limiter):** `createAlertsFromEnv` builds one limiter from `TELEGRAM_MAX_PER_SECOND` and passes it to the sender (`limiter` dep) and the bot (`limiter` dep, `take()` before every `sendText`). Both still build or skip their own when it isn't passed (tests). Test: the bot takes a slot before each reply.
 - **L9:** `useTelegramLinkToken` inserts a uuid v7 made in JS (`uuid`'s `v7`), not `gen_random_uuid()`. Test checks the version nibble.
 - **Empty keyboard:** core's `telegramAlert` can return `{ inline_keyboard: [] }` for a localhost or IP `APP_ORIGIN`; the sender now leaves `replyMarkup` out unless some row has a button. Test with `http://localhost:3001` and a 3-match message.
+
+## Final
+
+- Tests on feat/alerts after the review fixes (2026-10-20): core 318, db 335, worker 623, web 422 (llm unchanged at 26). Typecheck and lint clean.
