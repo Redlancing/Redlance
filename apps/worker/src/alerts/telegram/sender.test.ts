@@ -241,6 +241,101 @@ describe("Telegram sender", () => {
     expect(tg.sent).toHaveLength(1);
   });
 
+  it("a claim swept during a 429 pause is sent once, by its new owner (M1)", async () => {
+    const a = await seedUser(db, { chatId: "1" });
+    const b = await seedUser(db, { chatId: "2" });
+    const [ma] = await queueAlerts(db, a, 1);
+    const [mb] = await queueAlerts(db, b, 1);
+    // The first send gets a 1 s rate limit; every later one succeeds.
+    const tg = fakeTelegram((_, n) =>
+      n === 1 ? new TelegramError("sendMessage", 429, "Too Many", 1) : null,
+    );
+    // 2 a second: the second group waits in the limiter, then in the pause.
+    const s = make(tg.client, { maxPerSecond: 2 });
+    await s.start();
+    // Wait until the 429 is recorded (the rate-limited row is pending again).
+    const deadline = Date.now() + 2000;
+    const limited = async () =>
+      (await deliveries()).some((d) => d.errorCode === "RATE_LIMITED");
+    while (!(await limited()) && Date.now() < deadline)
+      await new Promise((r) => setTimeout(r, 10));
+    expect(tg.calls()).toBe(1);
+    // The other group is still waiting: its lock looks stale and the sweep re-queues it,
+    // and the sender claims it again.
+    await db.execute(
+      sql`update alert_deliveries set locked_at = now() - interval '5 minutes' where status = 'sending'`,
+    );
+    await s.sweep();
+    await s.idle();
+    // The rate-limited one comes back after its retry_after.
+    await db.execute(sql`update alert_deliveries set run_after = now()`);
+    await s.pump();
+    await s.idle();
+    await s.stop();
+    const perChat = (chat: string) =>
+      tg.sent.filter((m) => m.chatId === chat).length;
+    expect(perChat("1")).toBe(1);
+    expect(perChat("2")).toBe(1);
+    expect(await deliveries()).toHaveLength(0);
+    expect((await matchRow(ma!)).alertOutcome).toBe("sent");
+    expect((await matchRow(mb!)).alertOutcome).toBe("sent");
+  });
+
+  it("a claim lost before the send is skipped and never sent (M1)", async () => {
+    const u = await seedUser(db, { chatId: "9" });
+    await queueAlerts(db, u, 1);
+    const tg = fakeTelegram();
+    // A slow pacer holds the second user's group long enough to steal its claim.
+    const s = make(tg.client, { maxPerSecond: 4 });
+    await s.start(); // the first group is sent at once
+    await queueAlerts(db, await seedUser(db, { chatId: "10" }), 1);
+    void s.pump();
+    await new Promise((r) => setTimeout(r, 60));
+    // Another sender's sweep and claim take the row (attempts moves on).
+    await db.execute(
+      sql`update alert_deliveries set attempts = attempts + 1 where status = 'sending'`,
+    );
+    await s.idle();
+    await s.stop();
+    expect(tg.sent.map((m) => m.chatId)).toEqual(["9"]);
+    // Left for its owner: still sending, untouched.
+    expect(await deliveries()).toMatchObject([
+      { status: "sending", attempts: 2 },
+    ]);
+  });
+
+  it("stop() aborts a long pacer wait and gives the rows back within the grace (L1)", async () => {
+    const u = await seedUser(db);
+    await queueAlerts(db, u, 1);
+    const tg = fakeTelegram();
+    // One send per 100 s: the second group would wait far past the grace.
+    const s = make(tg.client, { maxPerSecond: 0.01 });
+    await s.start();
+    await queueAlerts(db, await seedUser(db), 1);
+    void s.pump();
+    await new Promise((r) => setTimeout(r, 100));
+    const t = Date.now();
+    await s.stop(200);
+    expect(Date.now() - t).toBeLessThan(1000);
+    expect(tg.sent).toHaveLength(1);
+    const left = await deliveries();
+    expect(left).toHaveLength(1);
+    expect(left[0]).toMatchObject({
+      status: "pending",
+      attempts: 0,
+      errorCode: "SHUTDOWN",
+    });
+  });
+
+  it("leaves out an empty keyboard (a localhost APP_ORIGIN has no buttons)", async () => {
+    const u = await seedUser(db);
+    await queueAlerts(db, u, 3);
+    const tg = fakeTelegram();
+    await runOnce(make(tg.client, { appOrigin: "http://localhost:3001" }));
+    expect(tg.sent).toHaveLength(1);
+    expect(tg.sent[0]!.replyMarkup).toBeUndefined();
+  });
+
   it("stop() gives back a claimed group that wasn't sent yet", async () => {
     const u = await seedUser(db);
     await queueAlerts(db, u, 1);

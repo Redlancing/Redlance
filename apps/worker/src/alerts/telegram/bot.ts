@@ -6,7 +6,7 @@ import {
   type Database,
 } from "@redlance/db";
 import type { Logger } from "../../logger";
-import { realClock, type Clock } from "../pace";
+import { realClock, type Clock, type RateLimiter } from "../pace";
 import {
   TelegramError,
   type TelegramClient,
@@ -26,6 +26,8 @@ export type TelegramBotDeps = {
   log: Logger;
   client: Pick<TelegramClient, "getUpdates" | "sendText">;
   acquireLock: () => Promise<SessionLock | null>;
+  /** The sender's limiter, so replies count toward the bot-wide send rate. */
+  limiter?: Pick<RateLimiter, "take">;
   /** Long-poll length. */
   pollTimeoutSec?: number;
   /** Wait before trying the lock again when another worker holds it. */
@@ -41,6 +43,7 @@ export const BOT_REPLIES = {
   howTo: "To get alerts here, open Redlance and press Connect Telegram.",
   stopped: "Alerts are off. Turn them back on in Redlance.",
   help: "This bot sends your new Redlance matches. Send /stop to turn alerts off.",
+  failed: "Something went wrong. Please try the link again in a minute.",
 } as const;
 
 /** A link token is 32 random bytes as base64url (43 characters). */
@@ -59,6 +62,7 @@ export function createTelegramBot(deps: TelegramBotDeps) {
 
   async function reply(chatId: string, text: string) {
     try {
+      await deps.limiter?.take(stop.signal);
       await deps.client.sendText(chatId, text);
     } catch (err) {
       deps.log.warn(
@@ -68,7 +72,27 @@ export function createTelegramBot(deps: TelegramBotDeps) {
     }
   }
 
+  /** Handles one update; if that throws (e.g. a database error), the chat gets one short reply. */
   async function handle(u: TelegramUpdate): Promise<void> {
+    try {
+      await handleUnsafe(u);
+    } catch (err) {
+      // A failed update must not stop the bot; it is skipped after the generic reply.
+      deps.log.error(
+        {
+          updateId: u.update_id,
+          pgCode: pgErrorCode(err),
+          errName: (err as Error)?.name,
+        },
+        "telegram update failed",
+      );
+      const msg = u.message;
+      if (msg?.chat.type === "private")
+        await reply(String(msg.chat.id), BOT_REPLIES.failed);
+    }
+  }
+
+  async function handleUnsafe(u: TelegramUpdate): Promise<void> {
     const msg = u.message;
     // Alerts are private only: groups and channels are ignored.
     if (!msg?.text || msg.chat.type !== "private") return;
@@ -132,19 +156,7 @@ export function createTelegramBot(deps: TelegramBotDeps) {
       }
       for (const u of updates) {
         offset = u.update_id + 1;
-        try {
-          await handle(u);
-        } catch (err) {
-          // A database error on one update must not stop the bot; that update is skipped.
-          deps.log.error(
-            {
-              updateId: u.update_id,
-              pgCode: pgErrorCode(err),
-              errName: (err as Error)?.name,
-            },
-            "telegram update failed",
-          );
-        }
+        await handle(u);
       }
     }
   }
@@ -200,7 +212,7 @@ export function createTelegramBot(deps: TelegramBotDeps) {
       stop.abort();
       await loop;
     },
-    /** Handles one update directly (tests). */
+    /** Handles one update directly, as the poll loop does (tests). */
     handle,
   };
 }

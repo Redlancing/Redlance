@@ -15,6 +15,7 @@ import {
   type Plan,
 } from "@redlance/core";
 import { sql } from "drizzle-orm";
+import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client";
 import { alertDeliveries } from "./schema";
 
@@ -424,6 +425,33 @@ export async function completeDeliveries(
   });
 }
 
+/**
+ * Re-checks a claim right before its message goes out and refreshes the lock, so the stale
+ * sweep can't hand the rows to another sender mid-send. True only if every row is still
+ * `sending` with the claim's attempts; otherwise nothing is touched and the caller must not
+ * send (a sweep re-queued some row while the sender waited, and another claim may own it).
+ */
+export async function touchDeliveries(
+  db: Executor,
+  rows: Fence[],
+): Promise<boolean> {
+  if (rows.length === 0) return true;
+  const res = await db.execute<{ id: string }>(sql`
+    with x as (
+      select * from unnest(${uuids(rows.map((r) => r.id))}, ${ints(rows.map((r) => r.attempts))})
+        as x(id, attempts)
+    ), ok as (
+      select count(*) = ${rows.length} as all_ours
+      from alert_deliveries d join x on d.id = x.id
+      where d.status = 'sending' and d.attempts = x.attempts
+    )
+    update alert_deliveries d set locked_at = now()
+    from x, ok
+    where ok.all_ours and d.id = x.id and d.status = 'sending' and d.attempts = x.attempts
+    returning d.id`);
+  return res.rows.length === rows.length;
+}
+
 export type DeliveryFailure = {
   /** An error code only, never message text. */
   code: string;
@@ -575,7 +603,7 @@ export async function createTelegramLinkToken(
 /**
  * Uses a link token (once, before it expires) to connect `chatId` to its user: the channel is
  * created or replaced, enabled and verified. A chat belongs to one account: if another user
- * had this chat, their channel is turned off. Returns the user id, or null for an unknown,
+ * had this chat, their channel is turned off (reason `relinked`). Returns the user id, or null for an unknown,
  * used or expired token.
  */
 export async function useTelegramLinkToken(
@@ -595,11 +623,11 @@ export async function useTelegramLinkToken(
       where kind = 'telegram' and target = ${chatId} and user_id <> ${userId} and enabled
       for update`);
     for (const o of others.rows) {
-      await disableChannelTx(tx, o.user_id, "telegram", "user_stop");
+      await disableChannelTx(tx, o.user_id, "telegram", "relinked");
     }
     await tx.execute(sql`
       insert into alert_channels (id, user_id, kind, target, enabled, verified_at, disabled_reason)
-      values (gen_random_uuid(), ${userId}, 'telegram', ${chatId}, true, now(), null)
+      values (${uuidv7()}, ${userId}, 'telegram', ${chatId}, true, now(), null)
       on conflict (user_id, kind) do update set
         target = excluded.target, enabled = true, verified_at = now(), disabled_reason = null`);
     return userId;

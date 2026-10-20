@@ -22,8 +22,12 @@ export const DELIVERY_CHANNELS = ["telegram"] as const; // "email" later
 export type DeliveryChannel = (typeof DELIVERY_CHANNELS)[number];
 export const DELIVERY_STATUSES = ["pending", "sending", "failed"] as const;
 export type DeliveryStatus = (typeof DELIVERY_STATUSES)[number];
-/** Why a channel was turned off: the bot was blocked, or the user sent /stop or unlinked. */
-export const CHANNEL_DISABLED_REASONS = ["blocked", "user_stop"] as const;
+/** Why a channel was turned off: the bot was blocked, the user sent /stop or unlinked, or another account linked the same chat. */
+export const CHANNEL_DISABLED_REASONS = [
+  "blocked",
+  "user_stop",
+  "relinked",
+] as const;
 export type ChannelDisabledReason = (typeof CHANNEL_DISABLED_REASONS)[number];
 
 export const ALERT_MIN_SCORE_DEFAULT = 70;

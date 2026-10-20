@@ -6,6 +6,7 @@ import {
 import { acquireSessionLock, createPgListener, type Listener } from "../db";
 import type { WorkerEnv } from "../env";
 import type { Logger } from "../logger";
+import { createRateLimiter } from "./pace";
 import { createRouter } from "./router";
 import { createTelegramBot, type TelegramBotDeps } from "./telegram/bot";
 import { createTelegramClient, type TelegramClient } from "./telegram/client";
@@ -71,18 +72,23 @@ export function createAlertsFromEnv(
     }
     const client =
       deps.client ?? createTelegramClient({ token: env.TELEGRAM_BOT_TOKEN! });
+    // One limiter for the whole bot: alerts and the bot's replies share Telegram's rate.
+    const limiter = createRateLimiter({
+      perSecond: env.TELEGRAM_MAX_PER_SECOND,
+    });
     sender = createTelegramSender({
       db,
       log: log.child({ part: "alert-sender" }),
       client,
       listen: listen(ALERTS_CHANNEL),
       appOrigin: env.APP_ORIGIN,
-      maxPerSecond: env.TELEGRAM_MAX_PER_SECOND,
+      limiter,
     });
     bot = createTelegramBot({
       db,
       log: log.child({ part: "telegram-bot" }),
       client,
+      limiter,
       acquireLock:
         deps.acquireLock ??
         (() => acquireSessionLock(env.DATABASE_URL, BOT_LOCK_KEY, log)),

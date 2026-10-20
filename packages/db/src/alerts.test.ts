@@ -22,6 +22,7 @@ import {
   requeueStaleDeliveries,
   routedTodayCounts,
   telegramLinkTokens,
+  touchDeliveries,
   useTelegramLinkToken,
   users,
   withRoutingBatch,
@@ -693,6 +694,48 @@ describe("disableChannel", () => {
   });
 });
 
+describe("touchDeliveries", () => {
+  it("refreshes the lock while every row is still this claim's", async () => {
+    const u = await seedUser();
+    await queued(u, 2);
+    const [g] = await claimDueDeliveries(db, "telegram", {
+      maxUsers: 5,
+      perUser: 5,
+    });
+    await db.execute(
+      sql`update alert_deliveries set locked_at = now() - interval '5 minutes'`,
+    );
+    expect(await touchDeliveries(db, g!.deliveries)).toBe(true);
+    // Fresh again, so the sweep leaves them alone.
+    expect(await requeueStaleDeliveries(db, 120)).toBe(0);
+    expect((await deliveryRows()).every((r) => r.status === "sending")).toBe(
+      true,
+    );
+  });
+
+  it("is false once the sweep took any row back, even if it was claimed again", async () => {
+    const u = await seedUser();
+    await queued(u, 2);
+    const [g] = await claimDueDeliveries(db, "telegram", {
+      maxUsers: 5,
+      perUser: 5,
+    });
+    await db.execute(
+      sql`update alert_deliveries set locked_at = now() - interval '5 minutes'
+          where id = ${g!.deliveries[0]!.id}`,
+    );
+    expect(await requeueStaleDeliveries(db, 120)).toBe(1);
+    expect(await touchDeliveries(db, g!.deliveries)).toBe(false);
+    // Claimed again by another sender: still not ours.
+    await claimDueDeliveries(db, "telegram", { maxUsers: 5, perUser: 5 });
+    expect(await touchDeliveries(db, g!.deliveries)).toBe(false);
+  });
+
+  it("is true for no rows", async () => {
+    expect(await touchDeliveries(db, [])).toBe(true);
+  });
+});
+
 describe("requeueStaleDeliveries", () => {
   it("puts old sending rows back and fails those out of attempts", async () => {
     const a = await seedUser();
@@ -737,6 +780,8 @@ describe("Telegram link tokens", () => {
       .where(eq(alertChannels.userId, u));
     expect(ch).toMatchObject({ kind: "telegram", target: "42", enabled: true });
     expect(ch!.verifiedAt).not.toBeNull();
+    // A uuid v7 made in JS, like the rest of the schema's ids.
+    expect(ch!.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab]/);
 
     await createTelegramLinkToken(db, u, sha("tok-old"), 0);
     expect(await useTelegramLinkToken(db, sha("tok-old"), "42")).toBeNull();
@@ -767,7 +812,7 @@ describe("Telegram link tokens", () => {
     const chans = await db.select().from(alertChannels);
     expect(chans.find((c) => c.userId === first)).toMatchObject({
       enabled: false,
-      disabledReason: "user_stop",
+      disabledReason: "relinked",
     });
     expect(chans.find((c) => c.userId === second)).toMatchObject({
       enabled: true,

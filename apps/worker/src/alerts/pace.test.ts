@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { createPerKeySpacing, createRateLimiter, type Clock } from "./pace";
+import {
+  createPerKeySpacing,
+  createRateLimiter,
+  realClock,
+  type Clock,
+} from "./pace";
+
+/** Resolves with how long `p` took, in real ms. */
+async function timed(p: Promise<unknown>): Promise<number> {
+  const t = Date.now();
+  await p;
+  return Date.now() - t;
+}
 
 /** A fake clock: sleeps advance time instantly, in order. */
 function fakeClock(): Clock & { t: number } {
@@ -35,6 +47,31 @@ describe("createRateLimiter", () => {
     limiter.pauseFor(5000);
     await limiter.take();
     expect(clock.t).toBeGreaterThanOrEqual(5000);
+  });
+});
+
+describe("aborting a wait", () => {
+  it("take() returns as soon as the signal aborts, even mid-pause", async () => {
+    const limiter = createRateLimiter({ perSecond: 25, clock: realClock });
+    await limiter.take();
+    limiter.pauseFor(60_000);
+    const ac = new AbortController();
+    setTimeout(() => ac.abort(), 20);
+    expect(await timed(limiter.take(ac.signal))).toBeLessThan(1000);
+  });
+
+  it("take() with an aborted signal doesn't wait for its slot", async () => {
+    const limiter = createRateLimiter({ perSecond: 0.01, clock: realClock });
+    await limiter.take();
+    expect(await timed(limiter.take(AbortSignal.abort()))).toBeLessThan(100);
+  });
+
+  it("wait() returns as soon as the signal aborts", async () => {
+    const spacing = createPerKeySpacing(60_000, realClock);
+    await spacing.wait("a");
+    const ac = new AbortController();
+    setTimeout(() => ac.abort(), 20);
+    expect(await timed(spacing.wait("a", ac.signal))).toBeLessThan(1000);
   });
 });
 

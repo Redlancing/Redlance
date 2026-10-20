@@ -167,6 +167,74 @@ describe("Telegram bot", () => {
     expect(tg.replies.map((r) => r.chatId)).toEqual(["42", "43"]);
   });
 
+  it("a failing update gets one short generic reply (L4)", async () => {
+    const tg = fakeTelegram([]);
+    const broken = {
+      transaction: async () => {
+        throw new Error("connection terminated");
+      },
+    } as unknown as typeof db;
+    const bot = createTelegramBot({
+      db: broken,
+      log: silent,
+      client: tg.client,
+      acquireLock: async () => fakeLock(),
+    });
+    await bot.handle(msg(`/start ${TOKEN}`, { id: 55 }));
+    expect(tg.replies).toEqual([{ chatId: "55", text: BOT_REPLIES.failed }]);
+    expect(BOT_REPLIES.failed).toBe(
+      "Something went wrong. Please try the link again in a minute.",
+    );
+  });
+
+  it("a failing update in the poll loop is answered and the loop goes on (L4)", async () => {
+    const tg = fakeTelegram([
+      [msg("/stop", { id: 56 }), msg("hello", { id: 57 })],
+    ]);
+    const broken = {
+      transaction: async () => {
+        throw new Error("connection terminated");
+      },
+    } as unknown as typeof db;
+    const bot = createTelegramBot({
+      db: broken,
+      log: silent,
+      client: tg.client,
+      acquireLock: async () => fakeLock(),
+    });
+    bot.start();
+    await until(() => tg.polls() >= 2);
+    await bot.stop();
+    expect(tg.replies).toEqual([
+      { chatId: "56", text: BOT_REPLIES.failed },
+      { chatId: "57", text: BOT_REPLIES.help },
+    ]);
+  });
+
+  it("takes a slot from the shared limiter before every reply (L8)", async () => {
+    const tg = fakeTelegram([]);
+    const order: string[] = [];
+    const sendText = tg.client.sendText;
+    tg.client.sendText = async (chatId, text) => {
+      order.push("send");
+      return sendText(chatId, text);
+    };
+    const bot = createTelegramBot({
+      db,
+      log: silent,
+      client: tg.client,
+      acquireLock: async () => fakeLock(),
+      limiter: {
+        take: async () => {
+          order.push("take");
+        },
+      },
+    });
+    await bot.handle(msg("/start"));
+    await bot.handle(msg("hello", { id: 58 }));
+    expect(order).toEqual(["take", "send", "take", "send"]);
+  });
+
   it("only the lock holder polls; the other stands by", async () => {
     const lockUrl = url;
     const key = `redlance:telegram-bot-test-${Math.random()}`;

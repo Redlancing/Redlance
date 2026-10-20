@@ -108,6 +108,7 @@ describe("alert lists mirror core", () => {
     expect(DELIVERY_CHANNELS).toEqual(core.DELIVERY_CHANNELS);
     expect(DELIVERY_STATUSES).toEqual(core.DELIVERY_STATUSES);
     expect(CHANNEL_DISABLED_REASONS).toEqual(core.CHANNEL_DISABLED_REASONS);
+    expect(CHANNEL_DISABLED_REASONS).toContain("relinked");
   });
 });
 
@@ -190,14 +191,18 @@ describe("alert columns", () => {
 
   it("checks the channel's disabled reason", async () => {
     const s = await seed();
-    await db
-      .insert(alertChannels)
-      .values({
-        userId: s.userId,
-        kind: "telegram",
-        target: "123",
-        disabledReason: "blocked",
-      });
+    await db.insert(alertChannels).values({
+      userId: s.userId,
+      kind: "telegram",
+      target: "123",
+      disabledReason: "blocked",
+    });
+    // Every listed reason passes the check (0016 added 'relinked').
+    for (const reason of CHANNEL_DISABLED_REASONS) {
+      await db.execute(
+        sql`update alert_channels set disabled_reason = ${reason} where user_id = ${s.userId}`,
+      );
+    }
     await expectReject(
       db.execute(
         sql`update alert_channels set disabled_reason = 'other' where user_id = ${s.userId}`,

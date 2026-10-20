@@ -128,7 +128,11 @@ export const ALERT_OUTCOMES = [
 ] as const;
 export const DELIVERY_CHANNELS = ["telegram"] as const;
 export const DELIVERY_STATUSES = ["pending", "sending", "failed"] as const;
-export const CHANNEL_DISABLED_REASONS = ["blocked", "user_stop"] as const;
+export const CHANNEL_DISABLED_REASONS = [
+  "blocked",
+  "user_stop",
+  "relinked",
+] as const;
 /** job_posts.match_status (the matcher's queue); null = not analysed yet. */
 export const POST_MATCH_STATUSES = [
   "pending",
@@ -521,7 +525,7 @@ export const alertChannels = pgTable(
     target: text("target").notNull(),
     enabled: boolean("enabled").notNull().default(true),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
-    /** Why `enabled` is false: the bot was blocked, or the user turned alerts off. */
+    /** Why `enabled` is false: the bot was blocked, the user turned alerts off, or another account took the chat. */
     disabledReason: text("disabled_reason", {
       enum: CHANNEL_DISABLED_REASONS,
     }),

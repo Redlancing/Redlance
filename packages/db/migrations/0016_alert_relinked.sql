@@ -1,0 +1,2 @@
+ALTER TABLE "alert_channels" DROP CONSTRAINT "alert_channels_disabled_reason_check";--> statement-breakpoint
+ALTER TABLE "alert_channels" ADD CONSTRAINT "alert_channels_disabled_reason_check" CHECK ("alert_channels"."disabled_reason" is null or "alert_channels"."disabled_reason" in ('blocked', 'user_stop', 'relinked'));

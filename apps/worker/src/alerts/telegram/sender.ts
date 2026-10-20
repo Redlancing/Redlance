@@ -6,6 +6,7 @@ import {
   failDeliveries,
   pgErrorCode,
   requeueStaleDeliveries,
+  touchDeliveries,
   type Database,
   type DeliveryFailure,
   type DeliveryGroup,
@@ -17,14 +18,21 @@ import {
   createRateLimiter,
   realClock,
   type Clock,
+  type RateLimiter,
 } from "../pace";
-import { classifyTelegramError, type TelegramClient } from "./client";
+import {
+  classifyTelegramError,
+  type InlineKeyboard,
+  type TelegramClient,
+} from "./client";
 
 // The Telegram sender (docs/alerts/README.md §4.3, plan/05-telegram.md): claims due deliveries
 // grouped per user, sends one message per group (up to 5 matches), and completes or fails the
 // rows. Woken by NOTIFY alerts with a poll as the safety net; a sweep puts back rows whose
 // sender died. Paced to stay under Telegram's limits; a run of outages opens a breaker.
 // Delivery is at least once: a crash between the send and the complete re-sends that message.
+// Right before each send the claim is re-checked (touchDeliveries): a group that waited out a
+// long 429 pause may have been swept and claimed again, and then only the new owner sends.
 
 export type TelegramSenderDeps = {
   db: Database;
@@ -35,6 +43,8 @@ export type TelegramSenderDeps = {
   appOrigin: string;
   /** Bot-wide sends per second (Telegram allows about 30). */
   maxPerSecond?: number;
+  /** A limiter shared with the bot's replies; built from `maxPerSecond` when absent. */
+  limiter?: RateLimiter;
   /** Gap between two messages to one chat (Telegram allows 1 a second). */
   perChatGapMs?: number;
   /** Users (message groups) in flight at once. */
@@ -53,10 +63,11 @@ const BREAKER_MAX_MS = 15 * 60_000;
 
 export function createTelegramSender(deps: TelegramSenderDeps) {
   const clock = deps.clock ?? realClock;
-  const limiter = createRateLimiter({
-    perSecond: deps.maxPerSecond ?? 25,
-    clock,
-  });
+  const limiter =
+    deps.limiter ??
+    createRateLimiter({ perSecond: deps.maxPerSecond ?? 25, clock });
+  // Aborted by stop(): groups waiting in the limiter or the per-chat spacing give back at once.
+  const stopSignal = new AbortController();
   const spacing = createPerKeySpacing(deps.perChatGapMs ?? 1100, clock);
   const maxUsers = deps.maxUsers ?? 25;
   const running = new Set<Promise<void>>();
@@ -115,12 +126,36 @@ export function createTelegramSender(deps: TelegramSenderDeps) {
       deps.appOrigin,
       new Date(clock.now()),
     );
-    await limiter.take();
-    await spacing.wait(g.target);
+    await limiter.take(stopSignal.signal);
+    await spacing.wait(g.target, stopSignal.signal);
     if (stopping) {
       // Claimed but not sent: the next worker sends it straight away, attempt not used.
       await fail(g, {
         code: "SHUTDOWN",
+        retryable: true,
+        countAttempt: false,
+        retryInMs: 0,
+      });
+      return;
+    }
+    let stillOurs = false;
+    try {
+      stillOurs = await touchDeliveries(deps.db, rows(g));
+    } catch (err) {
+      deps.log.error(
+        { userId: g.userId, pgCode: pgErrorCode(err) },
+        "could not check an alert claim",
+      );
+    }
+    if (!stillOurs) {
+      // Swept while we waited (another sender may own it now), or the check failed. Give back
+      // whatever is still ours (fenced, attempt not used); never send.
+      deps.log.warn(
+        { userId: g.userId, count: g.deliveries.length },
+        "claim lost before send",
+      );
+      await fail(g, {
+        code: "CLAIM_LOST",
         retryable: true,
         countAttempt: false,
         retryInMs: 0,
@@ -132,7 +167,9 @@ export function createTelegramSender(deps: TelegramSenderDeps) {
       ({ messageId } = await deps.client.sendMessage({
         chatId: g.target,
         text: message.text,
-        replyMarkup: message.replyMarkup,
+        replyMarkup: hasButtons(message.replyMarkup)
+          ? message.replyMarkup
+          : undefined,
       }));
     } catch (err) {
       const f = classifyTelegramError(err);
@@ -283,6 +320,7 @@ export function createTelegramSender(deps: TelegramSenderDeps) {
      */
     async stop(graceMs = 10_000) {
       stopping = true;
+      stopSignal.abort();
       if (pollTimer) clearInterval(pollTimer);
       if (sweepTimer) clearInterval(sweepTimer);
       if (pumping) await pumping.catch(() => {});
@@ -308,3 +346,8 @@ export function createTelegramSender(deps: TelegramSenderDeps) {
 }
 
 export type TelegramSender = ReturnType<typeof createTelegramSender>;
+
+/** An empty keyboard (no usable app links, e.g. a localhost APP_ORIGIN) is left out. */
+function hasButtons(markup: InlineKeyboard | undefined): boolean {
+  return Boolean(markup?.inline_keyboard.some((row) => row.length > 0));
+}

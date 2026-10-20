@@ -49,8 +49,10 @@ async function main() {
   const { db, pool } = createDb(env.DATABASE_URL, {
     // import jobs + post analysis + matching (posts and one re-match) + AI re-scores + the
     // poller and upkeep, plus drafts and voice updates (each holds at most one connection at a time),
-    // plus the alert router and sender (the listeners and the bot's lock use their own connections)
-    max: env.WORKER_CONCURRENCY * 4 + env.DRAFT_CONCURRENCY + 8,
+    // plus the alert router and sender (the listeners and the bot's lock use their own connections).
+    // Alerts get +5, not +2: the sender runs up to 25 groups, each with short claim-check and
+    // complete transactions, so a few spare connections keep it from queueing on the pool.
+    max: env.WORKER_CONCURRENCY * 4 + env.DRAFT_CONCURRENCY + 11,
     onError: (err) =>
       log.error({ err: err.message }, "postgres idle client error"),
   });
