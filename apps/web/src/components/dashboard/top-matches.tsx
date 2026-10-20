@@ -21,7 +21,12 @@ export function TopMatches({ matches }: { matches: TopMatch[] }) {
         >
           Newest strong matches
         </h2>
-        <Link href="/feed" className="text-sm text-stone hover:text-foreground">
+        {/* Never prefetched: the feed layout reads the list on every render. */}
+        <Link
+          href="/feed"
+          prefetch={false}
+          className="text-sm text-stone hover:text-foreground"
+        >
           See all matches
         </Link>
       </div>
@@ -43,6 +48,7 @@ export function TopMatches({ matches }: { matches: TopMatch[] }) {
               <li key={m.matchId}>
                 <Link
                   href={`/feed/${m.matchId}`}
+                  prefetch={false}
                   className="flex items-center gap-3 py-3 hover:bg-bone/60"
                 >
                   <ScoreChip score={m.score} />

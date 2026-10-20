@@ -14,8 +14,10 @@ export function SetupChecklist({ items }: { items: ChecklistItem[] }) {
       <ul className="mt-2 divide-y divide-border border-y border-border">
         {items.map((item) => (
           <li key={item.id}>
+            {/* Dynamic pages without a loading state: a prefetch would get no data anyway. */}
             <Link
               href={item.href}
+              prefetch={false}
               className={`flex items-center gap-3 py-3 text-sm hover:text-foreground ${
                 item.done
                   ? "text-muted-foreground"

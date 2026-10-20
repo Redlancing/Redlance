@@ -1,4 +1,5 @@
 import type { FeedItemResponse } from "@/server/feed";
+import { localIsNewer, type KnownStatus } from "./match-status";
 
 export type MatchStatus = FeedItemResponse["status"];
 
@@ -23,7 +24,12 @@ export type FeedAction =
   | { type: "loadingMore" }
   | { type: "appended"; items: FeedItemResponse[]; nextCursor: string | null }
   | { type: "moreFailed"; error: string }
-  | { type: "refreshed"; items: FeedItemResponse[] }
+  | {
+      type: "refreshed";
+      items: FeedItemResponse[];
+      /** The fresh first page's cursor: null means it is the whole list. */
+      nextCursor: string | null;
+    }
   | { type: "insertIncoming" }
   | {
       type: "status";
@@ -96,12 +102,23 @@ export function feedReducer(state: FeedState, action: FeedAction): FeedState {
       return { ...state, loadingMore: false, error: action.error };
     case "refreshed": {
       // Newer matches wait in `incoming`; rows the list already shows take the fresh copy
-      // (a score or status may have changed).
+      // (a score or status may have changed). Rows the fresh page should hold but doesn't
+      // (dismissed in another tab, withdrawn, or put back by an old cached page) go: those
+      // sorting at or before its last item, or every row when it is the whole list. Rows past
+      // it belong to later pages and stay; nothing is added or reordered, so the list only
+      // closes the gaps.
       const fresh = new Map(action.items.map((i) => [i.matchId, i]));
-      const items = state.items.map((i) => fresh.get(i.matchId) ?? i);
+      const last = action.items[action.items.length - 1];
+      const inRange = (i: FeedItemResponse) =>
+        action.nextCursor === null ||
+        (last !== undefined && newerFirst(i, last) <= 0);
+      const keep = (i: FeedItemResponse) => fresh.has(i.matchId) || !inRange(i);
+      const items = state.items
+        .filter(keep)
+        .map((i) => fresh.get(i.matchId) ?? i);
       const seen = new Set(state.incoming.map((i) => i.matchId));
       const incoming = [
-        ...state.incoming,
+        ...state.incoming.filter(keep),
         ...newerThan(state.items, action.items).filter(
           (i) => !seen.has(i.matchId),
         ),
@@ -186,6 +203,60 @@ export function filtersToParams(f: FeedFilters): URLSearchParams {
   if (f.types.length) p.set("type", f.types.join(","));
   if (f.paidOnly) p.set("pay", "paid");
   return p;
+}
+
+export function filtersEqual(a: FeedFilters, b: FeedFilters): boolean {
+  return (
+    a.view === b.view &&
+    a.paidOnly === b.paidOnly &&
+    a.types.length === b.types.length &&
+    a.types.every((t, i) => t === b.types[i])
+  );
+}
+
+/** Items per page, for the server-rendered first page and the client's own requests alike. */
+export const FEED_PAGE_SIZE = 25;
+
+/** The first page as the feed layout loaded it on the server. */
+export type InitialFeed = {
+  filters: FeedFilters;
+  items: FeedItemResponse[];
+  nextCursor: string | null;
+  /** When the server read it (epoch ms), to spot a copy kept in Next's client cache. */
+  loadedAt: number;
+};
+
+/**
+ * The list's first state. The server's page counts only for the filters it was loaded with:
+ * the layout is shared and isn't rendered again when only the URL's filters change, so after a
+ * client-side filter change (or a back/forward) the data is for another view.
+ *
+ * Back/forward can also bring the layout's page from Next's cache, older than what this tab did
+ * since: `known` (the statuses this tab set, see feed-events.ts) wins when it is newer than the
+ * page, and rows this tab dismissed since are dropped.
+ */
+export function startState(
+  initial: InitialFeed | undefined,
+  filters: FeedFilters,
+  known: (matchId: string) => KnownStatus | undefined = () => undefined,
+): FeedState {
+  if (!initial || !filtersEqual(initial.filters, filters))
+    return initialFeedState;
+  const items: FeedItemResponse[] = [];
+  for (const i of initial.items) {
+    const local = known(i.matchId);
+    if (!localIsNewer(local, initial.loadedAt)) items.push(i);
+    else if (local.status !== "dismissed")
+      items.push(
+        local.status === i.status ? i : { ...i, status: local.status },
+      );
+  }
+  return {
+    ...initialFeedState,
+    phase: "ready",
+    items,
+    nextCursor: initial.nextCursor,
+  };
 }
 
 /** The feed API query for filters and an optional cursor. */

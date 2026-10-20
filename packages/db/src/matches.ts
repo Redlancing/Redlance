@@ -1364,3 +1364,29 @@ export async function setMatchStatus(
     return { status };
   });
 }
+
+/**
+ * Opening a match: "new" becomes "seen" (logged as an event, like `setMatchStatus`); any other
+ * status is left as it is. A page shown from a browser cache can still say "new" for a match
+ * saved, dismissed or replied to since, and must not overwrite that. Returns the status the
+ * match has afterwards, so the caller can show it; null when the match isn't the user's.
+ */
+export async function markMatchSeen(
+  db: Database,
+  userId: string,
+  matchId: string,
+): Promise<{ status: MatchStatus } | null> {
+  return db.transaction(async (tx) => {
+    const res = await tx.execute<{ status: MatchStatus }>(sql`
+      select status from matches where id = ${matchId} and user_id = ${userId}
+      for update`);
+    const current = res.rows[0];
+    if (!current) return null;
+    if (current.status !== "new") return { status: current.status };
+    await tx.execute(sql`
+      update matches set status = 'seen', updated_at = now()
+      where id = ${matchId}`);
+    await tx.insert(matchEvents).values({ matchId, userId, event: "seen" });
+    return { status: "seen" };
+  });
+}

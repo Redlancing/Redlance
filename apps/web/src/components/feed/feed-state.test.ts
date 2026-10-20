@@ -3,13 +3,17 @@ import type { FeedItemResponse } from "@/server/feed";
 import {
   feedQuery,
   feedReducer,
+  filtersEqual,
   filtersFrom,
   filtersToParams,
   initialFeedState,
   newerThan,
+  startState,
   undoStatus,
+  type FeedFilters,
   type FeedState,
 } from "./feed-state";
+import type { KnownStatus } from "./match-status";
 
 function item(
   id: string,
@@ -78,6 +82,7 @@ describe("feedReducer", () => {
         item("b", T(11), { score: 91 }),
         item("a", T(10)),
       ],
+      nextCursor: null,
     });
     expect(ids(s)).toEqual(["b", "a"]);
     expect(s.items[0]!.score).toBe(91);
@@ -86,11 +91,49 @@ describe("feedReducer", () => {
     s = feedReducer(s, {
       type: "refreshed",
       items: [item("d", T(13)), item("c", T(12))],
+      nextCursor: "more",
     });
     expect(s.incoming.map((i) => i.matchId)).toEqual(["d", "c"]);
     s = feedReducer(s, { type: "insertIncoming" });
     expect(ids(s)).toEqual(["d", "c", "b", "a"]);
     expect(s.incoming).toEqual([]);
+  });
+
+  it("a refresh drops rows within its range that it no longer has (dismissed or withdrawn elsewhere)", () => {
+    let s = ready(
+      [item("d", T(13)), item("c", T(12)), item("b", T(11)), item("a", T(10))],
+      "cur",
+    );
+    s = { ...s, incoming: [item("f", T(15)), item("e", T(14))] };
+    // The fresh first page ends at b and has more after it: c and e are gone, a is beyond it.
+    s = feedReducer(s, {
+      type: "refreshed",
+      items: [item("f", T(15)), item("d", T(13)), item("b", T(11))],
+      nextCursor: "more",
+    });
+    expect(ids(s)).toEqual(["d", "b", "a"]);
+    expect(s.incoming.map((i) => i.matchId)).toEqual(["f"]);
+    // The cursor for the next page stays the list's own.
+    expect(s.nextCursor).toBe("cur");
+  });
+
+  it("a refresh that is the whole list drops every row it doesn't have", () => {
+    let s = ready([item("c", T(12)), item("b", T(11)), item("a", T(10))]);
+    s = feedReducer(s, {
+      type: "refreshed",
+      items: [item("c", T(12))],
+      nextCursor: null,
+    });
+    expect(ids(s)).toEqual(["c"]);
+    s = feedReducer(s, { type: "refreshed", items: [], nextCursor: null });
+    expect(ids(s)).toEqual([]);
+  });
+
+  it("an empty refresh with more pages (can't happen) changes nothing", () => {
+    const s = ready([item("b", T(11))]);
+    expect(
+      ids(feedReducer(s, { type: "refreshed", items: [], nextCursor: "x" })),
+    ).toEqual(["b"]);
   });
 
   it("an older match missing from the list is not 'new' (it belongs to a later page)", () => {
@@ -207,5 +250,95 @@ describe("filters", () => {
   it("undo brings a new match back as seen", () => {
     expect(undoStatus("new")).toBe("seen");
     expect(undoStatus("saved")).toBe("saved");
+  });
+});
+
+describe("filtersEqual", () => {
+  const base: FeedFilters = {
+    view: "best",
+    types: ["a", "b"],
+    paidOnly: false,
+  };
+  it("compares view, paid-only and the set of types", () => {
+    expect(filtersEqual(base, { ...base, types: ["a", "b"] })).toBe(true);
+    expect(filtersEqual(base, { ...base, view: "all" })).toBe(false);
+    expect(filtersEqual(base, { ...base, paidOnly: true })).toBe(false);
+    expect(filtersEqual(base, { ...base, types: ["a"] })).toBe(false);
+    expect(filtersEqual(base, { ...base, types: ["b", "a"] })).toBe(false);
+  });
+});
+
+describe("startState (the list's first state with server-rendered data)", () => {
+  const f: FeedFilters = { view: "best", types: [], paidOnly: false };
+  const initial = {
+    filters: f,
+    items: [item("1", "2026-10-01T10:00:00.000Z")],
+    nextCursor: "c1",
+    loadedAt: 0,
+  };
+
+  it("is ready with the server's items when the URL filters are the ones it loaded", () => {
+    const s = startState(initial, { ...f });
+    expect(s.phase).toBe("ready");
+    expect(s.items).toHaveLength(1);
+    expect(s.nextCursor).toBe("c1");
+    expect(s.incoming).toEqual([]);
+  });
+
+  it("is loading when the filters differ (the layout wasn't re-rendered) or there is no data", () => {
+    expect(startState(initial, { ...f, view: "all" })).toEqual(
+      initialFeedState,
+    );
+    expect(startState(undefined, f)).toEqual(initialFeedState);
+  });
+
+  describe("with what this tab changed since (back/forward can bring old data)", () => {
+    const LOADED = 1_000_000;
+    const page = {
+      filters: f,
+      items: [
+        item("3", "2026-10-03T10:00:00.000Z"),
+        item("2", "2026-10-02T10:00:00.000Z"),
+        item("1", "2026-10-01T10:00:00.000Z"),
+      ],
+      nextCursor: null,
+      loadedAt: LOADED,
+    };
+    const known = (m: Record<string, KnownStatus>) => (id: string) => m[id];
+
+    it("drops rows this tab dismissed after the data was loaded", () => {
+      const s = startState(
+        page,
+        f,
+        known({ "2": { status: "dismissed", at: LOADED + 60_000 } }),
+      );
+      expect(ids(s)).toEqual(["3", "1"]);
+    });
+
+    it("shows the status this tab set after the data was loaded", () => {
+      const s = startState(
+        page,
+        f,
+        known({
+          "3": { status: "saved", at: LOADED + 1 },
+          // Within the clock-skew allowance still counts as newer.
+          "1": { status: "replied", at: LOADED - 2_000 },
+        }),
+      );
+      expect(s.items.map((i) => i.status)).toEqual(["saved", "new", "replied"]);
+    });
+
+    it("ignores what this tab set well before the data was loaded", () => {
+      const s = startState(
+        page,
+        f,
+        known({
+          "3": { status: "dismissed", at: LOADED - 60_000 },
+          "2": { status: "saved", at: LOADED - 60_000 },
+        }),
+      );
+      expect(ids(s)).toEqual(["3", "2", "1"]);
+      expect(s.items.map((i) => i.status)).toEqual(["new", "new", "new"]);
+    });
   });
 });

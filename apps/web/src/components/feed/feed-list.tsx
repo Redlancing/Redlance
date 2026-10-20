@@ -1,12 +1,7 @@
 "use client";
 
 import { ArrowUp } from "lucide-react";
-import {
-  useParams,
-  usePathname,
-  useRouter,
-  useSearchParams,
-} from "next/navigation";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -18,23 +13,26 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api-client";
+import { isStale } from "@/lib/freshness";
 import { errorMessage } from "@/lib/api-errors";
 import type { FeedItemResponse, FeedResponse } from "@/server/feed";
 import { FeedFilters } from "./feed-filters";
-import { announceMatchStatus, onMatchStatus } from "./feed-events";
+import { announceMatchStatus, knownStatus, onMatchStatus } from "./feed-events";
 import {
+  FEED_PAGE_SIZE,
   feedQuery,
   feedReducer,
   filtersFrom,
   filtersToParams,
-  initialFeedState,
+  startState,
   undoStatus,
   type FeedFilters as Filters,
+  type InitialFeed,
   type MatchStatus,
 } from "./feed-state";
 import { MatchRow, MatchRowSkeleton } from "./match-row";
-
-const PAGE = 25;
+import { rememberPreviews } from "./match-preview-store";
+import { usePrefetchIntent } from "./use-prefetch-intent";
 
 /** True when a key press belongs to a text field or a menu, not to the list shortcuts. */
 function typingInto(target: EventTarget | null): boolean {
@@ -46,8 +44,14 @@ function typingInto(target: EventTarget | null): boolean {
   );
 }
 
-export function FeedList({ categories }: { categories: string[] }) {
-  const router = useRouter();
+export function FeedList({
+  categories,
+  initial,
+}: {
+  categories: string[];
+  /** The first page, loaded by the layout for the URL's filters at request time. */
+  initial?: InitialFeed;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const params = useParams<{ matchId?: string }>();
@@ -61,7 +65,16 @@ export function FeedList({ categories }: { categories: string[] }) {
   const qs = filtersToParams(filters).toString();
   const suffix = qs ? `?${qs}` : "";
 
-  const [state, dispatch] = useReducer(feedReducer, initialFeedState);
+  // `knownStatus`: a layout from Next's cache (back/forward) can hold a page older than what this
+  // tab did since; rows dismissed since stay out, newer statuses show.
+  const [state, dispatch] = useReducer(feedReducer, undefined, () =>
+    startState(initial, filters, knownStatus),
+  );
+  // The query the server-rendered page answers, until the list leaves it: the first-page
+  // effect skips that one query, and any other (or coming back to it later) fetches.
+  const serverQuery = useRef<string | null>(
+    initial && state.phase === "ready" ? query : null,
+  );
   const [refreshing, setRefreshing] = useState(false);
   const listRef = useRef<HTMLUListElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -69,6 +82,15 @@ export function FeedList({ categories }: { categories: string[] }) {
   useEffect(() => {
     stateRef.current = state;
   });
+  // Every row the list has shown, for the match page's instant preview while it loads.
+  useEffect(() => {
+    rememberPreviews(state.items);
+    rememberPreviews(state.incoming);
+  }, [state.items, state.incoming]);
+  const prefetch = usePrefetchIntent();
+  // The row a j/k selection last landed on, whose prefetch waits for the selection to stay.
+  const selected = useRef<string | null>(null);
+
   // Bumped whenever the list starts over (new filters, retry): responses for an older
   // generation are dropped, so a slow page from the old view can't land in the new one.
   const generation = useRef(0);
@@ -76,18 +98,22 @@ export function FeedList({ categories }: { categories: string[] }) {
   // First page whenever the filters change.
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    if (serverQuery.current === query && attempt === 0) return;
+    serverQuery.current = null;
     const mine = ++generation.current;
     dispatch({ type: "reset" });
-    void apiFetch<FeedResponse>(`${query}&limit=${PAGE}`).then((r) => {
-      if (mine !== generation.current) return;
-      if (r.ok)
-        dispatch({
-          type: "loaded",
-          items: r.data.items,
-          nextCursor: r.data.nextCursor,
-        });
-      else dispatch({ type: "failed", error: errorMessage(r) });
-    });
+    void apiFetch<FeedResponse>(`${query}&limit=${FEED_PAGE_SIZE}`).then(
+      (r) => {
+        if (mine !== generation.current) return;
+        if (r.ok)
+          dispatch({
+            type: "loaded",
+            items: r.data.items,
+            nextCursor: r.data.nextCursor,
+          });
+        else dispatch({ type: "failed", error: errorMessage(r) });
+      },
+    );
   }, [query, attempt]);
 
   const loadMore = useCallback(async () => {
@@ -95,7 +121,7 @@ export function FeedList({ categories }: { categories: string[] }) {
     const mine = generation.current;
     dispatch({ type: "loadingMore" });
     const r = await apiFetch<FeedResponse>(
-      `${feedQuery(filters, state.nextCursor)}&limit=${PAGE}`,
+      `${feedQuery(filters, state.nextCursor)}&limit=${FEED_PAGE_SIZE}`,
     );
     if (mine !== generation.current) return;
     if (r.ok)
@@ -127,12 +153,31 @@ export function FeedList({ categories }: { categories: string[] }) {
     if (stateRef.current.phase !== "ready") return;
     const mine = generation.current;
     setRefreshing(true);
-    const r = await apiFetch<FeedResponse>(`${query}&limit=${PAGE}`);
+    const r = await apiFetch<FeedResponse>(`${query}&limit=${FEED_PAGE_SIZE}`);
     setRefreshing(false);
     if (mine !== generation.current) return;
-    if (r.ok) dispatch({ type: "refreshed", items: r.data.items });
+    if (r.ok)
+      dispatch({
+        type: "refreshed",
+        items: r.data.items,
+        nextCursor: r.data.nextCursor,
+      });
     else toast.error(errorMessage(r));
   }, [query]);
+
+  // A layout kept in Next's client cache can hold a list that is minutes old: look for newer
+  // gigs once on mount (they wait behind the "new gigs" bar, the list doesn't move).
+  const checkedInitial = useRef(false);
+  useEffect(() => {
+    if (checkedInitial.current) return;
+    checkedInitial.current = true;
+    if (
+      serverQuery.current === query &&
+      initial &&
+      isStale(initial.loadedAt, Date.now())
+    )
+      void refresh();
+  }, [initial, query, refresh]);
 
   // Coming back to the tab is the natural time to look for new gigs.
   useEffect(() => {
@@ -222,9 +267,12 @@ export function FeedList({ categories }: { categories: string[] }) {
       dispatch({ type: "status", matchId: item.matchId, status: "seen" });
   }, []);
 
+  // Filters only change the query string: the native history API updates the URL and
+  // `useSearchParams` (Next syncs with it) without a server round trip, so an open match page
+  // isn't fetched and rendered again. The list's filters, its query and generation follow.
   const changeFilters = (next: Filters) => {
     const p = filtersToParams(next).toString();
-    router.replace(`${pathname}${p ? `?${p}` : ""}`, { scroll: false });
+    window.history.replaceState(null, "", `${pathname}${p ? `?${p}` : ""}`);
   };
 
   // Keyboard: j/k move, s save, d dismiss, o open the post on Reddit. Enter follows the link.
@@ -254,6 +302,13 @@ export function FeedList({ categories }: { categories: string[] }) {
               );
         links[next]!.focus();
         links[next]!.scrollIntoView({ block: "nearest" });
+        // Selecting a row is intent, like resting the mouse on it.
+        const href = links[next]!.getAttribute("href");
+        if (selected.current && selected.current !== href)
+          prefetch.cancel(selected.current);
+        selected.current = href;
+        if (href && links[next]!.dataset.matchId !== activeId)
+          prefetch.intend(href);
         return;
       }
       const id = current >= 0 ? links[current]!.dataset.matchId : undefined;
@@ -270,7 +325,15 @@ export function FeedList({ categories }: { categories: string[] }) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeId, dismiss, setStatus]);
+  }, [activeId, dismiss, setStatus, prefetch]);
+
+  // A j/k selection's prefetch still waiting when the list goes away is dropped with it.
+  useEffect(
+    () => () => {
+      if (selected.current) prefetch.cancel(selected.current);
+    },
+    [prefetch],
+  );
 
   return (
     <div className="flex min-h-full flex-col">

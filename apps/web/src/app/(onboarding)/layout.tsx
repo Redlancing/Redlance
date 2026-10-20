@@ -18,6 +18,7 @@ export default function OnboardingLayout({
       <header className="flex items-center justify-between px-4 py-4 sm:px-10 sm:py-5">
         <Link
           href="/dashboard"
+          prefetch={false}
           aria-label="Redlance dashboard"
           className="inline-flex rounded-md text-2xl focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
         >

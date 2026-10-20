@@ -9,6 +9,7 @@ export function AppSidebar({ email }: { email: string }) {
       <div className="px-5 py-5">
         <Link
           href="/dashboard"
+          prefetch={false}
           aria-label="Redlance dashboard"
           className="inline-flex rounded-md text-xl focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
         >

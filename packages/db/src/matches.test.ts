@@ -50,6 +50,7 @@ import {
   requeueStalePostMatching,
   requeueStaleRescores,
   rescoreUsage,
+  markMatchSeen,
   setMatchStatus,
   syncReferenceData,
   takeRescoreUnit,
@@ -2622,6 +2623,41 @@ describe("setMatchStatus", () => {
       aiStatus: "done",
       score: 70,
     });
+  });
+});
+
+describe("markMatchSeen", () => {
+  const events = () => db.select().from(matchEvents);
+
+  it("marks a new match seen and logs one event", async () => {
+    const priya = await seedUser(PRIYA);
+    const id = await seedMatch(priya, await seedPost(POST_A));
+    expect(await markMatchSeen(db, priya, id)).toEqual({ status: "seen" });
+    expect((await matchRow(id)).status).toBe("seen");
+    const ev = await events();
+    expect(ev).toHaveLength(1);
+    expect(ev[0]).toMatchObject({ matchId: id, userId: priya, event: "seen" });
+  });
+
+  it("leaves any other status alone and returns it, with no event", async () => {
+    const priya = await seedUser(PRIYA);
+    for (const status of ["saved", "dismissed", "replied", "seen"] as const) {
+      const id = await seedMatch(priya, await seedPost(POST_A));
+      await setMatchStatus(db, priya, id, status);
+      const before = (await events()).length;
+      expect(await markMatchSeen(db, priya, id)).toEqual({ status });
+      expect((await matchRow(id)).status).toBe(status);
+      expect(await events()).toHaveLength(before);
+    }
+  });
+
+  it("another user's match gives null and writes nothing", async () => {
+    const priya = await seedUser(PRIYA);
+    const other = await seedUser(DESIGNER);
+    const id = await seedMatch(priya, await seedPost(POST_A));
+    expect(await markMatchSeen(db, other, id)).toBeNull();
+    expect((await matchRow(id)).status).toBe("new");
+    expect(await events()).toHaveLength(0);
   });
 });
 

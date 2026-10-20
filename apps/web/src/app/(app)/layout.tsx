@@ -35,6 +35,7 @@ export default async function AppLayout({
         <header className="flex items-center justify-between border-b border-border px-4 py-3 md:hidden">
           <Link
             href="/dashboard"
+            prefetch={false}
             aria-label="Redlance dashboard"
             className="text-lg"
           >

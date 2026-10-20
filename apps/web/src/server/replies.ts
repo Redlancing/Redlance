@@ -278,3 +278,25 @@ export async function sentKindsForPost(
     );
   return rows.map((r) => r.kind);
 }
+
+/**
+ * `sentKindsForPost` by match id, for the composer's background check of a cached match page.
+ * Empty for someone else's match (the join is on the user's own match).
+ */
+export async function sentKindsForMatch(
+  user: UserRef,
+  matchId: string,
+): Promise<ReplyKind[]> {
+  const rows = await getDb()
+    .select({ kind: replies.kind })
+    .from(replies)
+    .innerJoin(matches, eq(matches.jobPostId, replies.jobPostId))
+    .where(
+      and(
+        eq(matches.id, matchId),
+        eq(matches.userId, user.userId),
+        eq(replies.userId, user.userId),
+      ),
+    );
+  return rows.map((r) => r.kind);
+}

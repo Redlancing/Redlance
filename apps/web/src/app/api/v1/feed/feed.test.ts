@@ -341,6 +341,55 @@ describe("POST /api/v1/feed/:matchId/status", () => {
     expect((await res.json()).error.code).toBe("BAD_ORIGIN");
   });
 
+  it("onlyIfNew marks a new match seen", async () => {
+    const { cookie, userId } = await setup();
+    const id = await seedMatch(userId, await seedPost());
+    const res = await post(
+      id,
+      { status: "seen", onlyIfNew: true },
+      headers(cookie),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "seen" });
+  });
+
+  it("onlyIfNew leaves a saved match saved and returns its status", async () => {
+    const { cookie, userId } = await setup();
+    const id = await seedMatch(userId, await seedPost());
+    await post(id, { status: "saved" }, headers(cookie));
+    const res = await post(
+      id,
+      { status: "seen", onlyIfNew: true },
+      headers(cookie),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "saved" });
+    const [row] = await getDb()
+      .select()
+      .from(matches)
+      .where(eq(matches.id, id));
+    expect(row!.status).toBe("saved");
+    const events = await getDb()
+      .select()
+      .from(matchEvents)
+      .where(eq(matchEvents.matchId, id));
+    expect(events).toHaveLength(1);
+  });
+
+  it("onlyIfNew works only with seen; another user's match is 404", async () => {
+    const a = await setup("a@example.com");
+    const b = await setup("b@example.com");
+    const id = await seedMatch(a.userId, await seedPost());
+    expect(
+      (await post(id, { status: "saved", onlyIfNew: true }, headers(a.cookie)))
+        .status,
+    ).toBe(400);
+    expect(
+      (await post(id, { status: "seen", onlyIfNew: true }, headers(b.cookie)))
+        .status,
+    ).toBe(404);
+  });
+
   it("19: signed out is 401", async () => {
     const { userId } = await setup();
     const id = await seedMatch(userId, await seedPost());

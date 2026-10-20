@@ -35,6 +35,7 @@ import { GET as getCredits } from "../credits/route";
 import { GET as getDraftRoute } from "./[id]/route";
 import { POST as feedbackRoute } from "./[id]/feedback/route";
 import { POST as rewriteRoute } from "./[id]/rewrite/route";
+import { POST as sendReply } from "../replies/route";
 import { GET as listRoute, POST as startRoute } from "./route";
 
 beforeEach(async () => {
@@ -558,13 +559,44 @@ describe("GET /drafts?matchId=", () => {
     expect(body.versions.map((v: { id: string }) => v.id)).toEqual([b.draftId]);
   });
 
+  it("19c: also returns the kinds already marked as sent for the post", async () => {
+    const { cookie, matchId } = await setup();
+    const id = await doneDraft(cookie, matchId);
+    const get = async () =>
+      (
+        await listRoute(
+          req(`/api/v1/drafts?matchId=${matchId}`, { headers: { cookie } }),
+        )
+      ).json();
+    expect((await get()).sentKinds).toEqual([]);
+    const sent = await sendReply(
+      req("/api/v1/replies", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie,
+          origin: TEST_ENV.APP_ORIGIN,
+        },
+        body: JSON.stringify({
+          draftId: id,
+          kind: "dm",
+          sentText: "Hi, saw your post and I can start this week.",
+        }),
+      }),
+    );
+    expect(sent.status).toBe(201);
+    expect((await get()).sentKinds).toEqual(["dm"]);
+  });
+
   it("is empty for another user's match", async () => {
     const { matchId } = await setup("a@example.com");
     const { cookie } = await setup("b@example.com");
     const res = await listRoute(
       req(`/api/v1/drafts?matchId=${matchId}`, { headers: { cookie } }),
     );
-    expect((await res.json()).versions).toEqual([]);
+    const body = await res.json();
+    expect(body.versions).toEqual([]);
+    expect(body.sentKinds).toEqual([]);
   });
 });
 

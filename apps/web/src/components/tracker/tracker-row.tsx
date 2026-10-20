@@ -31,7 +31,13 @@ export function TrackerRow({
     <li className="flex items-center gap-3 border-b border-border py-3">
       <div className="min-w-0 flex-1">
         {item.matchId ? (
-          <Link href={`/feed/${item.matchId}`} className={titleClass}>
+          // No prefetch: the match page's loading state sits under the feed layout, so even
+          // Next's automatic prefetch would render the feed list for every visible row.
+          <Link
+            href={`/feed/${item.matchId}`}
+            prefetch={false}
+            className={titleClass}
+          >
             {item.post.title}
           </Link>
         ) : (

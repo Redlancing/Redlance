@@ -14,6 +14,8 @@ export type AppNavItem = {
   soon?: boolean;
 };
 
+// Nav links never prefetch: every app page is dynamic, and Next's viewport prefetch would build
+// each one (with its queries) on every page load just because the link is on screen.
 // Items marked `soon` light up as each feature ships (onboarding, matching, tracker…).
 export const appNav: AppNavItem[] = [
   { title: "Overview", href: "/dashboard", icon: LayoutDashboard },

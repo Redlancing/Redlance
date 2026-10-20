@@ -33,18 +33,26 @@ import type { DraftView } from "@/server/drafts";
 import {
   DRAFT_COST,
   REWRITE_LABELS,
+  canOfferDraft,
   costLine,
   failedDraftMessage,
   firstTab,
   hasUnsentEdits,
+  actionsBlocked,
+  isConfirmed,
   isWorking,
   latestDone,
-  rewriteBlocked,
+  mergeSent,
+  mergeVersions,
+  pendingFirstDraft,
+  rememberDraftState,
   rewriteCost,
   textFor,
   upsertVersion,
+  type DraftMemory,
   type Edits,
   type ReplyKind,
+  type ServerCheck,
 } from "./composer-state";
 
 export type Credits = { balance: number; repliesLeft: number };
@@ -63,10 +71,12 @@ function problemFrom(r: ApiFail): Problem {
   };
 }
 
-// Edits and what was marked sent live for the browser session, outside the component: moving to
-// another match (the composer remounts) and back keeps them.
-const editsByMatch = new Map<string, Edits>();
-const sentByMatch = new Map<string, Partial<Record<ReplyKind, boolean>>>();
+// Edits, what was marked sent and the newest versions seen live for the tab, outside the
+// component: moving to another match (the composer remounts) and back keeps them. A cached match
+// page can carry older server data (no draft yet, a draft still running); merging with the
+// remembered versions keeps a draft the user already paid for from looking like it doesn't
+// exist. Capped at MAX_REMEMBERED_MATCHES, never dropping unsent edits (rememberDraftState).
+const memory = new Map<string, DraftMemory>();
 
 const TABS: { kind: ReplyKind; label: string }[] = [
   { kind: "comment", label: "Comment" },
@@ -84,6 +94,8 @@ export function DraftComposer({
   withdrawn,
   initialCredits,
   initialSent,
+  initialVersions,
+  revalidate,
   onSent,
 }: {
   matchId: string;
@@ -92,27 +104,55 @@ export function DraftComposer({
   initialCredits: Credits | null;
   /** Kinds the server already has as sent (survives a reload). */
   initialSent: ReplyKind[];
+  /**
+   * Versions the server loaded with the page. Without them the composer fetches them itself.
+   */
+  initialVersions?: DraftView[];
+  /**
+   * The page's data is old (a cached page): show it, but check the server in the background and
+   * hold back "Draft reply" and the paid actions until that has answered.
+   */
+  revalidate?: boolean;
   onSent: () => void;
 }) {
-  const [versions, setVersions] = useState<DraftView[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [currentId, setCurrentId] = useState<string | null>(null);
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  // What is known before any request: the page's versions merged with what this browser has seen.
+  const [start] = useState(() => {
+    const seen = memory.get(matchId)?.versions ?? [];
+    return initialVersions ? mergeVersions(seen, initialVersions) : seen;
+  });
+  const [versions, setVersions] = useState<DraftView[]>(start);
+  // Whether the server has confirmed what exists for this match. Derived on every render from
+  // `revalidate`, which can turn true just after hydration (the page's stale flag), so fresh
+  // page data counts as confirmed only while it isn't stale.
+  const [check, setCheck] = useState<ServerCheck>("pending");
+  const [checkAttempt, setCheckAttempt] = useState(0);
+  const confirmed = isConfirmed({
+    pageVersions: initialVersions !== undefined,
+    revalidate: revalidate === true,
+    check,
+  });
+  const [currentId, setCurrentId] = useState<string | null>(
+    () => latestDone(start)?.id ?? null,
+  );
+  const [pendingId, setPendingId] = useState<string | null>(
+    () => start.find(isWorking)?.id ?? null,
+  );
   const [slow, setSlow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
-  const [tab, setTab] = useState<ReplyKind>("comment");
+  const [tab, setTab] = useState<ReplyKind>(() => {
+    const done = latestDone(start);
+    return done ? firstTab(done) : "comment";
+  });
   const [edits, setEdits] = useState<Edits>(
-    () => editsByMatch.get(matchId) ?? {},
+    () => memory.get(matchId)?.edits ?? {},
   );
-  const [sent, setSent] = useState<Partial<Record<ReplyKind, boolean>>>(() => ({
-    ...Object.fromEntries(initialSent.map((k) => [k, true])),
-    ...sentByMatch.get(matchId),
-  }));
+  const [sent, setSent] = useState<Partial<Record<ReplyKind, boolean>>>(() =>
+    mergeSent(memory.get(matchId)?.sent ?? {}, initialSent),
+  );
   useEffect(() => {
-    editsByMatch.set(matchId, edits);
-    sentByMatch.set(matchId, sent);
-  }, [matchId, edits, sent]);
+    rememberDraftState(memory, matchId, { edits, sent, versions });
+  }, [matchId, edits, sent, versions]);
   const [credits, setCredits] = useState(initialCredits);
   const [custom, setCustom] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -126,31 +166,49 @@ export function DraftComposer({
   };
 
   const current = versions.find((v) => v.id === currentId) ?? null;
+  const currentIdRef = useRef(currentId);
+  useEffect(() => {
+    currentIdRef.current = currentId;
+  });
 
   const show = useCallback((d: DraftView) => {
     setCurrentId(d.id);
     setTab(firstTab(d));
   }, []);
 
-  // Versions already written for this match.
+  // Versions and sent state from the server: always when the page didn't bring versions, and in
+  // the background when it did but the data is old. The answer is merged in, never swapped in,
+  // so something this browser knows (a draft just started) can't be erased by a slower reply.
+  const needsFetch = initialVersions === undefined || revalidate === true;
   useEffect(() => {
+    if (!needsFetch) return;
     let live = true;
-    void apiFetch<{ versions: DraftView[] }>(
+    void apiFetch<{ versions: DraftView[]; sentKinds: ReplyKind[] }>(
       `/api/v1/drafts?matchId=${matchId}`,
     ).then((r) => {
       if (!live) return;
-      setLoaded(true);
-      if (!r.ok) return setProblem(problemFrom(r));
-      setVersions(r.data.versions);
-      const done = latestDone(r.data.versions);
-      if (done) show(done);
-      const working = r.data.versions.find(isWorking);
-      if (working) setPendingId(working.id);
+      // Not confirmed on failure: "Draft reply" and the paid actions stay off until a retry works.
+      if (!r.ok) return setCheck("failed");
+      setCheck("done");
+      const merged = mergeVersions(
+        memory.get(matchId)?.versions ?? [],
+        r.data.versions,
+      );
+      setVersions(merged);
+      setSent((s) => mergeSent(s, r.data.sentKinds));
+      // Only claim the screen if nothing is showing yet; don't pull the user off a version.
+      const shown = currentIdRef.current;
+      if (!shown || !merged.some((v) => v.id === shown)) {
+        const done = latestDone(merged);
+        if (done) show(done);
+      }
+      const working = merged.find(isWorking);
+      if (working) setPendingId((id) => id ?? working.id);
     });
     return () => {
       live = false;
     };
-  }, [matchId, show]);
+  }, [matchId, needsFetch, show, checkAttempt]);
 
   const refreshCredits = useCallback(async () => {
     const r = await apiFetch<Credits>("/api/v1/credits");
@@ -220,7 +278,7 @@ export function DraftComposer({
   });
 
   // Closing the tab with edits that weren't marked as sent asks first (moving between matches
-  // keeps them, see editsByMatch).
+  // keeps them, see `memory`).
   const unsent = hasUnsentEdits(versions, edits, sent);
   useEffect(() => {
     if (!unsent) return;
@@ -245,7 +303,16 @@ export function DraftComposer({
     keyRef.current = null;
     if (r.data.slowDown)
       toast("That's a lot of drafts this hour. Take your time with each one.");
-    setPendingId(r.data.draftId);
+    const { draftId } = r.data;
+    setVersions((v) =>
+      v.some((d) => d.id === draftId)
+        ? v
+        : upsertVersion(
+            v,
+            pendingFirstDraft(matchId, draftId, new Date().toISOString()),
+          ),
+    );
+    setPendingId(draftId);
   }
 
   async function rewrite(
@@ -327,7 +394,8 @@ export function DraftComposer({
     toast.success("Thanks. Future drafts will learn from this.");
   }
 
-  const blocked = rewriteBlocked(versions);
+  // Rewrites cost credits too: not until the server has confirmed the versions that exist.
+  const blocked = actionsBlocked({ confirmed, check, versions });
   const writing = pendingId !== null;
 
   return (
@@ -390,11 +458,30 @@ export function DraftComposer({
         </div>
       )}
 
-      {!loaded && (
+      {!confirmed && check === "failed" && (
+        <p
+          role="alert"
+          className="mt-4 flex flex-wrap items-center gap-2 text-sm text-stone"
+        >
+          Couldn&apos;t check for newer versions.
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setCheck("pending");
+              setCheckAttempt((a) => a + 1);
+            }}
+          >
+            Retry
+          </Button>
+        </p>
+      )}
+
+      {!confirmed && check !== "failed" && !current && !writing && (
         <div className="mt-4 h-40 animate-pulse rounded-[10px] bg-muted" />
       )}
 
-      {loaded && !current && !writing && (
+      {canOfferDraft({ confirmed, versions, writing }) && (
         <div className="mt-4">
           {withdrawn ? (
             <p className="text-sm text-stone">
@@ -518,7 +605,10 @@ export function DraftComposer({
             <Button
               onClick={() => void markSent()}
               disabled={
-                busy || sent[tab] || !textFor(current, edits, tab).trim()
+                busy ||
+                !confirmed ||
+                sent[tab] ||
+                !textFor(current, edits, tab).trim()
               }
             >
               <Check aria-hidden="true" />

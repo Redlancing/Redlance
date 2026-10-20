@@ -1,12 +1,14 @@
 import { profiles } from "@redlance/db";
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { OnboardingCta } from "@/components/app/onboarding-cta";
 import { FeedList } from "@/components/feed/feed-list";
 import { FeedShell } from "@/components/feed/feed-shell";
 import { getCurrentUser } from "@/server/current-user";
 import { getDb } from "@/server/db";
+import { loadInitialFeed } from "@/server/feed-initial";
 import { getOnboardingState } from "@/server/onboarding/service";
 
 export const metadata: Metadata = { title: "Matches" };
@@ -38,8 +40,19 @@ export default async function FeedLayout({
       </div>
     );
   }
+  // The first page is read here, with the same code as GET /api/v1/feed, so the list paints
+  // with the page. The layout is shared, so this is only the first mount's data; FeedList checks
+  // that its filters still match. Skipped when the browser already has this layout (a prefetch
+  // of a match page from the list): see loadInitialFeed.
+  const initial = await loadInitialFeed({
+    userId: user.userId,
+    categories: profile.categories,
+    headers: await headers(),
+  });
   return (
-    <FeedShell list={<FeedList categories={profile.categories} />}>
+    <FeedShell
+      list={<FeedList categories={profile.categories} initial={initial} />}
+    >
       {children}
     </FeedShell>
   );

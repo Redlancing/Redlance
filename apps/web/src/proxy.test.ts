@@ -31,4 +31,17 @@ describe("proxy", () => {
     expect(location.searchParams.get("next")).toBe("/onboarding/skills");
     expect(config.matcher).toContain("/onboarding/:path*");
   });
+
+  it("overwrites a client-sent request-path header, so layouts can trust it", () => {
+    const req = new NextRequest("http://localhost:3000/feed?view=all", {
+      headers: {
+        cookie: `${SESSION_COOKIE}=x`,
+        "x-redlance-path": "/feed?view=all&pay=paid&injected=1",
+      },
+    });
+    const res = proxy(req);
+    expect(res.headers.get("x-middleware-request-x-redlance-path")).toBe(
+      "/feed?view=all",
+    );
+  });
 });

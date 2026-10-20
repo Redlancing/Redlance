@@ -2,10 +2,12 @@
 
 import { Bookmark, BookmarkCheck, Flag, X } from "lucide-react";
 import Link from "next/link";
+import { useEffect } from "react";
 import { ScoreChip } from "@/components/app/score-chip";
 import { budgetText, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { FeedItemResponse } from "@/server/feed";
+import { usePrefetchIntent } from "./use-prefetch-intent";
 
 const REMOTE_LABEL: Record<string, string | null> = {
   remote: "Remote",
@@ -50,6 +52,10 @@ export function MatchRow({
 }) {
   const saved = item.status === "saved";
   const flags = item.post.redFlags.length;
+  const prefetch = usePrefetchIntent();
+  // A prefetch still waiting for the pointer to rest is dropped when the row goes (dismissed,
+  // filtered out, the list unmounted), so it never fires for a row that isn't there.
+  useEffect(() => () => prefetch.cancel(href), [prefetch, href]);
   return (
     <li
       className={cn(
@@ -57,9 +63,19 @@ export function MatchRow({
         active ? "bg-bone" : "hover:bg-bone/50",
       )}
     >
+      {/* No automatic prefetch (every visible row would fetch its loading state); the page is
+          prefetched once the mouse rests on the row, see use-prefetch-intent.ts. */}
       <Link
         href={href}
-        onClick={onOpen}
+        prefetch={false}
+        onPointerEnter={(e) => {
+          if (e.pointerType === "mouse" && !active) prefetch.intend(href);
+        }}
+        onPointerLeave={() => prefetch.cancel(href)}
+        onClick={() => {
+          prefetch.cancel(href);
+          onOpen();
+        }}
         data-match-id={item.matchId}
         aria-current={active ? "page" : undefined}
         className="flex gap-3 px-4 py-3 outline-none focus-visible:bg-bone focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset sm:px-5"
@@ -83,7 +99,11 @@ export function MatchRow({
               {item.post.title}
             </span>
           </span>
-          <span className="mt-0.5 block truncate text-[13px] text-stone tabular-nums">
+          {/* "5m" can tick to "6m" between the server render and hydration. */}
+          <span
+            suppressHydrationWarning
+            className="mt-0.5 block truncate text-[13px] text-stone tabular-nums"
+          >
             {metaParts(item).join(" · ")}
           </span>
           <span className="mt-1 block truncate text-[13px] text-muted-foreground">

@@ -36,6 +36,7 @@ export function AppNavLinks() {
             ) : (
               <Link
                 href={href}
+                prefetch={false}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   base,

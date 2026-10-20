@@ -20,6 +20,7 @@ export function MobileTabBar() {
             <li key={href}>
               <Link
                 href={href}
+                prefetch={false}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex flex-col items-center gap-0.5 px-2 py-2 text-[11px] font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",

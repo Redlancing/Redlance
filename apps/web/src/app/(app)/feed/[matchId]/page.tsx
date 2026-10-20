@@ -3,11 +3,12 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { MatchDetail } from "@/components/feed/match-detail";
+import { stampNow } from "@/lib/freshness";
 import { getCurrentUser } from "@/server/current-user";
 import { getDb } from "@/server/db";
-import { creditsSummary } from "@/server/drafts";
+import { creditsSummary, listVersions } from "@/server/drafts";
 import { toFeedItemDetailResponse } from "@/server/feed";
-import { sentKindsForPost } from "@/server/replies";
+import { sentKindsForMatch } from "@/server/replies";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -37,16 +38,26 @@ export default async function MatchPage({
   const { matchId } = await params;
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=/feed/${encodeURIComponent(matchId)}`);
-  const [item, credits] = await Promise.all([
-    loadMatch(user.userId, matchId),
+  if (!UUID.test(matchId)) notFound();
+  const id = matchId.toLowerCase();
+  // Taken before the reads, so it can only make the data look older than it is. The client
+  // compares it to its own clock: a page kept in Next's client cache for minutes is checked
+  // again in the background (see STALE_AFTER_MS).
+  const loadedAt = stampNow();
+  // Drafts and sent state are keyed by the match, so all four reads run together.
+  const [item, credits, versions, sentKinds] = await Promise.all([
+    loadMatch(user.userId, id),
     creditsSummary(user),
+    listVersions(user, id),
+    sentKindsForMatch(user, id),
   ]);
   if (!item) notFound();
-  const sentKinds = await sentKindsForPost(user, item.post.id);
   return (
     <MatchDetail
       item={toFeedItemDetailResponse(item)}
       sentKinds={sentKinds}
+      initialVersions={versions}
+      loadedAt={loadedAt}
       credits={
         credits.plan
           ? { balance: credits.balance, repliesLeft: credits.repliesLeft }
