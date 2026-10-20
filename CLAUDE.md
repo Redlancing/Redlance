@@ -144,7 +144,7 @@ Facts that are easy to get wrong:
 - Port 3000 is used by another local app (`node server.js`). Next then falls back to 3001, but the origin check needs `APP_ORIGIN` in `apps/web/.env.local` to match the actual port, or POSTs return 403.
 - The laptop runs Node 26; the project pins Node 24 (`.nvmrc`). Install it with `brew install fnm && fnm install 24`.
 - npm 11 blocks package install scripts. esbuild still works because its platform binary installs separately.
-- Ideas for later: add a per-IP pre-limit before the session lookup; decide whether the quota reset stays at UTC midnight.
+- Ideas for later: decide whether the quota reset stays at UTC midnight.
 - `npm run db:reset` runs `docker compose down -v`, which deletes the local dev database. Use `npm run db:migrate` for normal work.
 - Long runs: the laptop dozing made a test run and a build take ~15 min and stalled subagents; run `caffeinate -i` during long agent sessions.
 - `main` has 6 files prettier flags (from before onboarding); `npm run format:check` fails on them until someone formats them.
