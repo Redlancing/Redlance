@@ -4,7 +4,7 @@ import type { Feature } from "./score";
 const MAX_REASON = 120;
 const MAX_NAMES = 3;
 
-const RED_FLAG_TEXT: Record<string, string> = {
+export const RED_FLAG_TEXT: Record<string, string> = {
   asks_for_free_work: "asks for free work",
   off_platform_payment: "off-platform payment",
   upfront_fee: "upfront fee",

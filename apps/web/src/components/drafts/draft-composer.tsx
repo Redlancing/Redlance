@@ -83,12 +83,15 @@ export function DraftComposer({
   postUrl,
   withdrawn,
   initialCredits,
+  initialSent,
   onSent,
 }: {
   matchId: string;
   postUrl: string;
   withdrawn: boolean;
   initialCredits: Credits | null;
+  /** Kinds the server already has as sent (survives a reload). */
+  initialSent: ReplyKind[];
   onSent: () => void;
 }) {
   const [versions, setVersions] = useState<DraftView[]>([]);
@@ -102,9 +105,10 @@ export function DraftComposer({
   const [edits, setEdits] = useState<Edits>(
     () => editsByMatch.get(matchId) ?? {},
   );
-  const [sent, setSent] = useState<Partial<Record<ReplyKind, boolean>>>(
-    () => sentByMatch.get(matchId) ?? {},
-  );
+  const [sent, setSent] = useState<Partial<Record<ReplyKind, boolean>>>(() => ({
+    ...Object.fromEntries(initialSent.map((k) => [k, true])),
+    ...sentByMatch.get(matchId),
+  }));
   useEffect(() => {
     editsByMatch.set(matchId, edits);
     sentByMatch.set(matchId, sent);

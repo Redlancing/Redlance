@@ -64,20 +64,19 @@ export function MatchRow({
         aria-current={active ? "page" : undefined}
         className="flex gap-3 px-4 py-3 outline-none focus-visible:bg-bone focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset sm:px-5"
       >
-        <span className="relative mt-0.5">
-          <ScoreChip score={item.score} />
-          {item.status === "new" && (
-            <span
-              className="absolute top-1/2 -left-2.5 size-1.5 -translate-y-1/2 rounded-full bg-flare-500"
-              aria-label="New"
-            />
-          )}
-        </span>
+        <ScoreChip score={item.score} className="mt-0.5" />
         <span className="min-w-0 flex-1">
-          <span className="flex items-baseline gap-2">
+          <span className="flex items-start gap-2">
+            {item.status === "new" && (
+              <span
+                className="mt-[7px] size-2 shrink-0 rounded-full bg-flare-500"
+                role="img"
+                aria-label="New"
+              />
+            )}
             <span
               className={cn(
-                "min-w-0 flex-1 truncate text-[15px] text-foreground",
+                "line-clamp-2 min-w-0 flex-1 text-[15px] leading-snug break-words text-foreground",
                 item.status === "new" ? "font-semibold" : "font-medium",
               )}
             >

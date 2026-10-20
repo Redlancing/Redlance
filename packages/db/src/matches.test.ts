@@ -1,4 +1,5 @@
 import {
+  BEST_MIN_SCORE,
   isCandidate,
   passesFilters,
   type MatchPost,
@@ -325,6 +326,20 @@ async function seedMatch(
     );
   return m!.id;
 }
+
+/**
+ * The analysis's created_at as the matcher sees it (Postgres clock, to the millisecond). Tests
+ * must pass this to `withdrawPostMatches`, not `new Date()`: the container clock can run ahead of
+ * the host's, so a host-side "now" may be earlier than the stored `analysed_at` and the withdraw
+ * would (correctly) skip the row.
+ */
+const analysedAtOf = async (postId: string): Promise<Date> =>
+  (
+    await db
+      .select({ at: sql<Date>`date_trunc('milliseconds', created_at)` })
+      .from(jobPostAnalyses)
+      .where(eq(jobPostAnalyses.jobPostId, postId))
+  )[0]!.at;
 
 const matchRow = async (id: string) =>
   (await db.select().from(matches).where(eq(matches.id, id)))[0]!;
@@ -1392,7 +1407,12 @@ describe("withdrawing matches", () => {
     expect(await reanalyseAs(dismissed, "for_hire")).toBe("skipped");
     const withdrawn = await seedPost(POST_A);
     await seedMatch(priya, withdrawn);
-    await withdrawPostMatches(db, withdrawn, new Date(), null);
+    await withdrawPostMatches(
+      db,
+      withdrawn,
+      await analysedAtOf(withdrawn),
+      null,
+    );
     expect(await reanalyseAs(withdrawn, "for_hire")).toBe("skipped");
   });
 
@@ -1401,7 +1421,7 @@ describe("withdrawing matches", () => {
     const kept = await seedMatch(priya, await seedPost(POST_A));
     const postId = await seedPost(POST_A);
     await seedMatch(priya, postId);
-    await withdrawPostMatches(db, postId, new Date(), null);
+    await withdrawPostMatches(db, postId, await analysedAtOf(postId), null);
     for (const view of ["best", "all"] as const)
       expect(
         (await feedPage(db, priya, { view, limit: 20 })).items.map(
@@ -2645,7 +2665,7 @@ describe("feedItem", () => {
 });
 
 describe("dashboardStats", () => {
-  it("counts today's live matches, this week's replies, wins and Telegram", async () => {
+  it("counts today's live best matches, this week's replies, wins and Telegram", async () => {
     const priya = await seedUser(PRIYA);
     const live = await seedMatch(
       priya,
@@ -2659,6 +2679,10 @@ describe("dashboardStats", () => {
       priya,
       await seedPost({ ...POST_A, postedAt: ago(3 * DAY) }),
     );
+    // Below the "best" view's cut: not counted, so the number matches the default list.
+    await seedMatch(priya, await seedPost({ ...POST_A, postedAt: ago(DAY) }), {
+      ruleScore: BEST_MIN_SCORE - 1,
+    });
     await setMatchStatus(db, priya, gone, "dismissed");
     await db.execute(
       sql`update matches set created_at = now() - interval '3 days' where id = ${old}`,

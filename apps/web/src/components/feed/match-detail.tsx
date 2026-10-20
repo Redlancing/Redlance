@@ -1,12 +1,13 @@
 "use client";
 
-import { CATEGORIES } from "@redlance/core";
+import { CATEGORIES, RED_FLAG_TEXT } from "@redlance/core";
 import {
   ArrowLeft,
   Bookmark,
   BookmarkCheck,
   ExternalLink,
   Flag,
+  PenLine,
   Undo2,
   X,
 } from "lucide-react";
@@ -33,6 +34,12 @@ const CATEGORY_NAMES = new Map<string, string>(
   CATEGORIES.map((c) => [c.id, c.name]),
 );
 
+/** "vague_pay" → "Vague pay". */
+function flagLabel(code: string): string {
+  const text = RED_FLAG_TEXT[code] ?? code.replaceAll("_", " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 const DEADLINE = new Intl.DateTimeFormat("en", {
   day: "numeric",
   month: "short",
@@ -42,9 +49,12 @@ const DEADLINE = new Intl.DateTimeFormat("en", {
 export function MatchDetail({
   item,
   credits,
+  sentKinds,
 }: {
   item: FeedItemDetailResponse;
   credits: Credits | null;
+  /** Reply kinds already marked as sent for this post. */
+  sentKinds: ("comment" | "dm")[];
 }) {
   const searchParams = useSearchParams();
   const backHref = `/feed${searchParams.size ? `?${searchParams.toString()}` : ""}`;
@@ -166,6 +176,9 @@ export function MatchDetail({
               </span>
             ),
           )}
+          {facts.map((f) => (
+            <span key={f}> · {f}</span>
+          ))}
         </p>
         {post.alsoPostedIn.length > 0 && (
           <p className="mt-1 text-sm text-stone">
@@ -185,14 +198,15 @@ export function MatchDetail({
             ))}
           </p>
         )}
-        {facts.length > 0 && (
-          <p className="mt-1 text-sm text-muted-foreground">
-            {facts.join(" · ")}
-          </p>
-        )}
       </header>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {!item.withdrawn && (
+          <a href="#reply" className={buttonVariants()}>
+            <PenLine aria-hidden="true" />
+            Reply
+          </a>
+        )}
         <a
           href={post.url}
           target="_blank"
@@ -237,7 +251,7 @@ export function MatchDetail({
           </p>
           <ul className="mt-1.5 list-disc space-y-0.5 pl-5">
             {post.redFlags.map((f) => (
-              <li key={f}>{f}</li>
+              <li key={f}>{flagLabel(f)}</li>
             ))}
           </ul>
         </section>
@@ -267,7 +281,10 @@ export function MatchDetail({
           The post
         </h2>
         {post.summary && (
-          <p className="mt-1 text-sm text-stone">{post.summary}</p>
+          <p className="mt-1 text-sm text-stone">
+            <span className="font-medium text-foreground">In short:</span>{" "}
+            {post.summary}
+          </p>
         )}
         {post.body && (
           <>
@@ -293,13 +310,14 @@ export function MatchDetail({
         )}
       </section>
 
-      <div className="mt-8">
+      <div id="reply" className="mt-8 scroll-mt-6">
         <DraftComposer
           key={item.matchId}
           matchId={item.matchId}
           postUrl={post.url}
           withdrawn={item.withdrawn}
           initialCredits={credits}
+          initialSent={sentKinds}
           onSent={() => {
             setStatus("replied");
             announceMatchStatus({ matchId: item.matchId, status: "replied" });

@@ -264,3 +264,17 @@ export async function listReplies(
         : null,
   };
 }
+
+/** Which reply kinds the user already marked as sent for a post, so the composer remembers. */
+export async function sentKindsForPost(
+  user: UserRef,
+  jobPostId: string,
+): Promise<ReplyKind[]> {
+  const rows = await getDb()
+    .select({ kind: replies.kind })
+    .from(replies)
+    .where(
+      and(eq(replies.userId, user.userId), eq(replies.jobPostId, jobPostId)),
+    );
+  return rows.map((r) => r.kind);
+}

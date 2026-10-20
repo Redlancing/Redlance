@@ -1,10 +1,14 @@
+import { BEST_MIN_SCORE } from "@redlance/core";
 import { sql } from "drizzle-orm";
 import type { Database } from "./client";
 
 type Executor = Pick<Database, "execute">;
 
 export type DashboardStats = {
-  /** Matches created since midnight in the user's time zone, not dismissed or withdrawn. */
+  /**
+   * Matches created since midnight in the user's time zone that the feed's default "best" view
+   * shows (score ≥ BEST_MIN_SCORE), not dismissed or withdrawn.
+   */
   newToday: number;
   /** Gigs replied to in the last 7 days (a comment and a DM on one gig count once). */
   sentThisWeek: number;
@@ -40,6 +44,7 @@ export async function dashboardStats(
     select
       (select count(*)::int from matches m, day
         where m.user_id = ${userId} and m.created_at >= day.start
+          and m.score >= ${BEST_MIN_SCORE}
           and m.status <> 'dismissed' and m.withdrawn_at is null) as new_today,
       (select count(distinct r.job_post_id)::int from replies r
         where r.user_id = ${userId}
