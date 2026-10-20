@@ -23,6 +23,7 @@ import {
 import {
   classifyTelegramError,
   type InlineKeyboard,
+  type TelegramFailure,
   type TelegramClient,
 } from "./client";
 
@@ -98,7 +99,6 @@ export function createTelegramSender(deps: TelegramSenderDeps) {
 
   async function sendGroup(g: DeliveryGroup): Promise<void> {
     const started = clock.now();
-    let outcome = "sent";
     if (!g.channelEnabled || !g.target) {
       // Turned off after routing: never send.
       await fail(g, {
@@ -112,6 +112,30 @@ export function createTelegramSender(deps: TelegramSenderDeps) {
       );
       return;
     }
+    const res = await attempt(g);
+    if (res.kind === "gave_back") return;
+    if (res.kind === "error") {
+      if (res.f.code === "TG_BAD_REQUEST" && g.deliveries.length >= 2) {
+        // One match may be at fault: send them one by one (L3).
+        await sendSplit(g, res.f);
+        return;
+      }
+      await failSend(g, res.f);
+      return;
+    }
+    await recordSent(g, res.messageId, started);
+  }
+
+  type Attempt =
+    | { kind: "sent"; messageId: number }
+    | { kind: "gave_back" }
+    | { kind: "error"; f: TelegramFailure };
+
+  /**
+   * One message for `g`: waits for the limiter and the chat spacing, re-checks the claim, then
+   * sends. Gives the rows back itself when stopping or when the claim is lost.
+   */
+  async function attempt(g: DeliveryGroup): Promise<Attempt> {
     const message = telegramAlert(
       g.deliveries.map((d) => ({
         matchId: d.matchId,
@@ -127,7 +151,7 @@ export function createTelegramSender(deps: TelegramSenderDeps) {
       new Date(clock.now()),
     );
     await limiter.take(stopSignal.signal);
-    await spacing.wait(g.target, stopSignal.signal);
+    await spacing.wait(g.target!, stopSignal.signal);
     if (stopping) {
       // Claimed but not sent: the next worker sends it straight away, attempt not used.
       await fail(g, {
@@ -136,7 +160,7 @@ export function createTelegramSender(deps: TelegramSenderDeps) {
         countAttempt: false,
         retryInMs: 0,
       });
-      return;
+      return { kind: "gave_back" };
     }
     let stillOurs = false;
     try {
@@ -160,44 +184,54 @@ export function createTelegramSender(deps: TelegramSenderDeps) {
         countAttempt: false,
         retryInMs: 0,
       });
-      return;
+      return { kind: "gave_back" };
     }
-    let messageId: number;
     try {
-      ({ messageId } = await deps.client.sendMessage({
-        chatId: g.target,
+      const { messageId } = await deps.client.sendMessage({
+        chatId: g.target!,
         text: message.text,
         replyMarkup: hasButtons(message.replyMarkup)
           ? message.replyMarkup
           : undefined,
-      }));
+      });
+      return { kind: "sent", messageId };
     } catch (err) {
-      const f = classifyTelegramError(err);
-      outcome = f.code;
-      if (f.code === "RATE_LIMITED") limiter.pauseFor(f.retryInMs ?? 5000);
-      if (f.code === "TG_UNAVAILABLE" || f.code === "TG_UNAUTHORIZED")
-        noteOutage();
-      await fail(g, f);
-      if (f.disable) {
-        try {
-          await disableChannel(deps.db, g.userId, "telegram", "blocked");
-        } catch (dbErr) {
-          deps.log.error(
-            { userId: g.userId, pgCode: pgErrorCode(dbErr) },
-            "could not disable Telegram channel",
-          );
-        }
-      }
-      const line = {
-        userId: g.userId,
-        code: f.code,
-        count: g.deliveries.length,
-      };
-      if (f.code === "TG_BAD_REQUEST")
-        deps.log.error(line, "Telegram rejected an alert");
-      else deps.log.warn(line, "alert send failed");
-      return;
+      return { kind: "error", f: classifyTelegramError(err) };
     }
+  }
+
+  /** Records a failed send: breaker and limiter side effects, the rows, the channel. */
+  async function failSend(g: DeliveryGroup, f: TelegramFailure) {
+    if (f.code === "RATE_LIMITED") limiter.pauseFor(f.retryInMs ?? 5000);
+    if (f.code === "TG_UNAVAILABLE" || f.code === "TG_UNAUTHORIZED")
+      noteOutage();
+    await fail(g, f);
+    if (f.disable) {
+      try {
+        await disableChannel(deps.db, g.userId, "telegram", "blocked");
+      } catch (dbErr) {
+        deps.log.error(
+          { userId: g.userId, pgCode: pgErrorCode(dbErr) },
+          "could not disable Telegram channel",
+        );
+      }
+    }
+    const line = {
+      userId: g.userId,
+      code: f.code,
+      count: g.deliveries.length,
+    };
+    if (f.code === "TG_BAD_REQUEST")
+      deps.log.error(line, "Telegram rejected an alert");
+    else deps.log.warn(line, "alert send failed");
+  }
+
+  async function recordSent(
+    g: DeliveryGroup,
+    messageId: number,
+    started: number,
+  ) {
+    let outcome = "sent";
     outages = 0;
     trips = 0;
     try {
@@ -223,6 +257,34 @@ export function createTelegramSender(deps: TelegramSenderDeps) {
         },
         "alert sent",
       );
+    }
+  }
+
+  /**
+   * A grouped message got 400: send each match on its own, so one bad match fails alone.
+   * Another error ends the split and fails the rows not yet sent the usual way.
+   */
+  async function sendSplit(g: DeliveryGroup, first: TelegramFailure) {
+    deps.log.warn(
+      { userId: g.userId, code: first.code, count: g.deliveries.length },
+      "alert group rejected; sending one by one",
+    );
+    const todo = g.deliveries;
+    for (let i = 0; i < todo.length; i++) {
+      const one: DeliveryGroup = { ...g, deliveries: [todo[i]!] };
+      const started = clock.now();
+      const res = await attempt(one);
+      if (res.kind === "gave_back") continue;
+      if (res.kind === "sent") {
+        await recordSent(one, res.messageId, started);
+        continue;
+      }
+      if (res.f.code === "TG_BAD_REQUEST") {
+        await failSend(one, res.f);
+        continue;
+      }
+      await failSend({ ...g, deliveries: todo.slice(i) }, res.f);
+      return;
     }
   }
 

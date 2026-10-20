@@ -352,4 +352,111 @@ describe("Telegram sender", () => {
     expect(pending).toHaveLength(1);
     expect(pending[0]).toMatchObject({ attempts: 0, errorCode: "SHUTDOWN" });
   });
+
+  describe("a rejected group is split (L3)", () => {
+    const bad = new TelegramError(
+      "sendMessage",
+      400,
+      "Bad Request: can't parse",
+    );
+    const markBad = async (matchId: string) => {
+      await db.execute(
+        sql`update job_posts set title = 'BADMARK' where id = (select job_post_id from matches where id = ${matchId})`,
+      );
+    };
+    const hasMark = (m: Sent) => m.text.includes("BADMARK");
+
+    it("sends each match alone; only the bad one fails", async () => {
+      const u = await seedUser(db);
+      const ids = await queueAlerts(db, u, 3);
+      await markBad(ids[1]!);
+      const tg = fakeTelegram((m) => (hasMark(m) ? bad : null));
+      await runOnce(make(tg.client));
+      expect(tg.calls()).toBe(4); // the group, then one each
+      expect(tg.sent).toHaveLength(2);
+      expect(tg.sent.every((m) => !hasMark(m))).toBe(true);
+      const good = [ids[0]!, ids[2]!];
+      const gotIds = new Set<number | null>();
+      for (const id of good) {
+        const m = await matchRow(id);
+        expect(m.alertOutcome).toBe("sent");
+        gotIds.add(m.telegramMessageId);
+      }
+      expect(gotIds).toEqual(new Set([100, 101]));
+      expect((await matchRow(ids[1]!)).alertOutcome).toBe("failed");
+      const left = await deliveries();
+      expect(left).toHaveLength(1);
+      expect(left[0]).toMatchObject({
+        status: "failed",
+        errorCode: "TG_BAD_REQUEST",
+        attempts: 1,
+      });
+    });
+
+    it("a single rejected match fails as before", async () => {
+      const u = await seedUser(db);
+      const [m] = await queueAlerts(db, u, 1);
+      await markBad(m!);
+      const tg = fakeTelegram((x) => (hasMark(x) ? bad : null));
+      await runOnce(make(tg.client));
+      expect(tg.calls()).toBe(1);
+      expect(await deliveries()).toMatchObject([
+        { status: "failed", errorCode: "TG_BAD_REQUEST", attempts: 1 },
+      ]);
+    });
+
+    it("a block during the split disables the channel and fails the rest", async () => {
+      const u = await seedUser(db);
+      const ids = await queueAlerts(db, u, 3);
+      await markBad(ids[0]!);
+      const tg = fakeTelegram((_, n) =>
+        n === 1
+          ? bad
+          : n === 2
+            ? new TelegramError(
+                "sendMessage",
+                403,
+                "Forbidden: bot was blocked",
+              )
+            : null,
+      );
+      await runOnce(make(tg.client));
+      expect(tg.calls()).toBe(2);
+      const [ch] = await db
+        .select()
+        .from(alertChannels)
+        .where(eq(alertChannels.userId, u));
+      expect(ch).toMatchObject({ enabled: false, disabledReason: "blocked" });
+      const ds = await deliveries();
+      expect(ds).toHaveLength(3);
+      expect(ds.every((d) => d.status === "failed")).toBe(true);
+      for (const id of ids)
+        expect((await matchRow(id)).alertOutcome).toBe("failed");
+    });
+
+    it("stop() during the split gives back the unsent rows", async () => {
+      const u = await seedUser(db);
+      await queueAlerts(db, u, 3);
+      let s: ReturnType<typeof make>;
+      let stopped: Promise<void> | undefined;
+      const tg = fakeTelegram((_, n) => {
+        if (n === 1) return bad;
+        if (n === 2) stopped = s.stop(5_000); // the first single goes out, then stop
+        return null;
+      });
+      s = make(tg.client);
+      await s.start();
+      await s.idle();
+      await stopped;
+      expect(tg.calls()).toBe(2);
+      const ds = await deliveries();
+      expect(ds).toHaveLength(2);
+      for (const d of ds)
+        expect(d).toMatchObject({
+          status: "pending",
+          attempts: 0,
+          errorCode: "SHUTDOWN",
+        });
+    });
+  });
 });

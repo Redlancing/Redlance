@@ -3,7 +3,7 @@
 **Status (2026-10-20):**
 - The whole backend is built: the router, the delivery queue, the Telegram sender, the linking bot, the web API, upkeep and two CLIs. There is **no UI yet** (API only).
 - It lives in the working tree on `feat/alerts`. It is **not merged** into `main`.
-- It was reviewed and the findings were fixed (M1, L1, L4, L5, L7, L8, L9 and the empty keyboard; see the build notes). L3 is deferred (see the gaps).
+- It was reviewed and the findings were fixed (M1, L1, L4, L5, L7, L8, L9 and the empty keyboard; see the build notes). L3 was fixed afterwards.
 - Tests on feat/alerts after the review fixes (2026-10-20): core 318, db 335, worker 623, web 422 (llm unchanged at 26). Typecheck and lint clean.
 - **Not run live yet.** It needs a dev bot token from @BotFather. The live-run steps are in `plan/07-wiring-ops.md`.
 - Step 4 of the core loop (Alert) is done on the backend, for Telegram only. Email is deferred.
@@ -239,7 +239,7 @@ Do not run `alerts:test` while a soak worker is running against the same databas
 
 - **Not run live.** It needs a dev bot from @BotFather (`TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` in the worker env, the username in the web env). The steps are in `plan/07-wiring-ops.md`: link a user, run `alerts:test`, watch `alerts:status` for an hour, `kill -9` mid-send and check the sweep, block the bot and check the channel is disabled. Also check whether 70 is the right default threshold.
 - **Unconfirmed:** that Telegram rejects localhost and IP button URLs. It is handled by dropping the app buttons on such origins. If it turns out Telegram accepts them, `appLinksUsable` can be relaxed.
-- **L3 (deferred): one bad message fails the whole group.** If Telegram answers 400 for a grouped message (up to 5 matches), all of its matches fail, though only one may be at fault.
+- **L3 (fixed): one bad message used to fail the whole group.** If Telegram answers 400 (`TG_BAD_REQUEST`) for a grouped message of 2 or more matches, the sender now sends each match on its own (same limiter, per-chat spacing, stop signal and claim check), completes the ones that go out and fails only those that get 400 again. Any other error during the split (429, 403, 5xx) fails the not-yet-sent rows by the usual classification; a lone match that gets 400 fails as before.
 - **Deploy order.** Stop the old worker before running migration 0015. Otherwise matches the old worker inserts after the migration have a null `alert_outcome` and can alert.
 - **No `TELEGRAM_BOT_TOKEN`:** routed matches become `skipped_no_channel` for good. They are not delayed, so adding a token later does not send them.
 - **The "Draft reply" link points at `/feed/<matchId>`,** which does not exist until the feed UI is built.
