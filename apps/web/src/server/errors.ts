@@ -23,6 +23,7 @@ export type ErrorCode =
   | "MATCH_WITHDRAWN"
   | "NO_OTHER_PROJECT"
   | "UNAVAILABLE"
+  | "TELEGRAM_UNAVAILABLE"
   | "INTERNAL";
 
 const STATUS: Record<ErrorCode, number> = {
@@ -48,6 +49,7 @@ const STATUS: Record<ErrorCode, number> = {
   MATCH_WITHDRAWN: 409,
   NO_OTHER_PROJECT: 409,
   UNAVAILABLE: 503,
+  TELEGRAM_UNAVAILABLE: 503,
   INTERNAL: 500,
 };
 

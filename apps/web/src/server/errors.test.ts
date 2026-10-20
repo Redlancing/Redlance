@@ -19,6 +19,7 @@ describe("ApiError", () => {
     ["MATCH_WITHDRAWN", 409],
     ["NO_OTHER_PROJECT", 409],
     ["UNAVAILABLE", 503],
+    ["TELEGRAM_UNAVAILABLE", 503],
     ["INTERNAL", 500],
   ] as const)("maps %s to %i", (code, status) => {
     expect(new ApiError(code, "m").status).toBe(status);
