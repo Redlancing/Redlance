@@ -240,6 +240,20 @@ describe("POST /api/v1/alerts/telegram/link", () => {
     expect(a).not.toBe(b);
   });
 
+  it("a new link invalidates the user's older unused links only", async () => {
+    const a = await onboarded("a@example.com");
+    const b = await onboarded("b@example.com");
+    await link(a.cookie);
+    await link(b.cookie);
+    await link(a.cookie);
+    const rows = await getDb().select().from(telegramLinkTokens);
+    const mine = rows.filter((r) => r.userId === a.userId);
+    expect(mine).toHaveLength(2);
+    expect(mine.filter((r) => r.usedAt === null)).toHaveLength(1);
+    const theirs = rows.filter((r) => r.userId === b.userId);
+    expect(theirs.every((r) => r.usedAt === null)).toBe(true);
+  });
+
   it("503s TELEGRAM_UNAVAILABLE when no bot username is set, and stores nothing", async () => {
     const { cookie } = await onboarded();
     botUsername = undefined;
@@ -299,6 +313,17 @@ describe("DELETE /api/v1/alerts/telegram", () => {
       enabled: false,
       disabledReason: "user_stop",
     });
+  });
+
+  it("also kills the user's unused link tokens, not another user's", async () => {
+    const a = await onboarded("a@example.com");
+    const b = await onboarded("b@example.com");
+    await link(a.cookie);
+    await link(b.cookie);
+    await unlink(a.cookie);
+    const rows = await getDb().select().from(telegramLinkTokens);
+    expect(rows.find((r) => r.userId === a.userId)!.usedAt).not.toBeNull();
+    expect(rows.find((r) => r.userId === b.userId)!.usedAt).toBeNull();
   });
 
   it("succeeds when Telegram was never linked", async () => {

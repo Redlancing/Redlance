@@ -2,6 +2,8 @@
 // the alert router, so the whole path (route -> queue -> Telegram) can be seen without waiting
 // for Reddit. The user must have linked Telegram and be onboarded (a profile).
 // Run: npm run alerts:test -w @redlance/worker -- --user <uuid>
+// Afterwards run: npm run alerts:test -w @redlance/worker -- --cleanup
+// to delete the fake posts (and their matches) so they never linger in the db.
 // Needs DATABASE_URL and APP_ENV=local or test.
 import { randomUUID } from "node:crypto";
 import { parseArgs } from "node:util";
@@ -13,7 +15,10 @@ import {
   profiles,
   upsertMatches,
 } from "@redlance/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, like, sql } from "drizzle-orm";
+import { PIPELINE_VERSION } from "../src/ingest/analyse-post";
+
+const ID_PREFIX = "t3_alerttest_";
 
 const appEnv = process.env.APP_ENV;
 if (appEnv !== "local" && appEnv !== "test") {
@@ -23,10 +28,13 @@ if (appEnv !== "local" && appEnv !== "test") {
   process.exit(1);
 }
 const USAGE =
-  "Usage: npm run alerts:test -w @redlance/worker -- --user <user uuid>";
-const { values } = parseArgs({ options: { user: { type: "string" } } });
+  "Usage: npm run alerts:test -w @redlance/worker -- --user <user uuid>\n" +
+  "       npm run alerts:test -w @redlance/worker -- --cleanup   (run this after testing)";
+const { values } = parseArgs({
+  options: { user: { type: "string" }, cleanup: { type: "boolean" } },
+});
 const userId = values.user ?? "";
-if (!/^[0-9a-f-]{36}$/i.test(userId)) {
+if (!values.cleanup && !/^[0-9a-f-]{36}$/i.test(userId)) {
   console.error(USAGE);
   process.exit(1);
 }
@@ -38,6 +46,16 @@ if (!url) {
 
 const { db, pool } = createDb(url, { max: 2 });
 try {
+  if (values.cleanup) {
+    // Analyses and matches cascade; a draft made from a fake post would block this delete.
+    const gone = await db
+      .delete(jobPosts)
+      .where(like(jobPosts.externalId, `${ID_PREFIX}%`))
+      .returning({ id: jobPosts.id });
+    console.log(`Deleted ${gone.length} alerts:test job post(s).`);
+    await pool.end();
+    process.exit(0);
+  }
   const [profile] = await db
     .select({ version: profiles.profileVersion })
     .from(profiles)
@@ -51,7 +69,7 @@ try {
     .insert(jobPosts)
     .values({
       source: "reddit",
-      externalId: `t3_alerttest${key}`,
+      externalId: `${ID_PREFIX}${key}`,
       fetchedVia: "rss",
       community: "forhire",
       url: `https://www.reddit.com/r/forhire/comments/alerttest${key}/test_post/`,
@@ -67,7 +85,7 @@ try {
     .returning({ id: jobPosts.id });
   await db.insert(jobPostAnalyses).values({
     jobPostId: post!.id,
-    pipelineVersion: "post@1",
+    pipelineVersion: PIPELINE_VERSION,
     kind: "hiring",
     employmentType: "freelance",
     payType: "paid",

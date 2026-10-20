@@ -163,6 +163,57 @@ describe("telegramAlert, several matches", () => {
   });
 });
 
+describe("telegramAlert without a usable app origin", () => {
+  const hosts = [
+    "http://localhost:3001",
+    "http://app.localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://[::1]:3000",
+  ];
+
+  it.each(hosts)("single match keeps only Open post for %s", (o) => {
+    const m = telegramAlert([item()], o, now);
+    expect(m.replyMarkup.inline_keyboard).toEqual([
+      [
+        {
+          text: "🔗 Open post",
+          url: "https://www.reddit.com/r/forhire/comments/abc/next/",
+        },
+      ],
+    ]);
+  });
+
+  it.each(hosts)("list has plain titles and no buttons for %s", (o) => {
+    const m = telegramAlert([item(), item({ matchId: "m2" })], o, now);
+    expect(m.text).not.toContain("<a ");
+    expect(m.text).toContain("Next.js dev to fix Stripe checkout");
+    expect(m.replyMarkup.inline_keyboard).toEqual([]);
+  });
+
+  it("a single match with a non-Reddit url has no buttons", () => {
+    const m = telegramAlert([item({ url: "https://x.com/a" })], hosts[0]!, now);
+    expect(m.replyMarkup.inline_keyboard).toEqual([]);
+  });
+
+  it("a real domain still gets the app buttons", () => {
+    expect(
+      telegramAlert([item()], "https://redlance.app", now).replyMarkup
+        .inline_keyboard[0],
+    ).toHaveLength(2);
+  });
+});
+
+describe("title truncation", () => {
+  it("cuts by code points and never leaves half an emoji", () => {
+    const title = "a".repeat(118) + "😀😀😀";
+    const m = telegramAlert([item({ title })], origin, now);
+    const first = m.text.split("\n")[0]!;
+    expect(first).toContain("a".repeat(118) + "😀…");
+    expect(/[\ud800-\udbff](?![\udc00-\udfff])/.test(m.text)).toBe(false);
+    expect(/(?<![\ud800-\udbff])[\udc00-\udfff]/.test(m.text)).toBe(false);
+  });
+});
+
 describe("alertLinks", () => {
   it("builds the draft link and keeps only Reddit post links", () => {
     expect(

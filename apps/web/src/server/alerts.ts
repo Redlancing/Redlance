@@ -2,12 +2,13 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import {
   alertChannels,
+  telegramLinkTokens,
   createTelegramLinkToken,
   disableChannel,
   profiles,
   type Database,
 } from "@redlance/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { ApiError } from "./errors";
 
 export type AlertSettings = {
@@ -79,12 +80,27 @@ export async function updateAlertSettings(
   return getAlertSettings(db, userId);
 }
 
+/** Marks the user's unused, unexpired link tokens as used, so old links stop working. */
+async function revokeLinkTokens(db: Database, userId: string): Promise<void> {
+  await db
+    .update(telegramLinkTokens)
+    .set({ usedAt: sql`now()` })
+    .where(
+      and(
+        eq(telegramLinkTokens.userId, userId),
+        isNull(telegramLinkTokens.usedAt),
+        gt(telegramLinkTokens.expiresAt, sql`now()`),
+      ),
+    );
+}
+
 /** A one-time link: only the token's SHA-256 is stored. */
 export async function startTelegramLink(
   db: Database,
   userId: string,
   botUsername: string,
 ): Promise<{ url: string; expiresAt: string }> {
+  await revokeLinkTokens(db, userId);
   const token = randomBytes(32).toString("base64url");
   const hash = createHash("sha256").update(token).digest("hex");
   const expiresAt = await createTelegramLinkToken(db, userId, hash);
@@ -99,5 +115,6 @@ export async function unlinkTelegram(
   db: Database,
   userId: string,
 ): Promise<void> {
+  await revokeLinkTokens(db, userId);
   await disableChannel(db, userId, "telegram", "user_stop");
 }

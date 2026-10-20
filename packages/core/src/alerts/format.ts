@@ -44,6 +44,22 @@ function redditUrl(url: string): string | null {
   }
 }
 
+/**
+ * Telegram rejects button URLs on localhost or a raw IP (400 BUTTON_URL_INVALID), so
+ * links to the app are left out for those origins.
+ */
+export function appLinksUsable(appOrigin: string): boolean {
+  try {
+    const host = new URL(appOrigin).hostname.toLowerCase();
+    if (host === "localhost" || host.endsWith(".localhost")) return false;
+    if (host.startsWith("[")) return false; // IPv6 literal
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** The two links an alert can carry; `post` is null for a non-Reddit URL. */
 export function alertLinks(
   appOrigin: string,
@@ -58,7 +74,10 @@ export function alertLinks(
 
 function cleanTitle(title: string): string {
   const t = title.replace(/^\s*\[hiring\]\s*[:\-–—]?\s*/i, "").trim();
-  return t.length > MAX_TITLE ? t.slice(0, MAX_TITLE - 1) + "…" : t;
+  const chars = Array.from(t);
+  return chars.length > MAX_TITLE
+    ? chars.slice(0, MAX_TITLE - 1).join("") + "…"
+    : t;
 }
 
 function age(postedAt: Date, now: Date): string {
@@ -92,12 +111,12 @@ export function telegramAlert(
       `telegramAlert takes 1-${TELEGRAM_MATCHES_PER_MESSAGE} items`,
     );
   }
+  const appLinks = appLinksUsable(appOrigin);
   if (items.length === 1) {
     const item = items[0]!;
     const links = alertLinks(appOrigin, item.matchId, item.url);
-    const buttons: TelegramButton[] = [
-      { text: "✍️ Draft reply", url: links.draft },
-    ];
+    const buttons: TelegramButton[] = [];
+    if (appLinks) buttons.push({ text: "✍️ Draft reply", url: links.draft });
     if (links.post) buttons.push({ text: "🔗 Open post", url: links.post });
     return {
       text: [
@@ -105,13 +124,14 @@ export function telegramAlert(
         metaLine(item, now),
         escapeHtml(item.reason),
       ].join("\n"),
-      replyMarkup: { inline_keyboard: [buttons] },
+      replyMarkup: { inline_keyboard: buttons.length ? [buttons] : [] },
     };
   }
   const blocks = items.map((item) => {
     const { draft } = alertLinks(appOrigin, item.matchId, item.url);
+    const title = escapeHtml(cleanTitle(item.title));
     return [
-      `<b>${item.score}</b> · <a href="${escapeHtml(draft)}">${escapeHtml(cleanTitle(item.title))}</a>`,
+      `<b>${item.score}</b> · ${appLinks ? `<a href="${escapeHtml(draft)}">${title}</a>` : title}`,
       metaLine(item, now),
       escapeHtml(item.reason),
     ].join("\n");
@@ -119,14 +139,16 @@ export function telegramAlert(
   return {
     text: [`🎯 <b>${items.length} new matches</b>`, ...blocks].join("\n\n"),
     replyMarkup: {
-      inline_keyboard: [
-        [
-          {
-            text: "Open Redlance",
-            url: `${appOrigin.replace(/\/+$/, "")}/feed`,
-          },
-        ],
-      ],
+      inline_keyboard: appLinks
+        ? [
+            [
+              {
+                text: "Open Redlance",
+                url: `${appOrigin.replace(/\/+$/, "")}/feed`,
+              },
+            ],
+          ]
+        : [],
     },
   };
 }
