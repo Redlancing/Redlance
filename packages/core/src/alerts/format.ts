@@ -130,3 +130,44 @@ export function telegramAlert(
     },
   };
 }
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: "$",
+  GBP: "£",
+  EUR: "€",
+  INR: "₹",
+};
+const UNIT_SUFFIX: Record<string, string> = {
+  hour: "/hr",
+  day: "/day",
+  week: "/week",
+  month: "/month",
+  per_item: " per item",
+};
+
+function amount(n: number): string {
+  return Number.isInteger(n)
+    ? n.toLocaleString("en-US")
+    : n.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+}
+
+/** A posted budget as an alert shows it ("$400–600", "£30/hr"); null when there is none. */
+export function budgetLabel(b: {
+  min: number | null;
+  max: number | null;
+  currency: string | null;
+  unit: string | null;
+}): string | null {
+  if (b.min === null && b.max === null) return null;
+  const range =
+    b.min !== null && b.max !== null && b.min !== b.max
+      ? `${amount(b.min)}–${amount(b.max)}`
+      : amount((b.max ?? b.min)!);
+  const symbol = b.currency
+    ? (CURRENCY_SYMBOLS[b.currency] ?? `${b.currency} `)
+    : "";
+  return `${symbol}${range}${(b.unit && UNIT_SUFFIX[b.unit]) ?? ""}`;
+}

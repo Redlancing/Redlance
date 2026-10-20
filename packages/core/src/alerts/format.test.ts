@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { alertLinks, telegramAlert, type AlertItem } from "./format";
+import {
+  alertLinks,
+  budgetLabel,
+  telegramAlert,
+  type AlertItem,
+} from "./format";
 
 const now = new Date("2026-10-20T12:00:00Z");
 const origin = "https://redlance.app";
@@ -169,5 +174,34 @@ describe("alertLinks", () => {
     expect(alertLinks(origin, "m1", "https://old.reddit.com/r/a/").post).toBe(
       null,
     );
+  });
+});
+
+describe("budgetLabel", () => {
+  it("formats ranges, single values, symbols and units", () => {
+    expect(
+      budgetLabel({ min: 400, max: 600, currency: "USD", unit: "fixed" }),
+    ).toBe("$400–600");
+    expect(
+      budgetLabel({ min: 30, max: 30, currency: "GBP", unit: "hour" }),
+    ).toBe("£30/hr");
+    expect(
+      budgetLabel({ min: null, max: 1500, currency: "EUR", unit: null }),
+    ).toBe("€1,500");
+    expect(
+      budgetLabel({ min: 2000, max: null, currency: "INR", unit: "month" }),
+    ).toBe("₹2,000/month");
+    expect(
+      budgetLabel({ min: 12.5, max: 20, currency: "CAD", unit: "per_item" }),
+    ).toBe("CAD 12.50–20 per item");
+    expect(budgetLabel({ min: 50, max: 80, currency: null, unit: "day" })).toBe(
+      "50–80/day",
+    );
+  });
+
+  it("is null without amounts", () => {
+    expect(
+      budgetLabel({ min: null, max: null, currency: "USD", unit: "fixed" }),
+    ).toBe(null);
   });
 });
