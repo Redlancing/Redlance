@@ -30,7 +30,7 @@ Collect (RSS: every hiring subreddit about every 5 min, in combined feeds of ~80
 - **Auth:** Cognito (Essentials) with Google + email one-time code, no passwords. Tokens in httpOnly cookies, verified in the app on every request; our `users` table is keyed by the Cognito `sub`.
 - **Workflow:** build and test each feature locally first (Docker: Postgres + Valkey; a dev Cognito pool), then deploy. Docs are grouped by feature: `docs/<feature>/` holds its `conclusion.md` (how the built feature works), its design and research (index and status: `docs/README.md`). Step-by-step plans are deleted once built.
 - **Worker:** one Node process (`apps/worker`), run as a second Docker container on the same EC2 server as the web app; no separate AWS service for it. It runs RSS ingestion (one poller system-wide, at least 65 s between Reddit requests), post analysis, and the background jobs from the Postgres job table. Web code starts work by adding a job row (or calling an API), not through SQS.
-- **AI:** Gemini, tiered by task: Flash-Lite for high-volume work (per-post extraction, scoring), Flash for drafts and onboarding imports. Calls go through our own interface so any task can switch model.
+- **AI:** Gemini, tiered by task: Flash-Lite for post analysis, drafts, rewrites and voice notes (drafts moved from Flash on 2026-10-20: the draft eval scored it close to Flash, faster and cheaper); Flash for the resume Skills step and the eval judge (`VERTEX_MODEL_SMART`). Calls go through our own interface so any task can switch model.
 - **Matching:** rule filters + a rule score with a reason. The LLM re-score is built but off for the MVP (decided 2026-10-19, `RESCORE_ENABLED=false`); drafting picks the project to cite. Strict cross-post dedupe stays; the feed links every subreddit a gig was posted in.
 - **Alerts:** Telegram Bot API (email/push later)
 - **Payments:** subscriptions for US, UK and India customers; provider not chosen yet (Razorpay alone doesn't cover US/UK well)
@@ -111,7 +111,7 @@ Handover for the next chat. Update this section as things change.
 
 - Live end-to-end run: the 24 h ingestion soak (fills the dev db with real posts), then matching and the first live draft eval.
 - The feed + drafts UI (polling `GET /api/v1/drafts/:id`: 1.5 s, then every 1 s, give up at 30 s). Reminders and follow-ups wait for the email system; the monthly credit grant waits for payments (unify `profiles.plan` and `credit_balances.plan` then).
-- When building the profile edit page, limit profile changes to 5 per user per week.
+- When building the profile edit page, limit profile changes to 5 per user per week. A profile edit does not re-match existing posts (decided 2026-10-20); only new posts use the new profile.
 
 ### What's built (read the conclusions)
 
