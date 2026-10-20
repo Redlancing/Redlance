@@ -5,3 +5,5 @@ next-env.d.ts
 docs/*.pdf
 *.md
 packages/db/migrations/meta/
+.claude/worktrees
+.impeccable
