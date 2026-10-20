@@ -12,3 +12,4 @@ export * from "./email";
 export * from "./client-names";
 export * from "./drafts";
 export * from "./alerts";
+export * from "./insights";
