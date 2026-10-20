@@ -1163,6 +1163,106 @@ export type FeedOptions = {
   limit: number;
 };
 
+/** One feed row before mapping; `body` and `withdrawn` only on the single-match read. */
+type FeedRow = {
+  id: string;
+  score: number;
+  reason: string;
+  broad: boolean;
+  status: MatchStatus;
+  ai_status: AiStatus;
+  posted_at: string;
+  bp_id: string | null;
+  bp_title: string | null;
+  br_id: string | null;
+  br_title: string | null;
+  post_id: string;
+  title: string;
+  community: string;
+  url: string;
+  summary: string;
+  categories: string[];
+  budget_min: string | null;
+  budget_max: string | null;
+  currency: string | null;
+  budget_unit: BudgetUnit | null;
+  pay_type: PayType;
+  remote: RemoteType;
+  deadline: string | null;
+  red_flags: string[];
+  apply_instructions: string | null;
+  also_posted_in: string[];
+  body?: string;
+  withdrawn?: boolean;
+};
+
+/** The feed's select and joins, shared by the page and the single-match read. */
+function feedRows(
+  db: Executor,
+  where: SQL[],
+  opts: { limit: number; detail?: boolean },
+) {
+  const detail = opts.detail
+    ? sql`, j.body, (m.withdrawn_at is not null) as withdrawn`
+    : sql``;
+  return db.execute<FeedRow>(sql`
+    select m.id, m.score, m.broad, m.status, m.ai_status, m.posted_at,
+      case when m.ai_status = 'done' and m.ai_reason is not null then m.ai_reason else m.rule_reason end as reason,
+      bp.id as bp_id, bp.title as bp_title, br.id as br_id, br.title as br_title,
+      j.id as post_id, j.title, j.community, j.url,
+      a.summary, a.categories, a.budget_min, a.budget_max, a.currency, a.budget_unit,
+      a.pay_type, a.remote, a.deadline, a.red_flags, a.apply_instructions,
+      coalesce((
+        select array_agg(distinct d.community order by d.community) from job_posts d
+        where d.duplicate_of = j.id and d.community <> j.community), '{}'::text[]) as also_posted_in
+      ${detail}
+    from matches m
+    join job_posts j on j.id = m.job_post_id and j.duplicate_of is null
+    join job_post_analyses a on a.job_post_id = j.id
+    left join profile_projects bp
+      on bp.id = m.best_project_id and bp.user_id = m.user_id and not bp.hidden
+    left join profile_experience br
+      on br.id = m.best_role_id and br.user_id = m.user_id and not br.hidden
+    where ${sql.join(where, sql` and `)}
+    order by m.posted_at desc, m.id desc
+    limit ${opts.limit}`);
+}
+
+function toFeedItem(r: FeedRow): FeedItem {
+  const min = toNum(r.budget_min);
+  const max = toNum(r.budget_max);
+  return {
+    matchId: r.id,
+    score: r.score,
+    reason: r.reason,
+    broad: r.broad,
+    status: r.status,
+    aiStatus: r.ai_status,
+    bestProject:
+      r.bp_id && r.bp_title ? { id: r.bp_id, title: r.bp_title } : null,
+    bestRole: r.br_id && r.br_title ? { id: r.br_id, title: r.br_title } : null,
+    post: {
+      id: r.post_id,
+      title: r.title,
+      community: r.community,
+      url: r.url,
+      postedAt: toDate(r.posted_at),
+      summary: r.summary,
+      categories: r.categories,
+      budget:
+        min === null && max === null
+          ? null
+          : { min, max, currency: r.currency, unit: r.budget_unit },
+      payType: r.pay_type,
+      remote: r.remote,
+      deadline: toDay(r.deadline),
+      redFlags: r.red_flags,
+      applyInstructions: r.apply_instructions,
+      alsoPostedIn: r.also_posted_in,
+    },
+  };
+}
+
 /**
  * One page of a user's feed, newest post first, keyset-paged on (posted_at, match id) so
  * matches added between pages never shift it. Dismissed and withdrawn matches are left out;
@@ -1187,96 +1287,45 @@ export async function feedPage(
   if (opts.categories?.length)
     where.push(sql`a.categories && ${textArray(opts.categories)}`);
   if (opts.pay === "paid") where.push(sql`a.pay_type = 'paid'`);
-  const res = await db.execute<{
-    id: string;
-    score: number;
-    reason: string;
-    broad: boolean;
-    status: MatchStatus;
-    ai_status: AiStatus;
-    posted_at: string;
-    bp_id: string | null;
-    bp_title: string | null;
-    br_id: string | null;
-    br_title: string | null;
-    post_id: string;
-    title: string;
-    community: string;
-    url: string;
-    summary: string;
-    categories: string[];
-    budget_min: string | null;
-    budget_max: string | null;
-    currency: string | null;
-    budget_unit: BudgetUnit | null;
-    pay_type: PayType;
-    remote: RemoteType;
-    deadline: string | null;
-    red_flags: string[];
-    apply_instructions: string | null;
-    also_posted_in: string[];
-  }>(sql`
-    select m.id, m.score, m.broad, m.status, m.ai_status, m.posted_at,
-      case when m.ai_status = 'done' and m.ai_reason is not null then m.ai_reason else m.rule_reason end as reason,
-      bp.id as bp_id, bp.title as bp_title, br.id as br_id, br.title as br_title,
-      j.id as post_id, j.title, j.community, j.url,
-      a.summary, a.categories, a.budget_min, a.budget_max, a.currency, a.budget_unit,
-      a.pay_type, a.remote, a.deadline, a.red_flags, a.apply_instructions,
-      coalesce((
-        select array_agg(distinct d.community order by d.community) from job_posts d
-        where d.duplicate_of = j.id and d.community <> j.community), '{}'::text[]) as also_posted_in
-    from matches m
-    join job_posts j on j.id = m.job_post_id and j.duplicate_of is null
-    join job_post_analyses a on a.job_post_id = j.id
-    left join profile_projects bp
-      on bp.id = m.best_project_id and bp.user_id = m.user_id and not bp.hidden
-    left join profile_experience br
-      on br.id = m.best_role_id and br.user_id = m.user_id and not br.hidden
-    where ${sql.join(where, sql` and `)}
-    order by m.posted_at desc, m.id desc
-    limit ${opts.limit + 1}`);
-  const rows = res.rows.slice(0, opts.limit);
-  const items: FeedItem[] = rows.map((r) => {
-    const min = toNum(r.budget_min);
-    const max = toNum(r.budget_max);
-    return {
-      matchId: r.id,
-      score: r.score,
-      reason: r.reason,
-      broad: r.broad,
-      status: r.status,
-      aiStatus: r.ai_status,
-      bestProject:
-        r.bp_id && r.bp_title ? { id: r.bp_id, title: r.bp_title } : null,
-      bestRole:
-        r.br_id && r.br_title ? { id: r.br_id, title: r.br_title } : null,
-      post: {
-        id: r.post_id,
-        title: r.title,
-        community: r.community,
-        url: r.url,
-        postedAt: toDate(r.posted_at),
-        summary: r.summary,
-        categories: r.categories,
-        budget:
-          min === null && max === null
-            ? null
-            : { min, max, currency: r.currency, unit: r.budget_unit },
-        payType: r.pay_type,
-        remote: r.remote,
-        deadline: toDay(r.deadline),
-        redFlags: r.red_flags,
-        applyInstructions: r.apply_instructions,
-        alsoPostedIn: r.also_posted_in,
-      },
-    };
-  });
+  const res = await feedRows(db, where, { limit: opts.limit + 1 });
+  const items = res.rows.slice(0, opts.limit).map(toFeedItem);
   const last = items[items.length - 1];
   const next =
     res.rows.length > opts.limit && last
       ? { postedAt: last.post.postedAt, id: last.matchId }
       : null;
   return { items, next };
+}
+
+export type FeedItemDetail = FeedItem & {
+  /** The post was re-analysed and no longer fits; drafting is refused. */
+  withdrawn: boolean;
+  post: FeedItem["post"] & { body: string };
+};
+
+/**
+ * One of the user's matches with the post's own text, for the match page. Unlike the feed it
+ * includes dismissed and withdrawn matches, so a link from an alert always opens. Null when
+ * the match isn't the user's.
+ */
+export async function feedItem(
+  db: Executor,
+  userId: string,
+  matchId: string,
+): Promise<FeedItemDetail | null> {
+  const res = await feedRows(
+    db,
+    [sql`m.user_id = ${userId}`, sql`m.id = ${matchId}`],
+    { limit: 1, detail: true },
+  );
+  const r = res.rows[0];
+  if (!r) return null;
+  const item = toFeedItem(r);
+  return {
+    ...item,
+    withdrawn: r.withdrawn ?? false,
+    post: { ...item.post, body: r.body ?? "" },
+  };
 }
 
 /**

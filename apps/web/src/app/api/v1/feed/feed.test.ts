@@ -18,6 +18,7 @@ import {
 import { TEST_ENV } from "../../../../../test/test-env";
 import { users } from "@redlance/db";
 import { GET as getFeed } from "./route";
+import { GET as getOne } from "./[matchId]/route";
 import { POST as postStatus } from "./[matchId]/status/route";
 
 beforeEach(async () => {
@@ -349,6 +350,56 @@ describe("POST /api/v1/feed/:matchId/status", () => {
       { origin: TEST_ENV.APP_ORIGIN },
     );
     expect(res.status).toBe(401);
+  });
+});
+
+describe("GET /api/v1/feed/:matchId", () => {
+  const one = (matchId: string, cookie?: string) =>
+    getOne(
+      req(`/api/v1/feed/${matchId}`, { headers: cookie ? { cookie } : {} }),
+      { params: Promise.resolve({ matchId }) },
+    );
+
+  it("returns the match with the post body and the withdrawn flag", async () => {
+    const { cookie, userId } = await setup();
+    const id = await seedMatch(userId, await seedPost());
+    const res = await one(id, cookie);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.matchId).toBe(id);
+    expect(body.withdrawn).toBe(false);
+    expect(typeof body.post.body).toBe("string");
+    expect(body.post.postedAt).toMatch(/Z$/);
+    // Same fields as a feed item, plus the two extras.
+    const feed = await (await get(cookie, "?view=all")).json();
+    const {
+      withdrawn: _w,
+      post: { body: _b, ...post },
+      ...rest
+    } = body;
+    expect(feed.items[0]).toEqual({ ...rest, post });
+  });
+
+  it("dismissed matches still open", async () => {
+    const { cookie, userId } = await setup();
+    const id = await seedMatch(userId, await seedPost());
+    await post(
+      id,
+      { status: "dismissed" },
+      { cookie, origin: TEST_ENV.APP_ORIGIN },
+    );
+    const res = await one(id, cookie);
+    expect(res.status).toBe(200);
+    expect((await res.json()).status).toBe("dismissed");
+  });
+
+  it("another user's match, a bad id, or signed out", async () => {
+    const a = await setup("a@example.com");
+    const b = await setup("b@example.com");
+    const id = await seedMatch(a.userId, await seedPost());
+    expect((await one(id, b.cookie)).status).toBe(404);
+    expect((await one("not-a-uuid", a.cookie)).status).toBe(404);
+    expect((await one(id)).status).toBe(401);
   });
 });
 

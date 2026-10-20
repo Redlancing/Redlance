@@ -16,3 +16,4 @@ export * from "./draft-jobs";
 export * from "./draft-evidence";
 export * from "./voice";
 export * from "./alerts";
+export * from "./dashboard";

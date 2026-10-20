@@ -27,6 +27,8 @@ import {
   failPostMatching,
   failRematch,
   failRescore,
+  dashboardStats,
+  feedItem,
   feedPage,
   jobPostAnalyses,
   jobPosts,
@@ -37,6 +39,8 @@ import {
   matchEvents,
   matches,
   pgErrorCode,
+  alertChannels,
+  replies,
   profileExperience,
   profileProjects,
   profileSkills,
@@ -2598,5 +2602,120 @@ describe("setMatchStatus", () => {
       aiStatus: "done",
       score: 70,
     });
+  });
+});
+
+describe("feedItem", () => {
+  it("returns the user's match with the post's text; null for someone else's", async () => {
+    const priya = await seedUser(PRIYA);
+    const other = await seedUser(DESIGNER);
+    const id = await seedMatch(
+      priya,
+      await seedPost({ ...POST_A, postedAt: ago(DAY) }),
+    );
+    const item = await feedItem(db, priya, id);
+    expect(item?.matchId).toBe(id);
+    expect(item?.withdrawn).toBe(false);
+    expect(item?.post.body.length).toBeGreaterThan(0);
+    // Same shape as the feed page's item, plus body and withdrawn.
+    const { items } = await feedPage(db, priya, { view: "all", limit: 20 });
+    const { withdrawn: _w, post: full, ...rest } = item!;
+    const { body: _b, ...post } = full;
+    expect(items[0]).toEqual({ ...rest, post });
+    expect(await feedItem(db, other, id)).toBeNull();
+  });
+
+  it("still returns dismissed and withdrawn matches, flagged", async () => {
+    const priya = await seedUser(PRIYA);
+    const dismissed = await seedMatch(
+      priya,
+      await seedPost({ ...POST_A, postedAt: ago(DAY) }),
+    );
+    const withdrawn = await seedMatch(
+      priya,
+      await seedPost({ ...POST_A, postedAt: ago(2 * DAY) }),
+    );
+    await setMatchStatus(db, priya, dismissed, "dismissed");
+    await db.execute(
+      sql`update matches set withdrawn_at = now() where id = ${withdrawn}`,
+    );
+    expect((await feedItem(db, priya, dismissed))?.status).toBe("dismissed");
+    expect((await feedItem(db, priya, withdrawn))?.withdrawn).toBe(true);
+  });
+});
+
+describe("dashboardStats", () => {
+  it("counts today's live matches, this week's replies, wins and Telegram", async () => {
+    const priya = await seedUser(PRIYA);
+    const live = await seedMatch(
+      priya,
+      await seedPost({ ...POST_A, postedAt: ago(DAY) }),
+    );
+    const gone = await seedMatch(
+      priya,
+      await seedPost({ ...POST_A, postedAt: ago(DAY) }),
+    );
+    const old = await seedMatch(
+      priya,
+      await seedPost({ ...POST_A, postedAt: ago(3 * DAY) }),
+    );
+    await setMatchStatus(db, priya, gone, "dismissed");
+    await db.execute(
+      sql`update matches set created_at = now() - interval '3 days' where id = ${old}`,
+    );
+    const reply = async (
+      matchId: string,
+      sentAt: Date,
+      status: "sent" | "hired",
+    ) => {
+      const m = await matchRow(matchId);
+      await db.insert(replies).values({
+        userId: priya,
+        matchId,
+        jobPostId: m.jobPostId,
+        kind: "comment",
+        sentText: "Hi",
+        sentAt,
+        status,
+      });
+    };
+    await reply(live, ago(DAY), "sent");
+    await reply(old, ago(10 * DAY), "hired");
+    expect(await dashboardStats(db, priya)).toEqual({
+      newToday: 1,
+      sentThisWeek: 1,
+      sentEver: 2,
+      won: 1,
+      telegramOn: false,
+    });
+    await db.insert(alertChannels).values({
+      userId: priya,
+      kind: "telegram",
+      target: "42",
+      enabled: true,
+      verifiedAt: new Date(),
+    });
+    expect((await dashboardStats(db, priya)).telegramOn).toBe(true);
+  });
+
+  it("today starts at local midnight in the profile's time zone", async () => {
+    const priya = await seedUser(PRIYA);
+    const id = await seedMatch(
+      priya,
+      await seedPost({ ...POST_A, postedAt: ago(DAY) }),
+    );
+    await db.execute(
+      sql`update profiles set time_zone = 'Asia/Kolkata' where user_id = ${priya}`,
+    );
+    // 2026-10-20 18:40 UTC is 00:10 on the 21st in India.
+    const at = new Date("2026-10-20T18:40:00Z");
+    await db.execute(
+      sql`update matches set created_at = '2026-10-20T18:20:00Z' where id = ${id}`,
+    );
+    expect((await dashboardStats(db, priya, at)).newToday).toBe(0);
+    await db.execute(
+      sql`update matches set created_at = '2026-10-20T18:35:00Z' where id = ${id}`,
+    );
+    expect((await dashboardStats(db, priya, at)).newToday).toBe(1);
   });
 });
