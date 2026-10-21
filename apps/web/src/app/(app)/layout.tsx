@@ -46,6 +46,7 @@ export default async function AppLayout({
           <div className="flex items-center gap-1">
             <Link
               href="/settings"
+              prefetch={false}
               aria-label="Settings"
               className="inline-flex size-8 items-center justify-center rounded-lg text-stone transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
             >

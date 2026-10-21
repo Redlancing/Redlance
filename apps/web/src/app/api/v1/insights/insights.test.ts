@@ -2,7 +2,7 @@ import { profiles, subredditInsights, subreddits } from "@redlance/db";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@/server/db";
-import { subredditSummary } from "@/server/insights";
+import { matchInsightLine, subredditSummary } from "@/server/insights";
 import {
   closeAll,
   cookieFor,
@@ -517,5 +517,29 @@ describe("subredditSummary", () => {
     await seedRow("bb", { hiringPosts: 5, budgets: [] });
     expect(await subredditSummary("bb")).toBeNull();
     expect(await subredditSummary("missing")).toBeNull();
+  });
+});
+
+describe("matchInsightLine", () => {
+  it("the summary line while insights are allowed", async () => {
+    await seedRow("forhire");
+    const { userId } = await user();
+    expect(await matchInsightLine(userId, "forhire")).toBe(
+      "~10 hiring posts a week · posted budgets USD/hour $15–35",
+    );
+  });
+
+  it("null after the trial ends, before onboarding, and without a row", async () => {
+    await seedRow("forhire");
+    const { userId } = await user({
+      trialEndsAt: new Date(Date.now() - 1000),
+    });
+    expect(await matchInsightLine(userId, "forhire")).toBeNull();
+    await cookieFor("new@example.com");
+    expect(
+      await matchInsightLine(await userIdOf("new@example.com"), "forhire"),
+    ).toBeNull();
+    const other = await user({}, "paid@example.com");
+    expect(await matchInsightLine(other.userId, "missing")).toBeNull();
   });
 });

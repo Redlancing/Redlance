@@ -8,6 +8,7 @@ import {
   Undo2,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   useCallback,
@@ -46,6 +47,7 @@ export function MatchDetail({
   sentKinds,
   initialVersions,
   loadedAt,
+  insightLine,
 }: {
   item: FeedItemDetailResponse;
   credits: Credits | null;
@@ -59,6 +61,8 @@ export function MatchDetail({
    * and checked again in the background.
    */
   loadedAt?: number;
+  /** One line from the subreddit's insights ("~35 hiring posts a week · …"), when allowed. */
+  insightLine?: string | null;
 }) {
   const searchParams = useSearchParams();
   const backHref = `/feed${searchParams.size ? `?${searchParams.toString()}` : ""}`;
@@ -219,6 +223,17 @@ export function MatchDetail({
       )}
 
       <MatchHeader item={item} />
+      {insightLine && (
+        <p className="mt-1 text-sm text-stone tabular-nums">
+          <Link
+            href={`/insights/${item.post.community.toLowerCase()}`}
+            prefetch={false}
+            className="hover:text-foreground hover:underline"
+          >
+            r/{item.post.community}: {insightLine}
+          </Link>
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {!withdrawn && (

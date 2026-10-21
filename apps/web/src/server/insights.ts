@@ -329,6 +329,22 @@ export async function subredditSummary(
   return row ? summaryLine(row) : null;
 }
 
+/**
+ * The match page's insight line for the post's subreddit, or null when the user can't see
+ * insights (not onboarded, trial ended) or nothing passes the threshold. Never fails the page.
+ */
+export async function matchInsightLine(
+  userId: string,
+  subreddit: string,
+): Promise<string | null> {
+  try {
+    await insightsViewer(userId);
+    return await subredditSummary(subreddit);
+  } catch {
+    return null;
+  }
+}
+
 /** Profile fields the insights need; 404 before onboarding, 403 INSIGHTS_LOCKED when not allowed. */
 export async function insightsViewer(
   userId: string,

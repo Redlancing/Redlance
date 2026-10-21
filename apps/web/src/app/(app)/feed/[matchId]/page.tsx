@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/server/current-user";
 import { getDb } from "@/server/db";
 import { creditsSummary, listVersions } from "@/server/drafts";
 import { toFeedItemDetailResponse } from "@/server/feed";
+import { matchInsightLine } from "@/server/insights";
 import { sentKindsForMatch } from "@/server/replies";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -52,9 +53,11 @@ export default async function MatchPage({
     sentKindsForMatch(user, id),
   ]);
   if (!item) notFound();
+  const insightLine = await matchInsightLine(user.userId, item.post.community);
   return (
     <MatchDetail
       item={toFeedItemDetailResponse(item)}
+      insightLine={insightLine}
       sentKinds={sentKinds}
       initialVersions={versions}
       loadedAt={loadedAt}
