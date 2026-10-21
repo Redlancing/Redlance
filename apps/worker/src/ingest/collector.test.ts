@@ -560,6 +560,33 @@ describe("poller", () => {
     expect(new Set(urls.slice(0, 3)).size).toBe(3);
   });
 
+  it("tells the lock hooks when the lock is taken and released, and not at all without it", async () => {
+    const events: string[] = [];
+    const clock = virtualClock();
+    const mk = (lock: boolean) =>
+      createPoller({
+        db,
+        log,
+        userAgent: UA,
+        acquireLock: async () => (lock ? heldLock() : null),
+        fetch: fakeFetch(() => ok(atomFeed([]))),
+        // Without the lock the loop only sleeps; the virtual clock would spin, so use real time.
+        ...(lock ? { now: clock.now, sleep: clock.sleep } : {}),
+        onLockAcquired: () => void events.push("acquired"),
+        onLockReleased: () => void events.push("released"),
+      });
+    const without = mk(false);
+    without.start();
+    await new Promise((r) => setTimeout(r, 50));
+    await without.stop();
+    expect(events).toEqual([]);
+    const withLock = mk(true);
+    withLock.start();
+    await until(() => events.includes("acquired"));
+    await withLock.stop();
+    expect(events).toEqual(["acquired", "released"]);
+  });
+
   it("splits a group Reddit keeps refusing, then sets the bad subreddit aside", async () => {
     await applyFeedPlan(db, [
       {

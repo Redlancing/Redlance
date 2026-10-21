@@ -41,6 +41,9 @@ export type PollerDeps = {
   /** Daily upkeep (stats, re-plan, prune): run on taking the lock and then every interval. */
   upkeep?: () => Promise<void>;
   upkeepIntervalMs?: number;
+  /** Called after taking the lock / before releasing it: hourly jobs that must run in one process only. */
+  onLockAcquired?: () => void;
+  onLockReleased?: () => Promise<void> | void;
 };
 
 const CATALOGUE_TTL_MS = 5 * 60_000;
@@ -254,6 +257,7 @@ export function createPoller(deps: PollerDeps) {
       waitingLogged = false;
       deps.log.info("polling Reddit");
       try {
+        deps.onLockAcquired?.();
         await runWhileLocked(lock);
       } catch (err) {
         deps.log.error(
@@ -266,6 +270,7 @@ export function createPoller(deps: PollerDeps) {
           stop.signal,
         );
       } finally {
+        await Promise.resolve(deps.onLockReleased?.()).catch(() => {});
         await lock.release().catch(() => {});
       }
     }

@@ -1,6 +1,10 @@
 import { statSync } from "node:fs";
 import { basename } from "node:path";
-import { JOB_POSTS_CHANNEL, createDb } from "@redlance/db";
+import {
+  JOB_POSTS_CHANNEL,
+  createDb,
+  refreshSubredditInsights,
+} from "@redlance/db";
 import { acquireSessionLock, createPgListener } from "./db";
 import { parseWorkerEnv, redditUserAgent } from "./env";
 import { createAlertsFromEnv } from "./alerts";
@@ -11,6 +15,7 @@ import { handlers } from "./jobs";
 import { createLlmFromEnv } from "./llm";
 import { createDrafterFromEnv } from "./drafts/drafter";
 import { createVoiceUpdaterFromEnv } from "./drafts/voice-job";
+import { createInsightsRefresher } from "./insights/refresher";
 import { createLogger } from "./logger";
 import { createMatcherFromEnv } from "./match/matcher";
 import { createRescorerFromEnv } from "./match/rescorer";
@@ -49,10 +54,10 @@ async function main() {
   const { db, pool } = createDb(env.DATABASE_URL, {
     // import jobs + post analysis + matching (posts and one re-match) + AI re-scores + the
     // poller and upkeep, plus drafts and voice updates (each holds at most one connection at a time),
-    // plus the alert router and sender (the listeners and the bot's lock use their own connections).
+    // plus the hourly insights refresh, the alert router and sender (the listeners and the bot's lock use their own connections).
     // Alerts get +5, not +2: the sender runs up to 25 groups, each with short claim-check and
     // complete transactions, so a few spare connections keep it from queueing on the pool.
-    max: env.WORKER_CONCURRENCY * 4 + env.DRAFT_CONCURRENCY + 11,
+    max: env.WORKER_CONCURRENCY * 4 + env.DRAFT_CONCURRENCY + 12,
     onError: (err) =>
       log.error({ err: err.message }, "postgres idle client error"),
   });
@@ -66,6 +71,14 @@ async function main() {
     llm,
   });
 
+  // Hourly insights refresh: the poller starts it on taking the lock and stops it on losing it.
+  const insights =
+    env.INGEST_ENABLED && env.INSIGHTS_ENABLED
+      ? createInsightsRefresher({
+          log: log.child({ part: "insights" }),
+          refresh: () => refreshSubredditInsights(db, new Date()),
+        })
+      : null;
   const poller = env.INGEST_ENABLED
     ? createPoller({
         db,
@@ -83,6 +96,8 @@ async function main() {
             maxGroupSize: env.INGEST_MAX_GROUP,
           }),
         upkeepIntervalMs: UPKEEP_INTERVAL_MS,
+        onLockAcquired: () => insights?.start(),
+        onLockReleased: () => insights?.stop(),
       })
     : null;
   const analyser = env.ANALYSIS_ENABLED
@@ -135,6 +150,7 @@ async function main() {
     await Promise.all([
       runner.stop(),
       poller?.stop(),
+      insights?.stop(),
       analyser?.stop(),
       matcher?.stop(),
       rescorer?.stop(),
@@ -172,6 +188,7 @@ async function main() {
       rescore: rescorer !== null,
       drafts: drafter !== null,
       voice: voice !== null,
+      insights: insights !== null,
       alerts: alerts !== null,
       telegram: alerts !== null && Boolean(env.TELEGRAM_BOT_TOKEN),
       draftModel: env.DRAFT_MODEL,

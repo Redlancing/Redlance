@@ -282,6 +282,13 @@ describe("drafting settings", () => {
       expect(env.APP_ORIGIN).toBeUndefined();
     });
 
+    it("parses INSIGHTS_ENABLED (default true)", () => {
+      expect(parseWorkerEnv(base).INSIGHTS_ENABLED).toBe(true);
+      expect(
+        parseWorkerEnv({ ...base, INSIGHTS_ENABLED: "false" }).INSIGHTS_ENABLED,
+      ).toBe(false);
+    });
+
     it("parses ALERTS_ENABLED like the other flags", () => {
       expect(
         parseWorkerEnv({ ...base, ALERTS_ENABLED: "false" }).ALERTS_ENABLED,

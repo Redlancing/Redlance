@@ -54,6 +54,8 @@ export type WorkerEnv = {
   DRAFT_BUDGET_PAUSE_USD: number;
   /** Run the alert router, and the Telegram sender and bot when a token is set (docs/alerts/). */
   ALERTS_ENABLED: boolean;
+  /** Hourly subreddit insights refresh (docs/insights/design.md); runs in the poller-lock holder, so needs INGEST_ENABLED. */
+  INSIGHTS_ENABLED: boolean;
   /** From @BotFather. Unset: no sender or bot, and the router records skipped_no_channel. */
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_BOT_USERNAME?: string;
@@ -160,6 +162,10 @@ const schema = z.object({
   DRAFT_BUDGET_PAUSE_USD: z.preprocess(
     empty,
     z.coerce.number().min(0).max(10_000).default(80),
+  ),
+  INSIGHTS_ENABLED: z.preprocess(
+    empty,
+    z.enum(["true", "false"]).default("true"),
   ),
   ALERTS_ENABLED: z.preprocess(
     empty,
@@ -270,6 +276,7 @@ export function parseWorkerEnv(
         DRAFTS_ENABLED: env.DRAFTS_ENABLED === "true",
         VOICE_ENABLED: env.VOICE_ENABLED === "true",
         ALERTS_ENABLED: env.ALERTS_ENABLED === "true",
+        INSIGHTS_ENABLED: env.INSIGHTS_ENABLED === "true",
         APP_ORIGIN: env.APP_ORIGIN ? new URL(env.APP_ORIGIN).origin : undefined,
         DRAFT_MODEL: env.DRAFT_MODEL ?? env.VERTEX_MODEL_FAST,
         REWRITE_MODEL: env.REWRITE_MODEL ?? env.VERTEX_MODEL_FAST,
