@@ -22,7 +22,7 @@ export const plans: Plan[] = [
       "Red flags on every post",
       "Connected to the right subreddits",
     ],
-    cta: { label: "Start free", href: "/signup" },
+    cta: { label: "Start free", href: "/login" },
     available: true,
   },
   {
@@ -36,7 +36,7 @@ export const plans: Plan[] = [
       "Follow-up drafts when a reply goes quiet",
       "Subreddit insights: volume, posted budgets, peak hours",
     ],
-    cta: { label: "Join early access", href: "/signup" },
+    cta: { label: "Join early access", href: "/login" },
     available: true,
     highlight: true,
   },

@@ -15,7 +15,7 @@ export const announcement = {
   // Bump the id when the message changes so people who dismissed the old one see the new one.
   id: "early-access-2026-09",
   text: "Early access is open for freelancers in India",
-  href: "/signup",
+  href: "/login",
 };
 
 export const productMenu: { columns: NavGroup[]; side: NavGroup[] } = {
@@ -110,7 +110,7 @@ export const primaryLinks: NavItem[] = [
 
 export const authLinks = {
   logIn: { title: "Log in", href: "/login" },
-  signUp: { title: "Start free", href: "/signup" },
+  signUp: { title: "Start free", href: "/login" },
 };
 
 export const footerColumns: NavGroup[] = [

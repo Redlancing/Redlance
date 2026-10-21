@@ -50,7 +50,7 @@ app/layout.tsx                 fonts (Inter, Fraunces, Bricolage), metadata, <ht
 
 ## How it connects to the rest
 
-- The header's **Log in** goes to `/login` (foundation). **Start free** goes to `/signup`, which doesn't exist.
+- The header's **Log in** goes to `/login` (foundation). **Start free** also goes to `/login` (since 2026-10-21; login creates the account, until Cognito brings a real sign-up).
 - Nothing else connects. The homepage reads no data, so later features (feed, insights) won't change it unless we choose to show live numbers.
 
 ## Out of date (to fix in a homepage copy pass)
@@ -60,7 +60,7 @@ These came from product decisions made after the page was built:
 | Problem | Where |
 |---|---|
 | Plans are Free / Pro / Agency, priced in rupees with UPI. The decision is no free tier: a 5-day trial, then standard, Max and Agency, with draft **credits** (not "unlimited") | `lib/pricing.ts`, `pricing.tsx:45-46`, `faq.ts:22,37`, `alerts.tsx:25`, `voice-showcase.tsx:36`, the "Pro" badges in `how-it-works/index.tsx` |
-| "Start free" and the announcement link go to `/signup`, which doesn't exist; `/privacy` and `/terms` don't exist either | `lib/nav.ts:18,113,144-145`, `lib/pricing.ts:25,39` |
+| `/privacy` and `/terms` don't exist ("Start free" and the announcement link pointed at a missing `/signup`; they go to `/login` since 2026-10-21) | `lib/nav.ts:18,113,144-145`, `lib/pricing.ts:25,39` |
 | Says users are "connected to subreddits". Now one central catalogue is polled for everyone | `how-it-works/index.tsx:45,49-50`, `niche-tabs.tsx:87,120`, `lib/pricing.ts:23`, `faq.ts:32`, `lib/nav.ts:28` |
 | "More than 150 hiring subreddits". The catalogue has 238 active | `faq.ts:17` |
 | Portfolio links and "learns your tone from replies you've written". There is no portfolio step (GitHub instead), and voice is learned from edits | `how-it-works/index.tsx:83,91-93`, `voice-showcase.tsx:15-16,31`, `faq.ts:27` |
