@@ -73,7 +73,7 @@ export type JudgeInput = {
   draft: { comment: string; dm: string };
   /** A rewrite case: the draft being rewritten, so "shorter than before" can be checked. */
   previous?: { comment: string; dm: string };
-  evidence: Pick<Evidence, "evidenceText">;
+  evidence: Pick<Evidence, "evidenceText" | "allowedLinks">;
 };
 
 const escapeTags = (s: string) => s.replace(/</g, "‹").replace(/>/g, "›");
@@ -93,6 +93,8 @@ export function buildJudgePrompt(input: JudgeInput): string {
     "",
     "<evidence>",
     escapeTags(evidence.evidenceText),
+    // The drafter gets its link apart from evidenceText; without it here, every cited link looked invented.
+    ...evidence.allowedLinks.map((l) => `Link: ${escapeTags(l)}`),
     "</evidence>",
     ...(c.rewriteRequest
       ? [
