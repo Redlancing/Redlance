@@ -45,15 +45,20 @@ export default async function MatchPage({
   // compares it to its own clock: a page kept in Next's client cache for minutes is checked
   // again in the background (see STALE_AFTER_MS).
   const loadedAt = stampNow();
-  // Drafts and sent state are keyed by the match, so all four reads run together.
-  const [item, credits, versions, sentKinds] = await Promise.all([
-    loadMatch(user.userId, id),
+  // Drafts and sent state are keyed by the match, so all five reads run together.
+  // The insight line needs the post's subreddit, so it starts as soon as the match is loaded
+  // and runs beside the other reads instead of after them.
+  const itemRead = loadMatch(user.userId, id);
+  const [item, credits, versions, sentKinds, insightLine] = await Promise.all([
+    itemRead,
     creditsSummary(user),
     listVersions(user, id),
     sentKindsForMatch(user, id),
+    itemRead.then((i) =>
+      i ? matchInsightLine(user.userId, i.post.community) : null,
+    ),
   ]);
   if (!item) notFound();
-  const insightLine = await matchInsightLine(user.userId, item.post.community);
   return (
     <MatchDetail
       item={toFeedItemDetailResponse(item)}

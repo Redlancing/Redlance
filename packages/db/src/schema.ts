@@ -773,6 +773,8 @@ export const jobPosts = pgTable(
       .where(sql`${t.analysisStatus} = 'running'`),
     index("job_posts_community_posted_idx").on(t.community, t.postedAt),
     index("job_posts_posted_idx").on(t.postedAt),
+    // min(first_seen_at) = when collection started (subreddit insights history)
+    index("job_posts_first_seen_idx").on(t.firstSeenAt),
     index("job_posts_author_idx").on(t.author),
     index("job_posts_author_posted_idx").on(t.author, t.postedAt),
     index("job_posts_duplicate_of_idx")
@@ -1680,7 +1682,7 @@ export const subredditInsights = pgTable(
     hourSlots: integer("hour_slots").array().notNull(),
     knownAuthorPosts: integer("known_author_posts").notNull(),
     repeatAuthorPosts: integer("repeat_author_posts").notNull(),
-    /** Oldest stored post (any subreddit): repeat clients need history behind the window. */
+    /** When collection started (earliest first_seen_at, any subreddit): trends and repeat clients need history behind the window. */
     historyStart: timestamp("history_start", { withTimezone: true }),
   },
   (t) => [

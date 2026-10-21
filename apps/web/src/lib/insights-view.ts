@@ -194,11 +194,13 @@ function pctOf(part: number, whole: number): string {
 
 function paidSentence(p: {
   revShare: number;
+  commission: number;
   unpaid: number;
   other: number;
 }): string {
   const rest = [
     p.revShare > 0 ? `${p.revShare}% offer a revenue share` : null,
+    p.commission > 0 ? `${p.commission}% commission only` : null,
     p.unpaid > 0 ? `${p.unpaid}% are unpaid` : null,
     p.other > 0 ? `${p.other}% don't say` : null,
   ].filter(Boolean);
@@ -226,7 +228,10 @@ export function hiringFacts(r: SubredditInsightsResponse): Fact[] {
     })),
     fact("remote", "Remote", r.remote, (v) => ({
       value: `${v.percent}%`,
-      sentence: "of hiring posts are remote",
+      sentence:
+        v.unknown > 0
+          ? `of hiring posts are remote; ${v.unknown}% don't say`
+          : "of hiring posts are remote",
     })),
   ];
 }

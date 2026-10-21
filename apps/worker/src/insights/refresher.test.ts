@@ -96,4 +96,38 @@ describe("insights refresher", () => {
     await p;
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  it("a restart soon after a run waits out the rest of the interval", async () => {
+    const refresh = vi.fn().mockResolvedValue({ upserted: 0, deleted: 0 });
+    const r = createInsightsRefresher({ log: log() as never, refresh });
+    r.start();
+    await vi.advanceTimersByTimeAsync(0);
+    await r.stop();
+    await vi.advanceTimersByTimeAsync(20 * 60_000);
+    r.start(); // lock picked up again 20 minutes later
+    await vi.advanceTimersByTimeAsync(0);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(40 * 60_000 - 1);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(refresh).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(HOUR);
+    expect(refresh).toHaveBeenCalledTimes(3);
+    await r.stop();
+  });
+
+  it("logs a skipped refresh as skipped", async () => {
+    const l = log();
+    const refresh = vi
+      .fn()
+      .mockResolvedValue({ upserted: 0, deleted: 0, skipped: true });
+    const r = createInsightsRefresher({ log: l as never, refresh });
+    r.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(l.info).toHaveBeenCalledWith(
+      expect.objectContaining({ skipped: true }),
+      expect.stringContaining("skipped"),
+    );
+    await r.stop();
+  });
 });

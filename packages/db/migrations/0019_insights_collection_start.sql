@@ -1,0 +1,1 @@
+CREATE INDEX "job_posts_first_seen_idx" ON "job_posts" USING btree ("first_seen_at");

@@ -11,9 +11,15 @@ const { db, pool } = createDb(url, { max: 2 });
 try {
   const t0 = Date.now();
   const res = await refreshSubredditInsights(db, new Date());
-  console.log(
-    `Refreshed: ${res.upserted} upserted, ${res.deleted} deleted, ${Date.now() - t0} ms`,
-  );
+  if (res.skipped) {
+    console.log(
+      "Skipped: another refresh (the worker's?) is running right now",
+    );
+  } else {
+    console.log(
+      `Refreshed: ${res.upserted} upserted, ${res.deleted} deleted, ${Date.now() - t0} ms`,
+    );
+  }
 } finally {
   await pool.end();
 }

@@ -61,7 +61,14 @@ function detail(
       pattern: "weekdays",
     },
     skills: { status: "ok", skills: [] },
-    paid: { status: "ok", paid: 92, revShare: 5, unpaid: 3, other: 0 },
+    paid: {
+      status: "ok",
+      paid: 92,
+      revShare: 5,
+      commission: 0,
+      unpaid: 3,
+      other: 0,
+    },
     redFlags: {
       status: "ok",
       percent: 12,
@@ -70,7 +77,7 @@ function detail(
     },
     crowded: { status: "ok", perHiringPost: "3" },
     budgetStated: { status: "ok", percent: 40 },
-    remote: { status: "ok", percent: 95 },
+    remote: { status: "ok", percent: 95, unknown: 0 },
     repeatClients: { status: "building", days: 9 },
     latestMatches: [],
     ...over,
@@ -341,5 +348,38 @@ describe("updatedText", () => {
     );
     expect(updatedText("2026-10-01T11:48:00.000Z", now)).toBe("Updated Oct 1");
     expect(updatedText("not a date", now)).toBe("");
+  });
+});
+
+describe("paid and remote sentences", () => {
+  const sentence = (r: SubredditInsightsResponse, key: string) =>
+    hiringFacts(r).find((f) => f.key === key);
+
+  it("names commission-only apart from the posts that don't say", () => {
+    const r = detail({
+      paid: {
+        status: "ok",
+        paid: 75,
+        revShare: 0,
+        commission: 5,
+        unpaid: 3,
+        other: 17,
+      },
+    });
+    expect(sentence(r, "paid")).toMatchObject({
+      sentence: "are paid; 5% commission only, 3% are unpaid, 17% don't say",
+    });
+  });
+
+  it("says how many remote posts don't say, only when some don't", () => {
+    expect(
+      sentence(
+        detail({ remote: { status: "ok", percent: 60, unknown: 20 } }),
+        "remote",
+      ),
+    ).toMatchObject({ sentence: "of hiring posts are remote; 20% don't say" });
+    expect(sentence(detail(), "remote")).toMatchObject({
+      sentence: "of hiring posts are remote",
+    });
   });
 });

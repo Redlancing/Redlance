@@ -16,6 +16,9 @@ import { subredditInsights } from "./schema";
 
 type Executor = Pick<Database, "execute">;
 
+/** Arbitrary key for the refresh's advisory lock ("insights" in ASCII hex-ish); no other code uses it. */
+export const INSIGHTS_REFRESH_LOCK_KEY = 0x1a51_6875;
+
 export type SubredditInsightsRow = typeof subredditInsights.$inferSelect;
 
 /**
@@ -30,12 +33,29 @@ export type SubredditInsightsRow = typeof subredditInsights.$inferSelect;
  *   analysis still count; `other` posts count nowhere;
  * - a post's budget is the midpoint of min and max, or the one value given; zero is no value;
  *   percentiles are per (currency, unit), never converted;
+ * - history_start is when collection started (earliest first_seen_at, not the oldest posted_at:
+ *   first-page polls store old posts), so trends and repeat clients wait for real history;
  * - repeat client: the same author has an earlier hiring post (not another copy of this gig)
  *   in any subreddit in the 180 days before; known authors exclude null and `[deleted]`.
  */
 export async function refreshSubredditInsights(
-  db: Executor,
+  db: Pick<Database, "transaction">,
   now: Date = new Date(),
+): Promise<{ upserted: number; deleted: number; skipped: boolean }> {
+  // The hourly worker refresh and the `insights:refresh` CLI could otherwise run together
+  // (and upsert/delete over each other). The lock lives until the transaction ends.
+  return db.transaction(async (tx) => {
+    const got = await tx.execute<{ ok: boolean }>(
+      sql`select pg_try_advisory_xact_lock(${INSIGHTS_REFRESH_LOCK_KEY}) as ok`,
+    );
+    if (!got.rows[0]?.ok) return { upserted: 0, deleted: 0, skipped: true };
+    return { ...(await recompute(tx, now)), skipped: false };
+  });
+}
+
+async function recompute(
+  db: Executor,
+  now: Date,
 ): Promise<{ upserted: number; deleted: number }> {
   const win = INSIGHT_WINDOW_DAYS;
   const res = await db.execute<{ upserted: number; deleted: number }>(sql`
@@ -140,7 +160,7 @@ export async function refreshSubredditInsights(
              b.budget_stated, coalesce(pay.j, '{}'), coalesce(remote.j, '{}'), b.red_flag_posts,
              coalesce(flags.j, '{}'), coalesce(skills.j, '[]'), coalesce(budgets.j, '[]'),
              hours.slots, b.known_author_posts, coalesce(repeats.n, 0),
-             (select min(posted_at) from job_posts)
+             (select min(first_seen_at) from job_posts)
       from base b
       cross join bounds bd
       join hours on hours.community = b.community
@@ -239,6 +259,42 @@ export async function userFitCounts(
     where p.community = ${subreddit} and p.posted_at >= ${since.toISOString()}::timestamptz`);
   const r = res.rows[0];
   return { bestMatches: r?.best ?? 0, hiringPosts: r?.hiring ?? 0 };
+}
+
+/**
+ * `userFitCounts` for many subreddits in one query, keyed by subreddit. Subreddits with no
+ * hiring post come back as zeros. `since` is one date for all of them.
+ */
+export async function userFitCountsMany(
+  db: Executor,
+  userId: string,
+  subreddits: readonly string[],
+  since: Date,
+): Promise<Map<string, { bestMatches: number; hiringPosts: number }>> {
+  const out = new Map(
+    subreddits.map((s) => [s, { bestMatches: 0, hiringPosts: 0 }]),
+  );
+  if (subreddits.length === 0) return out;
+  const res = await db.execute<{
+    community: string;
+    best: number;
+    hiring: number;
+  }>(sql`
+    select p.community, count(*)::int as hiring,
+           (count(*) filter (where exists (
+             select 1 from matches m
+             where m.user_id = ${userId} and m.job_post_id = coalesce(p.duplicate_of, p.id)
+               and m.withdrawn_at is null and m.score >= ${BEST_MIN_SCORE})))::int as best
+    from job_posts p
+    join job_post_analyses a on a.job_post_id = coalesce(p.duplicate_of, p.id) and a.kind = 'hiring'
+    where p.community in (${sql.join(
+      subreddits.map((s) => sql`${s}`),
+      sql`, `,
+    )}) and p.posted_at >= ${since.toISOString()}::timestamptz
+    group by p.community`);
+  for (const r of res.rows)
+    out.set(r.community, { bestMatches: r.best, hiringPosts: r.hiring });
+  return out;
 }
 
 /** The user's newest matches (any score, not dismissed or withdrawn) from one subreddit. */

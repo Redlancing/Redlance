@@ -194,6 +194,7 @@ describe("GET /api/v1/insights/:subreddit", () => {
       status: "ok",
       paid: 75,
       revShare: 10,
+      commission: 0,
       unpaid: 10,
       other: 5,
     });
@@ -204,7 +205,7 @@ describe("GET /api/v1/insights/:subreddit", () => {
     });
     expect(body.crowded).toEqual({ status: "ok", perHiringPost: "1.5" });
     expect(body.budgetStated).toEqual({ status: "ok", percent: 50 });
-    expect(body.remote).toEqual({ status: "ok", percent: 95 });
+    expect(body.remote).toEqual({ status: "ok", percent: 95, unknown: 0 });
     expect(body.repeatClients).toEqual({ status: "ok", percent: 30 });
     expect(body.latestMatches).toEqual([]);
   });
@@ -339,6 +340,56 @@ describe("trend", () => {
     const { cookie } = await user();
     const w = (await (await one(cookie, "tt")).json()).postsPerWeek;
     expect(w).toMatchObject({ status: "ok", prevPerWeek: null });
+  });
+});
+
+describe("paid and remote: unknowns", () => {
+  it("counts commission-only apart from unknown pay, and reports unknown remote", async () => {
+    await seedRow("pp", {
+      payCounts: { paid: 24, commission_only: 2, unpaid: 6, unknown: 8 },
+      remoteCounts: { remote: 24, onsite: 8, unknown: 8 },
+    });
+    const { cookie } = await user();
+    const body = await (await one(cookie, "pp")).json();
+    expect(body.paid).toEqual({
+      status: "ok",
+      paid: 60,
+      revShare: 0,
+      commission: 5,
+      unpaid: 15,
+      other: 20,
+    });
+    expect(body.remote).toEqual({ status: "ok", percent: 60, unknown: 20 });
+  });
+});
+
+describe("posts a week: collection start", () => {
+  it("is building under 7 days of collection", async () => {
+    await seedRow("ww", { historyStart: new Date(Date.now() - 3 * DAY) });
+    const { cookie } = await user();
+    expect((await (await one(cookie, "ww")).json()).postsPerWeek).toEqual({
+      status: "building",
+      days: 3,
+    });
+  });
+
+  it("divides by the weeks actually covered, not four", async () => {
+    // 40 posts over 14 days = 2 weeks -> 20 a week
+    await seedRow("ww", { historyStart: new Date(Date.now() - 14 * DAY) });
+    const { cookie } = await user();
+    expect((await (await one(cookie, "ww")).json()).postsPerWeek).toEqual({
+      status: "ok",
+      perWeek: 20,
+      prevPerWeek: null,
+    });
+  });
+
+  it("uses the full 28 days once collection is older", async () => {
+    await seedRow("ww", { historyStart: new Date(Date.now() - 45 * DAY) });
+    const { cookie } = await user();
+    expect((await (await one(cookie, "ww")).json()).postsPerWeek).toMatchObject(
+      { status: "ok", perWeek: 10, prevPerWeek: null },
+    );
   });
 });
 

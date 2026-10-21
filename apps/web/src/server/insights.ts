@@ -24,10 +24,11 @@ import {
   profiles,
   subreddits,
   userFitCounts,
+  userFitCountsMany,
   userInsightSubreddits,
   type SubredditInsightsRow,
 } from "@redlance/db";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { getDb } from "./db";
 import { ApiError } from "./errors";
 
@@ -38,6 +39,8 @@ import { ApiError } from "./errors";
 
 const DAY_MS = 86_400_000;
 const WEEKS = INSIGHT_WINDOW_DAYS / 7;
+/** Fewer days of collection than this and "posts a week" is still building. */
+const MIN_COVERED_DAYS = 7;
 const MAX_BUDGET_GROUPS = 3;
 const MAX_SKILLS = 5;
 const LATEST_MATCHES = 5;
@@ -70,6 +73,7 @@ function gated<T>(n: number, build: () => T): Insight<T> {
     : notEnough(n);
 }
 
+/** Days since collection started (row.historyStart is min(first_seen_at), not the oldest posted_at). */
 function historyDays(row: SubredditInsightsRow): number {
   if (!row.historyStart) return 0;
   return Math.max(
@@ -89,12 +93,25 @@ function hasTrendHistory(row: SubredditInsightsRow): boolean {
   );
 }
 
-function perWeek(row: SubredditInsightsRow) {
+/** Days of the 28-day window that collection covers; a row without a start date counts as all of it. */
+function coveredDays(row: SubredditInsightsRow): number {
+  return row.historyStart === null
+    ? INSIGHT_WINDOW_DAYS
+    : Math.min(INSIGHT_WINDOW_DAYS, historyDays(row));
+}
+
+/** Posts a week over the weeks actually collected, so a new install isn't divided by 4. */
+function perWeek(row: SubredditInsightsRow): Insight<{
+  perWeek: number;
+  prevPerWeek: number | null;
+}> {
+  const days = coveredDays(row);
+  if (days < MIN_COVERED_DAYS) return { status: "building", days };
   return gated(row.hiringPosts, () => {
     const trend =
       row.hiringPostsPrev >= INSIGHT_MIN_POINTS && hasTrendHistory(row);
     return {
-      perWeek: Math.round(row.hiringPosts / WEEKS),
+      perWeek: Math.round(row.hiringPosts / (days / 7)),
       prevPerWeek: trend ? Math.round(row.hiringPostsPrev / WEEKS) : null,
     };
   });
@@ -213,12 +230,15 @@ function shapeBody(
     paid: gated(n, () => {
       const paid = payPct("paid");
       const revShare = payPct("revshare");
+      const commission = payPct("commission_only");
       const unpaid = payPct("unpaid");
       return {
         paid,
         revShare,
+        commission,
         unpaid,
-        other: Math.max(0, 100 - paid - revShare - unpaid),
+        // posts whose pay type is unknown
+        other: Math.max(0, 100 - paid - revShare - commission - unpaid),
       };
     }),
     redFlags: redFlags(row),
@@ -226,7 +246,10 @@ function shapeBody(
       perHiringPost: perPostText(row.forHirePosts, n),
     })),
     budgetStated: gated(n, () => ({ percent: pct(row.budgetStated, n) })),
-    remote: gated(n, () => ({ percent: pct(row.remoteCounts.remote ?? 0, n) })),
+    remote: gated(n, () => ({
+      percent: pct(row.remoteCounts.remote ?? 0, n),
+      unknown: pct(row.remoteCounts.unknown ?? 0, n),
+    })),
     repeatClients: !hasTrendHistory(row)
       ? { status: "building", days: historyDays(row) }
       : gated(row.knownAuthorPosts, () => ({
@@ -365,9 +388,9 @@ export async function insightsViewer(
   return { userId, timeZone: p.timeZone, onboardedAt: p.onboardedAt };
 }
 
-function fitSince(row: SubredditInsightsRow, viewer: InsightsViewer): Date {
+function fitSince(windowStart: Date, viewer: InsightsViewer): Date {
   return new Date(
-    Math.max(row.windowStart.getTime(), viewer.onboardedAt.getTime()),
+    Math.max(windowStart.getTime(), viewer.onboardedAt.getTime()),
   );
 }
 
@@ -375,11 +398,9 @@ async function displayNames(names: string[]): Promise<Map<string, string>> {
   if (names.length === 0) return new Map();
   const rows = await getDb()
     .select({ name: subreddits.name, displayName: subreddits.displayName })
-    .from(subreddits);
-  const wanted = new Set(names);
-  return new Map(
-    rows.filter((r) => wanted.has(r.name)).map((r) => [r.name, r.displayName]),
-  );
+    .from(subreddits)
+    .where(inArray(subreddits.name, names));
+  return new Map(rows.map((r) => [r.name, r.displayName]));
 }
 
 export async function listInsights(
@@ -398,24 +419,27 @@ export async function listInsights(
       ).map((r) => [r.subreddit, r]),
     );
     const names = await displayNames(mine.map((m) => m.subreddit));
-    const out = await Promise.all(
-      mine
-        .filter((m) => rows.has(m.subreddit))
-        .map(async (m) => {
-          const row = rows.get(m.subreddit)!;
-          const fit = await userFitCounts(
-            db,
-            viewer.userId,
-            m.subreddit,
-            fitSince(row, viewer),
-          );
-          return shapeListRow(
-            row,
-            names.get(m.subreddit) ?? m.subreddit,
-            fit,
-            m.matches,
-          );
-        }),
+    const shown = mine.filter((m) => rows.has(m.subreddit));
+    // One query for every row: they were all computed in the same refresh, so they share a
+    // window start; take the latest if a refresh is mid-way.
+    const windowStart = new Date(
+      Math.max(
+        ...shown.map((m) => rows.get(m.subreddit)!.windowStart.getTime()),
+      ),
+    );
+    const fits = await userFitCountsMany(
+      db,
+      viewer.userId,
+      shown.map((m) => m.subreddit),
+      fitSince(windowStart, viewer),
+    );
+    const out = shown.map((m) =>
+      shapeListRow(
+        rows.get(m.subreddit)!,
+        names.get(m.subreddit) ?? m.subreddit,
+        fits.get(m.subreddit)!,
+        m.matches,
+      ),
     );
     return { tab, rows: out };
   }
@@ -444,7 +468,12 @@ export async function subredditInsights(
   const [row] = await insightRows(db, [subreddit]);
   if (!row) return null;
   const [fit, latest, names] = await Promise.all([
-    userFitCounts(db, viewer.userId, subreddit, fitSince(row, viewer)),
+    userFitCounts(
+      db,
+      viewer.userId,
+      subreddit,
+      fitSince(row.windowStart, viewer),
+    ),
     latestMatchesIn(db, viewer.userId, subreddit, LATEST_MATCHES),
     displayNames([subreddit]),
   ]);

@@ -5,7 +5,9 @@ import {
   insightRows,
   latestMatchesIn,
   refreshSubredditInsights,
+  INSIGHTS_REFRESH_LOCK_KEY,
   userFitCounts,
+  userFitCountsMany,
   userInsightSubreddits,
 } from "./insights";
 import { runMigrations } from "./migrate";
@@ -47,6 +49,8 @@ const ago = (days: number, extraMs = 0) =>
 type PostOver = {
   community?: string;
   at?: Date;
+  /** When collection saw the post; defaults to now (the real clock). */
+  firstSeen?: Date;
   author?: string | null;
   preKind?: "hiring" | "for_hire" | "unknown";
   duplicateOf?: string;
@@ -80,6 +84,7 @@ async function seedPost(over: PostOver = {}) {
       body: "Need help.",
       author: over.author === undefined ? `author${seq}` : over.author,
       postedAt: over.at ?? ago(1),
+      ...(over.firstSeen ? { firstSeenAt: over.firstSeen } : {}),
       preKind: over.preKind ?? "hiring",
       analysisStatus: "done",
       duplicateOf: over.duplicateOf ?? null,
@@ -371,13 +376,37 @@ describe("refreshSubredditInsights: repeat clients", () => {
     expect(r?.repeatAuthorPosts).toBe(0);
   });
 
-  it("records the oldest stored post as history_start", async () => {
-    await seedPost({ at: ago(300), community: "other_sub" });
-    await seedPost({ at: ago(2) });
+  it("records when collection started (earliest first_seen_at), not the oldest posted_at", async () => {
+    await seedPost({ at: ago(300), community: "other_sub", firstSeen: ago(3) });
+    await seedPost({ at: ago(2), firstSeen: ago(9) });
     await refreshSubredditInsights(db, NOW);
     expect((await rowOf("forhire"))?.historyStart?.toISOString()).toBe(
-      ago(300).toISOString(),
+      ago(9).toISOString(),
     );
+  });
+});
+
+describe("refreshSubredditInsights: concurrency", () => {
+  it("skips cleanly while another refresh holds the lock, and runs after it is released", async () => {
+    await seedPost();
+    const holder = await pool.connect();
+    try {
+      await holder.query("begin");
+      await holder.query("select pg_advisory_xact_lock($1)", [
+        INSIGHTS_REFRESH_LOCK_KEY,
+      ]);
+      expect(await refreshSubredditInsights(db, NOW)).toEqual({
+        upserted: 0,
+        deleted: 0,
+        skipped: true,
+      });
+      expect(await rowOf("forhire")).toBeUndefined();
+      await holder.query("rollback");
+    } finally {
+      holder.release();
+    }
+    const res = await refreshSubredditInsights(db, NOW);
+    expect(res).toMatchObject({ upserted: 1, skipped: false });
   });
 });
 
@@ -412,7 +441,7 @@ describe("refreshSubredditInsights: rows", () => {
       db,
       new Date(NOW.getTime() + 50 * DAY),
     );
-    expect(res).toEqual({ upserted: 1, deleted: 1 });
+    expect(res).toEqual({ upserted: 1, deleted: 1, skipped: false });
     const rows = await insightRows(db);
     expect(rows.map((r) => r.subreddit)).toEqual(["kept"]);
     expect(rows[0]?.hiringPosts).toBe(0);
@@ -587,6 +616,25 @@ describe("userFitCounts", () => {
       bestMatches: 0,
       hiringPosts: 1,
     });
+  });
+});
+
+describe("userFitCountsMany", () => {
+  it("matches userFitCounts per subreddit in one query, zeros for empty ones", async () => {
+    const u = await seedUser();
+    const a1 = await seedPost({ community: "aaa", at: ago(2) });
+    await seedPost({ community: "aaa", at: ago(3) });
+    const b1 = await seedPost({ community: "bbb", at: ago(2) });
+    await seedPost({ community: "bbb", at: ago(60) }); // before `since`
+    await seedMatch(u, a1, { score: 80 });
+    await seedMatch(u, b1, { score: 40 });
+    const many = await userFitCountsMany(db, u, ["aaa", "bbb", "ccc"], ago(28));
+    for (const s of ["aaa", "bbb"])
+      expect(many.get(s)).toEqual(await userFitCounts(db, u, s, ago(28)));
+    expect(many.get("aaa")).toEqual({ bestMatches: 1, hiringPosts: 2 });
+    expect(many.get("bbb")).toEqual({ bestMatches: 0, hiringPosts: 1 });
+    expect(many.get("ccc")).toEqual({ bestMatches: 0, hiringPosts: 0 });
+    expect((await userFitCountsMany(db, u, [], ago(28))).size).toBe(0);
   });
 });
 

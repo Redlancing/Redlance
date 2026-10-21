@@ -47,6 +47,7 @@ export type SubredditInsightsResponse = {
   paid: Insight<{
     paid: number;
     revShare: number;
+    commission: number; // commission only
     unpaid: number;
     other: number;
   }>; // 6, percents
@@ -57,7 +58,7 @@ export type SubredditInsightsResponse = {
   }>; // 7
   crowded: Insight<{ perHiringPost: string }>; // 8
   budgetStated: Insight<{ percent: number }>; // 9
-  remote: Insight<{ percent: number }>; // 10
+  remote: Insight<{ percent: number; unknown: number }>; // 10, unknown = % that don't say
   repeatClients: Insight<{ percent: number }>; // 11 (a percentage only: rule 7)
   latestMatches: InsightMatch[];
 };
