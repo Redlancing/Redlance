@@ -13,6 +13,7 @@ Start here. `PROJECT.md` is the product spec (the "why"). Each feature has a fol
 | 7 | **Drafts**: comment and first DM in the user's voice | `docs/drafts/` | Backend built (2026-10-20), `conclusion.md`; UI built on `feat/ui` (`ui/conclusion.md`) |
 | 8 | **Tracker and learning**: outcomes, edits feed back, follow-ups | `docs/drafts/` | Backend built with drafts (2026-10-20); follow-ups and reminders wait for email |
 | 10 | **App UI**: overview, matches + reply composer, tracker, settings (Telegram) | `ui/` | Built 2026-10-20 on `feat/ui` (from feat/alerts), reviewed and fixed; not checked in a browser yet: `ui/conclusion.md`, design `ui/README.md`, plan `ui/plan/` |
+| 11 | **Subreddit insights**: per subreddit, hiring volume, strong fits, posted budgets, busiest hours, red flags (hourly precomputed table) | `insights/` | Built 2026-10-21 on `feat/insights` (from feat/ui), reviewed and fixed, checked in a browser; migrations 0018-0019 not applied to the dev db yet: `insights/conclusion.md`, design `insights/design.md`, plan `insights/plan/` |
 | 9 | **Deployment**: AWS (EC2, CloudFront, WAF) with CDK | `deployment/` | Not started. `cdn-waf-design.md` is an early, partly outdated draft |
 | — | Cognito login, payments, SEO pages | — | Not started |
 
@@ -26,6 +27,7 @@ Where this sits in the roadmap (`CLAUDE.md`): Collect and Understand are done, w
 | `homepage/` | `conclusion.md`; `attio-teardown.md`, the measured study of attio.com the page copies (layout, motion values) |
 | `onboarding/` | `conclusion.md`; `design.md`, the original spec (reasons, security and privacy rules; where it differs from the code, the conclusion says so) |
 | `ingestion/` | `conclusion.md`; `plan.md`, the phased plan with Phase 0 answers and build status (code comments point to it); `research/`, the subreddit study and `data/catalogue.json`, the source of `packages/core/src/subreddit-catalogue.ts` |
+| `insights/` | `conclusion.md`; `design.md`, the spec (the eleven insights, thresholds) |
 | `deployment/` | `cdn-waf-design.md` (not built; see its banner) |
 
 Step-by-step build plans are deleted once a feature is built. Git history keeps them (e.g. `git log --diff-filter=D -- docs/`).
