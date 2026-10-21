@@ -212,9 +212,9 @@ export function hiringFacts(r: SubredditInsightsResponse): Fact[] {
       value: `~${v.perWeek}`,
       sentence: weekSentence(v.perWeek, v.prevPerWeek),
     })),
-    fact("fit", "Fits you", r.fit, (v) => ({
+    fact("fit", "Strong fits", r.fit, (v) => ({
       value: pctOf(v.best, v.hiring),
-      sentence: `${v.best} of ${v.hiring} hiring posts fit your skills`,
+      sentence: `${v.best} of ${v.hiring} hiring posts scored 60+ for you`,
     })),
     fact("paid", "Paid", r.paid, (v) => ({
       value: `${v.paid}%`,

@@ -306,7 +306,7 @@ describe("rule 8: the 20-point gate", () => {
       status: "ok",
       best: 1,
       hiring: 21,
-      text: "1 in 21 fits your skills",
+      text: "1 in 21 is a strong fit",
     });
     expect(body.latestMatches).toHaveLength(1);
     expect(Object.keys(body.latestMatches[0]).sort()).toEqual([

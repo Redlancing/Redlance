@@ -20,7 +20,7 @@ Window: the last **28 days** ("this month"), compared with the 28 days before wh
 | # | Insight | Example | Source | Data points that must reach 20 |
 |---|---|---|---|---|
 | 1 | Hiring posts per week | "~35 a week, up from 28" | `job_posts.community, posted_at` + analysis `kind` | hiring posts in the window (trend: both windows) |
-| 2 | Share fitting your skills | "1 in 5 fits your skills" | the user's matches with score ≥ 60 (the Best view) ÷ hiring posts, both counted since `max(window start, onboarded_at)` | hiring posts in that span |
+| 2 | Strong fits | "1 in 5 is a strong fit" | the user's matches with score ≥ 60 (the Best view) ÷ hiring posts, both counted since `max(window start, onboarded_at)` | hiring posts in that span |
 | 3 | Posted budgets | "USD per hour: usually $15–35, middle $22" | `budget_min/max, currency, budget_unit`; a post's value is the midpoint (or the one given) | budgets in that currency + unit; up to 3 groups shown, largest first |
 | 4 | Busiest hours | "Most posts arrive 6–10 pm your time; weekdays" | `posted_at`, shown in the profile's time zone | hiring posts |
 | 5 | Most-asked skills | "Video editing 45 %, Thumbnails 20 %" | analysis `skill_ids` (names from the taxonomy) | hiring posts; a skill shows only with ≥ 3 mentions; top 5 |
@@ -46,7 +46,7 @@ worker (hourly, one runner via the poller lock)        web (on request)
                                                                the user's time zone
 ```
 
-- **Shared table, not per user, not Redis.** Ten of the eleven insights are the same for everyone, change slowly and cost a scan of weeks of posts, so they're computed once an hour into `subreddit_insights` (Postgres). Only "fits your skills" is per user, read at request time from the indexed `matches` table. This is the "shared, expensive, slow-changing" case where precomputing pays off.
+- **Shared table, not per user, not Redis.** Ten of the eleven insights are the same for everyone, change slowly and cost a scan of weeks of posts, so they're computed once an hour into `subreddit_insights` (Postgres). Only "strong fits" is per user, read at request time from the indexed `matches` table. This is the "shared, expensive, slow-changing" case where precomputing pays off.
 - **Table `subreddit_insights`** (one row per subreddit; replaced on each run): `subreddit`, `computed_at`, `window_start`, `hiring_posts`, `hiring_posts_prev`, `for_hire_posts`, `budget_stated`, `pay_counts jsonb`, `remote_counts jsonb`, `red_flag_posts`, `red_flag_counts jsonb`, `skill_counts jsonb` (top 20), `budgets jsonb` (`[{currency, unit, n, p25, median, p75}]`), `hour_slots int[336]` (UTC half-hours of the week, Monday 00:00 = 0; half-hours so India's +5:30 lines up), `known_author_posts`, `repeat_author_posts`, `history_start`. Raw counts are stored; thresholds and wording are applied when reading, so they can change without recomputing.
 - **Busiest hours** are converted from UTC slots to the user's zone with the zone's current offset (a DST shift moves a bar by an hour for a few weeks; acceptable). Shown as 24 hourly bars plus one sentence naming the busiest 4-hour stretch and whether weekdays or weekends dominate.
 - **Percentiles** with `percentile_cont` per (currency, unit), ignoring zero and empty budgets.

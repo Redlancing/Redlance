@@ -51,7 +51,7 @@ function detail(
     displayName: "ForHire",
     computedAt: "2026-10-21T10:00:00.000Z",
     postsPerWeek: { status: "ok", perWeek: 35, prevPerWeek: 28 },
-    fit: { status: "ok", best: 12, hiring: 60, text: "1 in 5 fit your skills" },
+    fit: { status: "ok", best: 12, hiring: 60, text: "1 in 5 is a strong fit" },
     budgets: { status: "ok", groups: [usdHour] },
     hours: {
       status: "ok",
@@ -190,7 +190,7 @@ describe("facts", () => {
     });
     expect(facts[1]).toMatchObject({
       value: "20%",
-      sentence: "12 of 60 hiring posts fit your skills",
+      sentence: "12 of 60 hiring posts scored 60+ for you",
     });
     expect(facts[2]).toMatchObject({
       value: "92%",
@@ -257,7 +257,7 @@ describe("list rows", () => {
     subreddit: "forhire",
     displayName: "ForHire",
     perWeek: { status: "ok", perWeek: 35, prevPerWeek: 28 },
-    fit: { status: "ok", text: "1 in 5 fit your skills" },
+    fit: { status: "ok", text: "1 in 5 is a strong fit" },
     mainBudget: { status: "ok", group: usdHour },
     redFlagPercent: { status: "ok", percent: 30 },
     matches: 4,
@@ -269,7 +269,7 @@ describe("list rows", () => {
       displayName: "ForHire",
       href: "/insights/forhire",
       perWeek: { ok: true, value: { text: "~35", trend: "up", prev: 28 } },
-      fit: { ok: true, value: "1 in 5 fit your skills" },
+      fit: { ok: true, value: "1 in 5 is a strong fit" },
       budget: { ok: true, value: "$15–35/hour" },
       redFlags: { ok: true, value: { text: "30%", danger: true } },
       matches: 4,

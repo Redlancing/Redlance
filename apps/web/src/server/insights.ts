@@ -174,10 +174,10 @@ function fitInsight(fit: Fit) {
     const ratio = ratioText(fit.bestMatches, fit.hiringPosts);
     const text =
       ratio === "None"
-        ? "None fit your skills yet"
+        ? "No strong fits yet"
         : ratio === "All"
-          ? "All fit your skills"
-          : `${ratio} ${ratio.startsWith("1 in") ? "fits" : "fit"} your skills`;
+          ? "All are strong fits"
+          : `${ratio} ${ratio.startsWith("1 in") ? "is a strong fit" : "are strong fits"}`;
     return { best: fit.bestMatches, hiring: fit.hiringPosts, text };
   });
 }

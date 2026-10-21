@@ -158,7 +158,7 @@ export function InsightList({
       >
         <span className={head}>Subreddit</span>
         <span className={cn(head, "text-right")}>A week</span>
-        {personal && <span className={head}>Fits you</span>}
+        {personal && <span className={head}>Strong fits</span>}
         <span className={cn(head, "text-right")}>Posted budget</span>
         <span className={cn(head, "text-right")}>Red flags</span>
         {personal && <span className={cn(head, "text-right")}>Matches</span>}
