@@ -1,6 +1,6 @@
 # Drafts + reply tracker
 
-Status: **backend built 2026-10-20** (branch `feat/drafts`); the UI comes later. This file is the **design**. The build changed some details: extra error codes, `reply_sends`, failed versions freeing their number, stuck-draft expiry, rebuilt evidence on rewrites, bare-domain link checks, hand-written eval cases. **Where this file and `conclusion.md` differ, `conclusion.md` is right.**
+Status: **backend built 2026-10-20** (branch `feat/drafts`); the UI comes later. This file is the **design**. The build changed some details: extra error codes, `reply_sends`, failed versions freeing their number, stuck-draft expiry, rebuilt evidence on rewrites, bare-domain link checks, real-post eval cases. **Where this file and `conclusion.md` differ, `conclusion.md` is right.**
 
 The user clicks "Draft" on a match. Redlance writes a Reddit **comment** and a **first DM** in one AI call. The user edits the text, copies it, opens the post and sends it themselves (rule 1: never auto-post). They then mark it as sent. The tracker records what they sent and what happened afterwards. Every edit and outcome feeds back into the next draft.
 
@@ -137,9 +137,9 @@ Google credentials stay in the worker only. Retries and crash recovery work the 
            different_project ─► rebuilt, excluding projects already cited
  prompt:   same fixed part + the previous version + the instruction
            + "write a clearly different version"
- model:    different_project ─► DRAFT_MODEL (Flash)
+ model:    different_project ─► DRAFT_MODEL (Flash-Lite)
            style / typed     ─► REWRITE_MODEL (Flash-Lite);
-                                failing validation ─► one retry on Flash
+                                failing validation ─► one retry on DRAFT_MODEL
           │
           ▼
  validators ─► save vN ─► the user can switch between v1…v5
@@ -255,11 +255,11 @@ The evidence is saved on the draft row as JSON, so rewrites reuse it and we can 
 - **Broad match:** lean on general experience; never claim skills that aren't in the evidence.
 
 **Models** (worker env):
-- `DRAFT_MODEL` = `VERTEX_MODEL_SMART` (Flash);
+- `DRAFT_MODEL` = `VERTEX_MODEL_FAST` (Flash-Lite, since 2026-10-20);
 - `REWRITE_MODEL` = `VERTEX_MODEL_FAST` (Flash-Lite);
 - thinking `"off"`, temperature 0.7, `maxOutputTokens` 800, `timeoutMs` 15 s, LLM-level `retries` 1 (provider errors only).
 
-Switch `DRAFT_MODEL` to Flash-Lite if the eval shows it scores close to Flash.
+Decided 2026-10-20: the live eval scored Flash-Lite close to Flash, so `DRAFT_MODEL` now defaults to `VERTEX_MODEL_FAST` (Flash-Lite). Set `DRAFT_MODEL=gemini-3.8-flash` to go back.
 
 ## 8. Validators
 
@@ -323,7 +323,7 @@ The first failure → one retry: the problems are sent back ("You wrote 60%, whi
 | Day | credits | 105 / 210 / 560 | Postgres ledger (UTC day) | blocks (it's Postgres) |
 | Day | AI cost per user | $0.20 / $0.40 / $1.00 | Postgres `llm_usage` (UTC day) | blocks |
 | Day | voice notes updates per user | 2 | Postgres | — |
-| Day | resume / GitHub imports | 5 / 10 | Redis quota (built) | blocks (built) |
+| Day | resume / GitHub imports | 5 / 5 | Redis quota (built) | blocks (built) |
 | Week | profile changes | 5 | profile edit page (later) | — |
 | Plan period | credits | 210 / 2,100 / 5,600 | Postgres balance | — |
 | System | daily drafting budget | alert at `DRAFT_BUDGET_ALERT_USD` (default $40), pause at `DRAFT_BUDGET_PAUSE_USD` (default $80) | `llm_usage` today, tasks `draft`/`rewrite`/`voice` | — |

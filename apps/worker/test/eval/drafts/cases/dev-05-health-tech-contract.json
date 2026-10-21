@@ -1,0 +1,32 @@
+{
+  "id": "dev-05-health-tech-contract",
+  "tags": ["dm_only", "no_budget"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "[Hiring] Paid part-time contract: build AI + health features at an early-stage health-tech startup (fully remote, flexible, ownership)",
+    "body": "We’re a small, early-stage health-tech startup, and we’re looking for one sharp CS student to join us on a paid, part-time contract. This isn’t a “fix the button colour” gig. You’d be the second engineer on a product that’s live with customers, and you’d help decide what it becomes.\n\nWhat we do\n\nWe are a preventative diagnostics platform for pets. Customers book online, get a sample collected at a clinic, and receive their results in our mobile app with AI-powered insights reviewed by a clinician. Customers are already using the full flow, we have partnerships with clinics and a major diagnostic lab, and our B2B model has clinics paying us on a recurring basis.\n\nWhat you’d work on\n\nWe have a long list of high-impact problems and not enough hands:\n\n* Health scores. Turn raw bloodwork into a clear, trackable health score that people actually understand.\n* AI features. Expand our AI layer: lab result summaries, an always-on assistant for customers and clinic staff, and a unified health data model.\n* Onboarding, end to end. Rebuild the signup flow and lifecycle emails, and bring at-home kit tracking into the app so customers know exactly where things stand before their clinic or mobile visit.\n* Core product. Take the features we’ve only scratched the surface of and make them great.\n* Speed. Ship the smaller fixes that are currently taking us way longer than they should.\n\nWhy this is worth your time\n\n* Paid. This is real, paid work, and there’s room to grow into a bigger role for the right person.\n* Real ownership. You’d own features end to end, from idea to production.\n* A seat at the table. We want a thought partner, not just someone writing code. You’d work directly with the founding team on product and technical decisions.\n* Resume-defining work. Applied AI on real medical data, a live mobile app, and integrations with real lab partners. These make good stories in your next co-op interview.\n* Fully remote and flexible. Work from anywhere, on a schedule that fits around school and co-op.\n\nWho we’re looking for\n\n* Comfortable shipping in a real codebase.\n* Interested in or experienced with LLMs and building AI-powered products.\n* Self-directed. You’d rather figure it out and ship than wait for a spec.\n* Interest in health or health data is a plus, but not required.\n\nHow to apply\n\nDM me with:\n\n1. A line or two about yourself\n2. Your GitHub, portfolio, or something you’ve built that you’re proud of\n3. Your rough availability\n4. Your email\n\nHappy to answer questions in the comments!",
+    "subreddit": "uwaterloo"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "contract",
+    "payType": "paid",
+    "categories": ["development", "data"],
+    "skillIds": [],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "A health-tech startup needs a CS student for a paid part-time contract to build AI and health features for their preventative pet diagnostics app.",
+    "applyInstructions": "DM me with: 1. A line or two about yourself 2. Your GitHub, portfolio, or something you’ve built that you’re proud of 3. Your rough availability 4. Your email"
+  },
+  "expect": [
+    "follows DM only: the comment is empty or just a short note that a DM was sent",
+    "gives what the post asks for in the DM (a line about the applicant, one GitHub or project link, availability) without inventing availability hours or an email address",
+    "mentions shipping in a live product or the AI features, and does not claim health-data or LLM experience the profile lacks"
+  ]
+}

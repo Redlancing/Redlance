@@ -30,7 +30,7 @@ Collect (RSS: every hiring subreddit about every 5 min, in combined feeds of ~80
 - **Auth:** Cognito (Essentials) with Google + email one-time code, no passwords. Tokens in httpOnly cookies, verified in the app on every request; our `users` table is keyed by the Cognito `sub`.
 - **Workflow:** build and test each feature locally first (Docker: Postgres + Valkey; a dev Cognito pool), then deploy. Docs are grouped by feature: `docs/<feature>/` holds its `conclusion.md` (how the built feature works), its design and research (index and status: `docs/README.md`). Step-by-step plans are deleted once built.
 - **Worker:** one Node process (`apps/worker`), run as a second Docker container on the same EC2 server as the web app; no separate AWS service for it. It runs RSS ingestion (one poller system-wide, at least 65 s between Reddit requests), post analysis, and the background jobs from the Postgres job table. Web code starts work by adding a job row (or calling an API), not through SQS.
-- **AI:** Gemini, tiered by task: Flash-Lite for high-volume work (per-post extraction, scoring), Flash for drafts and onboarding imports. Calls go through our own interface so any task can switch model.
+- **AI:** Gemini, tiered by task: Flash-Lite for post analysis, drafts, rewrites and voice notes (drafts moved from Flash on 2026-10-20: the draft eval scored it close to Flash, faster and cheaper); Flash for the resume Skills step and the eval judge (`VERTEX_MODEL_SMART`). Calls go through our own interface so any task can switch model.
 - **Matching:** rule filters + a rule score with a reason. The LLM re-score is built but off for the MVP (decided 2026-10-19, `RESCORE_ENABLED=false`); drafting picks the project to cite. Strict cross-post dedupe stays; the feed links every subreddit a gig was posted in.
 - **Alerts:** Telegram Bot API (email/push later)
 - **Payments:** subscriptions for US, UK and India customers; provider not chosen yet (Razorpay alone doesn't cover US/UK well)
@@ -105,13 +105,15 @@ Handover for the next chat. Update this section as things change.
   - slices 1–7 are built, the review is done and all 11 fixes are in;
   - still to do: the user's manual check on real resumes (slice 8 in `docs/onboarding/projects-experience-plan.md`) and `conclusion.md`;
   - build notes are in `docs/onboarding/projects-experience-build-notes.md`.
+- **Alerts (Telegram) backend** (on `feat/alerts`, not merged): router, delivery queue, sender, linking bot, web API (settings and Telegram link), `alerts:status` and `alerts:test`; reviewed and fixed. Not run live yet. Read `docs/alerts/conclusion.md`. It needs a dev bot token from @BotFather, and the user must approve the new wording for the onboarding review step (it still says matches are emailed). Delete `docs/alerts/plan/` once the user has read the conclusion.
+- **App UI** (on `feat/ui`, branched from `feat/alerts`, not merged): overview, `/feed` (split view: list + match page with the reply composer), `/tracker`, `/settings` (Telegram link, alert rules, credits), plus `GET /api/v1/feed/:matchId` and `dashboardStats`. Reviewed and fixed; **not opened in a browser yet** (needs the soak stopped and an onboarded dev user). Read `docs/ui/conclusion.md`. Feed polling: no Redis cache (decided against for now; cost); a 60 s `since` poll is recommended and waits for the user's go-ahead. Delete `docs/ui/plan/` once the user has read the conclusion.
 - **Matching + job feed backend:** built, reviewed and fixed (F1–F5), verified 2026-10-18: `docs/matching/conclusion.md`. The phase plan and build notes are still in `docs/matching/plan/` (delete them once the user has read the conclusion). Not run live end to end yet (real posts + Vertex re-scores + an onboarded profile). The AI re-scorer is **off** for the MVP (2026-10-19); when it's on, trial/Standard get 15 AI re-scores a day and Max ($20/month) gets 50.
 
 ### Next
 
-- Live end-to-end run: the 24 h ingestion soak (fills the dev db with real posts), then matching and the first live draft eval.
+- Live end-to-end run: the 24 h ingestion soak (fills the dev db with real posts), then matching and the first live draft eval. Then the alerts live run (steps in `docs/alerts/plan/07-wiring-ops.md`).
 - The feed + drafts UI (polling `GET /api/v1/drafts/:id`: 1.5 s, then every 1 s, give up at 30 s). Reminders and follow-ups wait for the email system; the monthly credit grant waits for payments (unify `profiles.plan` and `credit_balances.plan` then).
-- When building the profile edit page, limit profile changes to 5 per user per week.
+- When building the profile edit page, limit profile changes to 5 per user per week. A profile edit does not re-match existing posts (decided 2026-10-20); only new posts use the new profile.
 
 ### What's built (read the conclusions)
 
@@ -142,7 +144,7 @@ Facts that are easy to get wrong:
 - Port 3000 is used by another local app (`node server.js`). Next then falls back to 3001, but the origin check needs `APP_ORIGIN` in `apps/web/.env.local` to match the actual port, or POSTs return 403.
 - The laptop runs Node 26; the project pins Node 24 (`.nvmrc`). Install it with `brew install fnm && fnm install 24`.
 - npm 11 blocks package install scripts. esbuild still works because its platform binary installs separately.
-- Ideas for later: add a per-IP pre-limit before the session lookup; decide whether the quota reset stays at UTC midnight.
+- Ideas for later: decide whether the quota reset stays at UTC midnight.
 - `npm run db:reset` runs `docker compose down -v`, which deletes the local dev database. Use `npm run db:migrate` for normal work.
 - Long runs: the laptop dozing made a test run and a build take ~15 min and stalled subagents; run `caffeinate -i` during long agent sessions.
 - `main` has 6 files prettier flags (from before onboarding); `npm run format:check` fails on them until someone formats them.

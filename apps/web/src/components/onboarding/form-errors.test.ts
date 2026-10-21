@@ -4,7 +4,7 @@ import { errorMessageFor } from "./form-errors";
 const errors = [
   { path: "skills.3.id", message: "Unknown skill." },
   { path: "displayName", message: "Add your name." },
-  { path: "customSkills.0.name", message: "Too long." },
+  { path: "projects.0.title", message: "Too long." },
 ];
 
 describe("errorMessageFor", () => {
@@ -13,7 +13,7 @@ describe("errorMessageFor", () => {
   });
   it("matches errors inside a field (list items and their parts)", () => {
     expect(errorMessageFor(errors, "skills")).toBe("Unknown skill.");
-    expect(errorMessageFor(errors, "customSkills")).toBe("Too long.");
+    expect(errorMessageFor(errors, "projects")).toBe("Too long.");
   });
   it("does not match fields that only share a prefix", () => {
     expect(errorMessageFor(errors, "skill")).toBeUndefined();

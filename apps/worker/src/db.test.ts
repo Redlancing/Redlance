@@ -16,7 +16,11 @@ describe("createPgListener", () => {
     await db.execute(sql`truncate table users cascade`);
     const [u] = await db
       .insert(users)
-      .values({ authSub: "dev|l", email: "l@example.com", emailNormalized: "l@example.com" })
+      .values({
+        authSub: "dev|l",
+        email: "l@example.com",
+        emailNormalized: "l@example.com",
+      })
       .returning();
     const listener = await createPgListener(url, log);
     const got = new Promise<void>((resolve) => listener.onNotify(resolve));

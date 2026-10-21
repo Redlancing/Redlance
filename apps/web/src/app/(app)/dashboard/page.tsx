@@ -1,20 +1,23 @@
-import { PAGE_IDS, pageIndex } from "@redlance/core";
-import { ArrowRight, Inbox, Send, Trophy } from "lucide-react";
+import { dashboardStats, feedPage } from "@redlance/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { buttonVariants } from "@/components/ui/button";
+import { OnboardingCta } from "@/components/app/onboarding-cta";
+import {
+  checklistComplete,
+  creditsLine,
+  setupChecklist,
+} from "@/components/dashboard/overview";
+import { NumbersStrip } from "@/components/dashboard/numbers-strip";
+import { SetupChecklist } from "@/components/dashboard/setup-checklist";
+import { TopMatches } from "@/components/dashboard/top-matches";
 import { getCurrentUser } from "@/server/current-user";
+import { getDb } from "@/server/db";
+import { creditsSummary } from "@/server/drafts";
 import { getOnboardingState } from "@/server/onboarding/service";
 import { trialDaysLeft } from "@/server/onboarding/trial";
 
 export const metadata: Metadata = { title: "Dashboard" };
-
-const stats = [
-  { label: "New matches", icon: Inbox, hint: "Gigs that fit your skills" },
-  { label: "Replies sent", icon: Send, hint: "Comments and first DMs" },
-  { label: "Gigs won", icon: Trophy, hint: "Marked as won in the tracker" },
-];
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -22,7 +25,39 @@ export default async function DashboardPage() {
   const state = await getOnboardingState(user.userId);
   const onboarded = state.onboardedAt !== null;
   const daysLeft = state.trialEndsAt ? trialDaysLeft(state.trialEndsAt) : 0;
-  const started = state.steps.length > 0;
+
+  const db = getDb();
+  const [stats, best, creditData] = onboarded
+    ? await Promise.all([
+        dashboardStats(db, user.userId),
+        feedPage(db, user.userId, { view: "best", limit: 5 }),
+        creditsSummary(user),
+      ])
+    : [
+        {
+          newToday: 0,
+          sentThisWeek: 0,
+          sentEver: 0,
+          won: 0,
+          telegramOn: false,
+        },
+        { items: [] },
+        null,
+      ];
+  const checklist = setupChecklist({
+    onboarded,
+    telegramOn: stats.telegramOn,
+    sentEver: stats.sentEver,
+  });
+  const matches = best.items.map((i) => ({
+    matchId: i.matchId,
+    score: i.score,
+    title: i.post.title,
+    community: i.post.community,
+    postedAt: i.post.postedAt.toISOString(),
+    budget: i.post.budget,
+  }));
+  const credits = creditData ? creditsLine(creditData) : null;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -40,78 +75,28 @@ export default async function DashboardPage() {
         </p>
       )}
 
-      {!onboarded && (
-        <section
-          aria-labelledby="setup-heading"
-          className="mt-8 overflow-hidden rounded-2xl border border-flare-100 bg-flare-50"
-        >
-          <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2
-                id="setup-heading"
-                className="text-base font-semibold text-foreground"
-              >
-                Set up your profile
-              </h2>
-              <p className="mt-1 max-w-xl text-sm text-stone">
-                Add your job types and skills so Redlance can match gigs to you.
-                Your 5-day trial starts when you finish.
-              </p>
-            </div>
-            <Link
-              href="/onboarding"
-              className={
-                buttonVariants({ size: "lg" }) +
-                " shrink-0 self-start sm:self-auto"
-              }
-            >
-              {started
-                ? `Continue setup · step ${pageIndex(state.resumeAt) + 1} of ${PAGE_IDS.length}`
-                : "Start setup"}
-              <ArrowRight aria-hidden="true" />
-            </Link>
-          </div>
-        </section>
-      )}
+      {!onboarded && <OnboardingCta state={state} className="mt-8" />}
 
-      <section
-        aria-label="Your numbers"
-        className="mt-6 grid gap-4 sm:grid-cols-3"
-      >
-        {stats.map(({ label, icon: Icon, hint }) => (
-          <div
-            key={label}
-            className="rounded-xl border border-border bg-background p-5"
-          >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Icon className="size-4" aria-hidden="true" />
-              {label}
-            </div>
-            <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground tabular-nums">
-              0
+      {onboarded && (
+        <>
+          <NumbersStrip
+            newToday={stats.newToday}
+            sentThisWeek={stats.sentThisWeek}
+            won={stats.won}
+          />
+          {!checklistComplete(checklist) && (
+            <SetupChecklist items={checklist} />
+          )}
+          <TopMatches matches={matches} />
+          {credits && (
+            <p className="mt-6 text-sm text-stone tabular-nums">
+              <Link href="/settings" className="hover:text-foreground">
+                {credits}
+              </Link>
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-          </div>
-        ))}
-      </section>
-
-      <section
-        aria-labelledby="matches-heading"
-        className="mt-6 rounded-2xl border border-dashed border-feed bg-bone/60 px-6 py-12 text-center"
-      >
-        <Inbox className="mx-auto size-6 text-stone" aria-hidden="true" />
-        <h2
-          id="matches-heading"
-          className="mt-3 text-base font-semibold text-foreground"
-        >
-          No matches yet
-        </h2>
-        <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-          Once your profile is set up, new hiring posts that fit your skills
-          show up here within minutes, each with a score and the reason it
-          matched.
-        </p>
-      </section>
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -1,0 +1,32 @@
+{
+  "id": "vid-03-longterm-creative-partner",
+  "tags": [],
+  "profileId": "video-editor",
+  "post": {
+    "title": "\"[Hiring].Looking for a long term video editor and creative partner.",
+    "body": "I'm looking for someone talented, knowledgeable, and creative who can do more than just edit videos, someone who's interested in being a long-term creative partner. I want someone who understands modern memes, gaming culture, and YouTube editing styles. I want someone who's comfortable helping script videos, pitching ideas, and bringing their own personality into the content. Budget, around 100 dollars per video, with flexible deadlines. I'm aiming to build something long-term with someone who'll grow alongside the channel. For the first project, I'll provide a reference video, so you can get a feel for the style. If this sounds interesting, please share a bit about yourself, your editing experience, and link your portfolio.",
+    "subreddit": "videoeditors_forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["video"],
+    "skillIds": ["video-editing", "youtube-editing"],
+    "budgetMin": 100,
+    "budgetMax": 100,
+    "currency": "USD",
+    "budgetUnit": "per_item",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for a long-term video editor and creative partner for YouTube content.",
+    "applyInstructions": "share a bit about yourself, your editing experience, and link your portfolio"
+  },
+  "expect": [
+    "addresses the long-term creative-partner angle (ideas, memes and gaming culture) without claiming scripting or gaming-channel experience the profile lacks",
+    "includes the one allowed portfolio link, as the post asks",
+    "keeps a conversational, short tone and does not invent a rate"
+  ]
+}

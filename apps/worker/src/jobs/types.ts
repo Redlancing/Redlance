@@ -17,7 +17,6 @@ export class JobError extends Error {
 
 export type JobOutcome = {
   result: unknown;
-  sourceText?: string;
   contentHash?: string;
   pipelineVersion?: string;
 };

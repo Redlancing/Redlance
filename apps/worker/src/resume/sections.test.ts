@@ -108,3 +108,116 @@ describe("wider headings (Slice 4)", () => {
     expect(splitSections(t)).toEqual(splitSectionsWithFlag(t).sections);
   });
 });
+
+describe("more heading formats (resume@4)", () => {
+  const sectionOf = (heading: string) => {
+    const s = splitSections(`Jane Doe\n${heading}\nBody line`);
+    return (Object.keys(s) as (keyof typeof s)[]).filter(
+      (k) => k !== "top" && s[k] === "Body line",
+    );
+  };
+
+  it("matches skills headings with other words around 'skills'", () => {
+    for (const h of [
+      "Technical Skills and Interests",
+      "Skills & Tools",
+      "SKILLS AND TOOLS:",
+      "Key Skills",
+      "Skills Summary",
+      "Core Competencies",
+      "Technologies",
+      "Tech Stack",
+      "Tools & Technologies",
+      "Expertise",
+      "Areas of Expertise",
+      "Soft skills",
+      "Languages & Skills",
+    ])
+      expect(sectionOf(h), h).toEqual(["skills"]);
+  });
+
+  it("routes headings we don't read to other, so they end the section above", () => {
+    for (const h of [
+      "Achievements",
+      "Awards",
+      "Honors and Awards",
+      "Positions of Responsibility",
+      "Leadership",
+      "Leadership Experience",
+      "Extracurricular Activities",
+      "Extra-curricular",
+      "Volunteer Experience",
+      "Volunteering",
+      "Publications",
+      "Interests",
+      "Hobbies",
+      "References",
+    ])
+      expect(sectionOf(h), h).toEqual(["other"]);
+  });
+
+  it("routes coursework and licences to education", () => {
+    for (const h of [
+      "Relevant Coursework",
+      "Coursework",
+      "Licenses & Certifications",
+      "Certifications",
+    ])
+      expect(sectionOf(h), h).toEqual(["education"]);
+  });
+
+  it("accepts letter-spaced headings, emoji icons and extra spaces", () => {
+    expect(sectionOf("E X P E R I E N C E")).toEqual(["experience"]);
+    expect(sectionOf("W O R K  E X P E R I E N C E")).toEqual(["experience"]);
+    expect(sectionOf("📁 Projects")).toEqual(["projects"]);
+    expect(sectionOf("🎓 EDUCATION:")).toEqual(["education"]);
+    expect(sectionOf("  Technical   Skills  ")).toEqual(["skills"]);
+  });
+
+  it("never takes a bulleted or numbered line for a heading", () => {
+    for (const h of [
+      "– Tech Stack:",
+      "• SKILLS:",
+      "▪ Projects",
+      "\uF0B7 Tools",
+      "2. Education",
+    ])
+      expect(sectionOf(h), h).toEqual([]);
+    const s = splitSections(
+      "Projects\n• Shopfront (Next.js)\n– Tech Stack:\nReact, Stripe\nSkills\nGo",
+    );
+    expect(s.projects).toContain("– Tech Stack:");
+    expect(s.skills).toBe("Go");
+  });
+
+  it("does not take short body lines that mention skills for headings", () => {
+    const s = splitSections(
+      "Experience\nDev, Acme 2020 - 2022\nTaught coding skills\nPeople skills matter a lot",
+    );
+    expect(s.skills).toBe("");
+    expect(s.experience).toContain("Taught coding skills");
+  });
+
+  it("ends the projects section at the headings that follow it", () => {
+    const s = splitSections(
+      [
+        "Jane Doe",
+        "Education",
+        "B.Tech, 2021 - 2025",
+        "Projects",
+        "Shopfront",
+        "Chat app",
+        "Technical Skills and Interests",
+        "Languages: Python, C++",
+        "Positions of Responsibility",
+        "Club lead",
+        "Achievements",
+        "Hackathon winner",
+      ].join("\n"),
+    );
+    expect(s.projects).toBe("Shopfront\nChat app");
+    expect(s.skills).toBe("Languages: Python, C++");
+    expect(s.other).toBe("Club lead\nHackathon winner");
+    expect(s.experience).toBe("");
+  });
+});

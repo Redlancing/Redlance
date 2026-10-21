@@ -2,7 +2,6 @@ import type { MatchPost, MatchProfile } from "@redlance/core";
 import {
   MAX_REMATCH_ATTEMPTS,
   POST_ANALYSED_CHANNEL,
-  bumpProfileVersion,
   candidateUsersForPost,
   claimPostsForMatching,
   completePostAnalysis,
@@ -452,6 +451,8 @@ describe("matcher (database)", () => {
       aiStatus: "pending",
       status: "new",
       profileVersion: 1,
+      // A new post's match waits for the alert router.
+      alertOutcome: null,
     });
     expect((await matchFor(priya, a))!.ruleReason).toContain("Next.js");
     // Old's trial ended: rule score only.
@@ -469,9 +470,9 @@ describe("matcher (database)", () => {
     });
     await runOnce({
       ops: {
-        upsertMatches: async (d, rows) => {
+        upsertMatches: async (d, rows, opts) => {
           written.push(...rows);
-          return upsertMatches(d, rows);
+          return upsertMatches(d, rows, opts);
         },
       },
     });
@@ -581,20 +582,18 @@ describe("matcher (database)", () => {
     });
   });
 
-  it("8: a dismissed match stays dismissed after a profile change", async () => {
+  it("8: a dismissed match stays dismissed after a re-analysis", async () => {
     const a = await analysedPost(POST_A);
     await runOnce();
     const row = await matchFor(priya, a);
     expect(row!.aiStatus).toBe("pending");
     await setMatchStatus(db, priya, row!.id, "dismissed");
-    expect(await bumpProfileVersion(db, priya, new Date())).toBe(2);
     await reanalyse(a, POST_A);
     await runOnce();
     expect(await matchFor(priya, a)).toMatchObject({
       id: row!.id,
       status: "dismissed",
       aiStatus: "not_needed",
-      profileVersion: 2,
       ruleScore: 80,
     });
   });
@@ -609,11 +608,17 @@ describe("matcher (database)", () => {
     await requestRematch(db, priya, ago(3 * DAY));
     await runOnce();
     const mine = await db
-      .select({ postId: matches.jobPostId, aiStatus: matches.aiStatus })
+      .select({
+        postId: matches.jobPostId,
+        aiStatus: matches.aiStatus,
+        alertOutcome: matches.alertOutcome,
+      })
       .from(matches)
       .where(eq(matches.userId, priya));
     expect(mine.map((r) => r.postId).sort()).toEqual([...recent].sort());
     expect(mine.every((r) => r.aiStatus === "pending")).toBe(true);
+    // Backfilled matches never alert.
+    expect(mine.every((r) => r.alertOutcome === "skipped_backfill")).toBe(true);
     expect(mine.map((r) => r.postId)).not.toContain(older);
     // Only Priya asked for a backfill.
     expect(await db.$count(matches)).toBe(3);
@@ -622,29 +627,6 @@ describe("matcher (database)", () => {
       .from(profiles)
       .where(eq(profiles.userId, priya));
     expect(p!.since).toBeNull();
-  });
-
-  it("10: a re-match after a profile change updates the row in place", async () => {
-    const b = await analysedPost(POST_B);
-    await runOnce();
-    const before = (await matchFor(priya, b))!;
-    expect(before.ruleScore).toBe(0);
-    await db
-      .update(profileSkills)
-      .set({ level: "core" })
-      .where(
-        and(
-          eq(profileSkills.userId, priya),
-          eq(profileSkills.skillId, "postgresql"),
-        ),
-      );
-    expect(await bumpProfileVersion(db, priya, new Date())).toBe(2);
-    await runOnce();
-    const after = (await matchFor(priya, b))!;
-    expect(after.id).toBe(before.id);
-    expect(after.ruleScore).toBeGreaterThan(before.ruleScore);
-    expect(after.profileVersion).toBe(2);
-    expect(await matchesOf(b)).toHaveLength(1);
   });
 
   it("11: a failed post goes back to pending, then succeeds; the log has no post text", async () => {
@@ -757,11 +739,11 @@ describe("matcher (database)", () => {
           inFlight--;
           return candidateUsersForPost(d, post);
         },
-        upsertMatches: async (d, rows) => {
+        upsertMatches: async (d, rows, opts) => {
           for (const r of rows)
             if (r.userId === priya)
               upserts.set(r.jobPostId, (upserts.get(r.jobPostId) ?? 0) + 1);
-          return upsertMatches(d, rows);
+          return upsertMatches(d, rows, opts);
         },
       },
     });

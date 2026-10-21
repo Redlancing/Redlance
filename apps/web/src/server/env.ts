@@ -26,6 +26,18 @@ const schema = z
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
+    /** The alerts bot's @username, for t.me deep links. Unset: linking Telegram is unavailable. */
+    TELEGRAM_BOT_USERNAME: z.preprocess(
+      empty,
+      z
+        .string()
+        .regex(
+          /^[A-Za-z0-9_]{5,32}$/,
+          "must be a Telegram bot username (5-32 letters, digits or underscores)",
+        )
+        .regex(/bot$/i, 'must end with "bot"')
+        .optional(),
+    ),
     /** Daily drafting spend across all users (USD, UTC day): log an alert at this level... */
     DRAFT_BUDGET_ALERT_USD: usd(40),
     /** ...and pause new drafts at this level (docs/drafts/README.md §10). */

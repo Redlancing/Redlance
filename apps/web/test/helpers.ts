@@ -1,7 +1,11 @@
 import { sql } from "drizzle-orm";
 import { closeDb, getDb } from "@/server/db";
 import { closeRedis, getRedis, redisReady } from "@/server/redis";
-import { DEV_SESSION_COOKIE, encodeDevSession, signInDevUser } from "@/server/session";
+import {
+  DEV_SESSION_COOKIE,
+  encodeDevSession,
+  signInDevUser,
+} from "@/server/session";
 import { TEST_ENV } from "./test-env";
 
 export async function resetState(): Promise<void> {

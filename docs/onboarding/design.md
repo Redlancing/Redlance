@@ -241,6 +241,8 @@ cleaned text ─▶ A. early exit + cache ─▶ B. deterministic pre-pass ─�
 | **Job types & experience** | `VERTEX_MODEL_FAST` | `summary` + `experience` + `projects` + the pre-pass `yearsExperience` | `categories` (1–3 of the 12 ids, each with a ≤160-char `evidence` quote), `experienceLevel` | 400 |
 | **Skills** | `VERTEX_MODEL_SMART` (Flash) | `skills` + `experience` + `projects` + the shortlist (ids + names) | `skills: [{ id (enum = shortlist ∪ full taxonomy), level, evidence }]` ≤30; `customSkills: [{ name, level, evidence }]` ≤10 | 1 500 |
 
+> **Changed 2026-10-21 (`resume@3`):** the code now makes three calls, all on Flash-Lite: profile (Basics + Job types), skills, and work (Projects + Experience). Prompts put the task first and the resume last. See `conclusion.md` → "Resume import".
+
 - Experience level rules given to the model (and applied in code when `yearsExperience` is known): < 1 year paid → beginner; 1–3 → intermediate; > 3 → experienced.
 - The category prompt lists the 12 categories with their one-line hints.
 
@@ -284,7 +286,7 @@ cleaned text ─▶ A. early exit + cache ─▶ B. deterministic pre-pass ─�
    - `redirect: "error"` (GitHub's API doesn't redirect these), a 10 s timeout, and a response size cap (e.g. 1 MB) read as a stream; parse JSON and validate it with zod before use.
    - Never download repo contents, release assets or archives, and never run anything from them. Only metadata (language, topics, stars, dates, description) is read.
    - Treat every string from GitHub (repo names, descriptions, topics) as untrusted text: store it plain, render it through React (escaped), never with `dangerouslySetInnerHTML` or a markdown/HTML renderer, and never put it into an LLM prompt without the same "this is data, not instructions" framing as resumes.
-   - Keep the per-user quota (10 GitHub imports a day) and the token with no permissions.
+   - Keep the per-user quota (5 GitHub imports a day) and the token with no permissions.
 
 ### Suggestions (schema v1, in core)
 
@@ -312,7 +314,7 @@ What a step's form shows = **its saved data** (draft or completed) if the row ex
 | `GET /onboarding` | `{ steps: [{ id, status, data, version, updatedAt }], resumeAt, imports: [{ id, kind, status, errorCode, suggestions }] }` |
 | `PUT /onboarding/steps/:step` | body `{ mode: "draft" \| "complete", data, expectedVersion }` (0 for a new row). → `{ status, version, next }`. 409 `VERSION_CONFLICT` if `expectedVersion` is stale (another tab saved); 409 `STEP_ORDER`; 400 with field errors |
 | `POST /onboarding/imports/resume` | multipart field `file`, ≤5 MB, PDF/DOCX by magic bytes (not by extension). Quota 5/day. → 202 `{ jobId }` |
-| `POST /onboarding/imports/github` | `{ username }` (username or URL). Quota 10/day. → 202 `{ jobId }` |
+| `POST /onboarding/imports/github` | `{ username }` (username or URL). Quota 5/day. → 202 `{ jobId }` |
 | `GET /onboarding/imports/:id` | `{ status, stage, errorCode, suggestions, partial }`; `stage` is `queued` → `reading` → `analysing` → `checking` → `done`/`failed` (written by the worker); 404 unless it's the caller's job |
 | `POST /onboarding/imports/reset` | Deletes the saved `basics` and `skills` step rows (for Replace). 409 `ALREADY_ONBOARDED` after Finish |
 | `POST /onboarding/finish` | See below. → `{ redirect: "/dashboard" }` |
@@ -343,8 +345,8 @@ Web: no new variables. Worker (`apps/worker/.env.local`, from `.env.example`):
 | Thinking level | "off" maps to MINIMAL, but `gemini-3.8-flash` rejects MINIMAL (400); the Vertex transport falls back to LOW once per model and remembers it |
 | SDK client | `new GoogleGenAI({ vertexai: true, project, location })` — the Vertex (Google Cloud) backend. `vertexai` and the newer `enterprise` flag are the same switch; we use `vertexai`. Billing runs on the Google Cloud project, so the $300 free-trial credits apply (they don't cover the AI Studio Gemini API for accounts opened after 2026-03-02). |
 | Google credentials | Application Default Credentials: locally `gcloud auth application-default login`; on EC2, Workload Identity Federation from the AWS role (no key files), or a service-account key from AWS Secrets Manager as a fallback. The service account has only `roles/aiplatform.user`. **No AI Studio API key.** |
-| `VERTEX_MODEL_FAST` | Flash-Lite model for the Basics and Job-types steps; default chosen at build time from the Vertex model list (e.g. `gemini-3.5-flash-lite`) |
-| `VERTEX_MODEL_SMART` | Flash model for the Skills step (e.g. `gemini-3.8-flash`) |
+| `VERTEX_MODEL_FAST` | Flash-Lite model for the Basics and Job-types steps (since 2026-10-21, every resume call); default chosen at build time from the Vertex model list (e.g. `gemini-3.5-flash-lite`) |
+| `VERTEX_MODEL_SMART` | Flash model for the Skills step (e.g. `gemini-3.8-flash`); since 2026-10-21 only the draft-eval judge uses it |
 | `LANGSMITH_*` | eval runs only |
 | `GITHUB_TOKEN` | optional locally (warns once); required outside `local`. A fine-grained token with no permissions |
 | `WORKER_CONCURRENCY` | default 4 |

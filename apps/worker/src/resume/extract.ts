@@ -9,7 +9,19 @@ export {
   extractTextInline,
 } from "./extract-inline";
 
-const WORKER_TIMEOUT_MS = 20_000;
+const WORKER_TIMEOUT_MS = 5_000;
+
+/**
+ * Per-thread memory limit: JS heap plus external memory (ArrayBuffers, which is what pdf.js
+ * allocates when it inflates a content stream). `resourceLimits` caps only the JS heap — a
+ * thread capped at 64 MB of heap held 600 MB of Uint8Arrays in a test — so the parent polls
+ * the thread instead. A normal resume peaks at ~25–35 MB (tsx + pdf.js or mammoth loaded,
+ * measured on 10-page fixtures); 128 MB leaves room for big files and stays well under the 256 MB heap cap, so up to
+ * WORKER_CONCURRENCY (4) threads hold at most ~0.5 GB plus one poll's growth each.
+ */
+export const MEMORY_LIMIT_BYTES = 128 * 1024 * 1024;
+/** `getHeapStatistics()` is answered by the thread even mid-way through a synchronous loop. */
+const MEMORY_POLL_MS = 50;
 
 type Reply =
   | { ok: true; text: string }
@@ -24,9 +36,10 @@ function isStartFailure(err: unknown): boolean {
 }
 
 /**
- * Parses in a worker thread with memory limits and a hard timer, so a pathological file can
- * neither exhaust the worker process's memory nor block its event loop. Any failure of the
- * thread (crash, out of memory, timeout) becomes UNSUPPORTED_FILE, except a thread that can't
+ * Parses in a worker thread with memory limits, a memory watchdog and a hard timer, so a
+ * pathological file can neither exhaust the worker process's memory nor block its event loop.
+ * Any failure of the thread (crash, out of memory, over the watchdog limit, timeout) becomes
+ * UNSUPPORTED_FILE, except a thread that can't
  * start at all (a deploy problem), which is a retryable INTERNAL. Failures are logged with the
  * path, exit code and error name/code only — never a message, which may quote the file.
  */
@@ -40,14 +53,15 @@ export function extractText(
     let done = false;
     let worker: Worker;
     const logFailure = (
-      path: "error" | "exit" | "timeout",
-      extra: { exitCode?: number; err?: unknown } = {},
+      path: "error" | "exit" | "timeout" | "memory",
+      extra: { exitCode?: number; err?: unknown; memoryMb?: number } = {},
     ) => {
       const e = extra.err as { name?: unknown; code?: unknown } | undefined;
       opts.log?.warn(
         {
           path,
           exitCode: extra.exitCode,
+          memoryMb: extra.memoryMb,
           errName: typeof e?.name === "string" ? e.name : undefined,
           errCode: typeof e?.code === "string" ? e.code : undefined,
         },
@@ -79,6 +93,7 @@ export function extractText(
       if (done) return;
       done = true;
       clearTimeout(timer);
+      clearInterval(watchdog);
       void worker.terminate();
       fn();
     };
@@ -90,6 +105,25 @@ export function extractText(
       if (!done) logFailure("timeout");
       fail();
     }, opts.timeoutMs ?? WORKER_TIMEOUT_MS);
+    // One poll in flight at a time; a poll that fails (the thread is exiting) is ignored, since
+    // the exit/error listeners settle the promise.
+    let polling = false;
+    const watchdog = setInterval(() => {
+      if (polling || done) return;
+      polling = true;
+      worker.getHeapStatistics().then(
+        (s) => {
+          polling = false;
+          const used = s.used_heap_size + s.external_memory;
+          if (done || used <= MEMORY_LIMIT_BYTES) return;
+          logFailure("memory", { memoryMb: Math.round(used / 1024 / 1024) });
+          fail();
+        },
+        () => {
+          polling = false;
+        },
+      );
+    }, MEMORY_POLL_MS);
     worker.once("message", (m: Reply) =>
       m.ok ? finish(() => resolve(m.text)) : fail(m.code),
     );

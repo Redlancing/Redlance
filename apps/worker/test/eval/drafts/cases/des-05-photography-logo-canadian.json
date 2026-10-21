@@ -1,0 +1,32 @@
+{
+  "id": "des-05-photography-logo-canadian",
+  "tags": [],
+  "profileId": "junior-designer",
+  "post": {
+    "title": "[Hiring] Canadian Graphic Designer needed for photography logo",
+    "body": "Hey everyone,\n\nI’m looking for a talented Canadian graphic designer to bring a photography logo concept to life. I already have a clear picture in mind of what I want, I just need someone with the technical skills to execute it professionally.\n\nWhat I need:\n\n* A primary colored version and a black and white version.\n* High-resolution files suitable for large-format print (watermarking photos, business cards, signage).\n* Web-ready formats optimized for my portfolio site and social media.\n\nWhat I’ll provide:\n\n* A detailed visual idea/sketch.\n* Specific font names to use.\n* Exact color codes (HEX/CMYK).\n* approximently $100-$300\n\nIf you are based in Canada, please drop a link to your portfolio and your preferred way to connect (or DM me directly with your rates/turnaround time).\n\nThanks!",
+    "subreddit": "designjobs"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["design", "photo"],
+    "skillIds": ["photography", "logo-design", "print-design"],
+    "budgetMin": 100,
+    "budgetMax": 300,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "remote",
+    "location": "Canada",
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Seeking a Canadian graphic designer to create a photography logo in primary and black-and-white versions for print and web use.",
+    "applyInstructions": "If you are based in Canada, please drop a link to your portfolio and your preferred way to connect (or DM me directly with your rates/turnaround time)."
+  },
+  "expect": [
+    "does not claim to be Canadian or Canada-based (the post asks for a Canadian designer)",
+    "mentions the colour and black-and-white versions and the print- and web-ready files",
+    "includes a portfolio link as the post asks"
+  ]
+}

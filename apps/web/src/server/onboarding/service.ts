@@ -5,7 +5,6 @@ import {
   STEP_SCHEMAS,
   TRIAL_DAYS,
   nextPage,
-  normalizeSkillName,
   pageIndex,
   resumeAt,
   toFieldErrors,
@@ -18,7 +17,6 @@ import {
   latestImportJobs,
   type Database,
   alertChannels,
-  customSkills,
   grantPlanCredits,
   onboardingSteps,
   profileExperience,
@@ -281,16 +279,6 @@ export async function finishOnboarding(
         skills.skills.map((s) => ({
           userId,
           skillId: s.id,
-          level: s.level,
-          source: s.source,
-        })),
-      );
-    if (skills.customSkills.length)
-      await tx.insert(customSkills).values(
-        skills.customSkills.map((s) => ({
-          userId,
-          name: s.name,
-          nameNormalized: normalizeSkillName(s.name),
           level: s.level,
           source: s.source,
         })),

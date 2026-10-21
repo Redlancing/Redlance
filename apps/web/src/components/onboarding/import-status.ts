@@ -145,7 +145,7 @@ export function describeImports(
     filled.push("your basics");
   if (b.categories?.length)
     filled.push(plural(b.categories.length, "job type", "job types"));
-  const skillCount = merged.skills.length + merged.customSkills.length;
+  const skillCount = merged.skills.length;
   if (skillCount) filled.push(plural(skillCount, "skill", "skills"));
 
   const partial = [...new Set(done.flatMap((j) => j.partial))];

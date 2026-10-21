@@ -1,0 +1,32 @@
+{
+  "id": "art-02-discord-dnd-community-artist",
+  "tags": [],
+  "profileId": "junior-designer",
+  "post": {
+    "title": "[Hiring] Fantasy / D&D Graphic Artist & Content Manager for a Discord Community — $200/month, ongoing",
+    "body": "**Adventuring To Die** is a D&D-themed Baldur's Gate 3 Discord community (est. October 2025). We're looking for an artist who can give the guild a consistent dark-fantasy look and stick around long term.\n\n**Pay:** $200/month, paid monthly via PayPal Goods & Services. This is paid work, not exposure or a trial.\n\n**What you'd make:**\n\n- Website and Discord art: banners, headers, emotes, event graphics\n\n- Profile pictures and banners for our 12-person staff team (each has a character theme)\n\n- D&D character art and portraits, with a possible role as our go-to character artist\n\n- Graphics for announcements and run promos\n\n**What you'd manage:**\n\n- Keeping our purple-and-gold, dark-fantasy style consistent across everything\n\n- A simple monthly schedule of what's requested, done, and next\n\n**Looking for:**\n\n- A portfolio of fantasy, D&D, or character art\n\n- Reliable turnaround and clear communication\n\n- Comfort with feedback and revisions\n\n- Knowing D&D or BG3 is a plus\n\n**To apply:** use the form at [link] [link] (choose \"Not sure – open to anything,\" put \"Artist\" at the top of your answer to \"Why do you want to join the staff?\", and include a portfolio link), or DM me here.",
+    "subreddit": "artistforhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "contract",
+    "payType": "paid",
+    "categories": ["art", "design", "admin"],
+    "skillIds": ["graphic-design", "character-design", "portraits"],
+    "budgetMin": 200,
+    "budgetMax": 200,
+    "currency": "USD",
+    "budgetUnit": "month",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for a fantasy graphic artist and content manager for an ongoing Discord community role.",
+    "applyInstructions": "use the form at [link] (choose \"Not sure – open to anything,\" put \"Artist\" at the top of your answer to \"Why do you want to join the staff?\", and include a portfolio link), or DM me here."
+  },
+  "expect": [
+    "mentions the dark-fantasy look, banners, emotes or character portraits the post lists",
+    "uses the DM or form route and does not paste contact details; does not claim D&D or Baldur's Gate knowledge the profile lacks",
+    "does not negotiate the $200 a month and includes one allowed link"
+  ]
+}

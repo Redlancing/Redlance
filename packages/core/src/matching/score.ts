@@ -6,6 +6,7 @@ import type {
   RemoteType,
 } from "../job-post";
 import type { CURRENCIES, RATE_TYPES } from "../onboarding";
+import { warningFlags } from "../job-post";
 import { BROAD_CAP, MATCH_MAX_AGE_DAYS } from "./constants";
 import { convert } from "./fx";
 import { ruleReason } from "./reason";
@@ -201,11 +202,12 @@ export function ruleScore(
     features.push({ signal: "remote_fit", points: weights.remoteFit });
   }
 
-  if (post.redFlags.length > 0) {
+  const warnings = warningFlags(post.redFlags);
+  if (warnings.length > 0) {
     features.push({
       signal: "red_flag",
-      points: post.redFlags.length * weights.redFlag,
-      detail: post.redFlags,
+      points: warnings.length * weights.redFlag,
+      detail: warnings,
     });
   }
 

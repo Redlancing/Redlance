@@ -242,7 +242,9 @@ describe("findNumbers / findUrls", () => {
 
 describe("M5: bare domains are links", () => {
   it("doesn't treat tool names that look like domains as links", () => {
-    expect(findUrls("I built it in ASP.NET, Socket.io and Make.com.")).toEqual([]);
+    expect(findUrls("I built it in ASP.NET, Socket.io and Make.com.")).toEqual(
+      [],
+    );
     expect(findUrls("see make.com/scenario")).toEqual(["make.com/scenario"]);
   });
 

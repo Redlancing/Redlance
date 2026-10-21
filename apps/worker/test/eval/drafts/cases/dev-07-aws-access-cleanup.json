@@ -1,0 +1,32 @@
+{
+  "id": "dev-07-aws-access-cleanup",
+  "tags": ["dm_only", "no_budget", "send_rate"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "DevOps Engineer's help needed for 2-3hrs - I will pay for your time",
+    "body": "I have my MERN saas deployed on AWS by a freelancer, now my freelancer is creating problems for me and delaying my handover\n\nAs I don't have good relations with him anymore, I need someone to help me\n\nI do own AWS root login\n\nI have deleted his user roles across all services including AWS but I need someone to remove any possible access of him\n\nAs he still has all the live keys on his computer\nI will need you to teach me stuff and help me secure my access and solve my doubts\n\nI am new to this but learning won't be a problem, I do have small experience in tech\nAlso I am ready to pay for your time\n\nDM me with your experience and price for 2-3hrs",
+    "subreddit": "indiajobs"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["development"],
+    "skillIds": ["aws"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Need a DevOps expert to help secure an AWS account and remove a former freelancer's access.",
+    "applyInstructions": "DM me with your experience and price for 2-3hrs"
+  },
+  "expect": [
+    "follows the DM instruction: the comment is empty or a one-line note, the reply is in the DM",
+    "if it names a price for the 2-3 hours it comes from the profile's hourly rate and is in the DM, not the comment",
+    "is practical about removing the old freelancer's access and securing the AWS root account and keys, and does not claim DevOps or security certifications the profile lacks"
+  ]
+}

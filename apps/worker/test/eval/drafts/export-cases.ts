@@ -1,6 +1,6 @@
 /**
- * Exports posts and their analyses from a database into draft-eval case files, so new real cases
- * can be added by hand. Read-only: one `READ ONLY` transaction of SELECTs. The author is never
+ * Exports posts and their analyses from a database into draft-eval case files, so real posts can
+ * become eval cases (the draft eval's cases are all real posts, 2026-10-21). Read-only: one `READ ONLY` transaction of SELECTs. The author is never
  * selected, and Reddit usernames and emails inside the text are masked.
  *
  *   npm run eval:export-cases -w @redlance/worker -- [--limit=40] [--category=video] [--out=<dir>]

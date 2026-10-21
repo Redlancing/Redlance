@@ -18,6 +18,7 @@ import {
 import { TEST_ENV } from "../../../../../test/test-env";
 import { users } from "@redlance/db";
 import { GET as getFeed } from "./route";
+import { GET as getOne } from "./[matchId]/route";
 import { POST as postStatus } from "./[matchId]/status/route";
 
 beforeEach(async () => {
@@ -211,6 +212,7 @@ describe("GET /api/v1/feed", () => {
         "community",
         "deadline",
         "id",
+        "noBudgetStated",
         "payType",
         "postedAt",
         "redFlags",
@@ -229,6 +231,17 @@ describe("GET /api/v1/feed", () => {
     expect(new Date(item.post.postedAt).toISOString()).toBe(item.post.postedAt);
     // An analysis without instructions (all old rows) gives null.
     expect(item.post.applyInstructions).toBeNull();
+  });
+
+  it("vague_pay becomes noBudgetStated, not a red flag", async () => {
+    const { cookie, userId } = await setup();
+    await seedMatch(
+      userId,
+      await seedPost({ redFlags: ["vague_pay", "upfront_fee"] }),
+    );
+    const body = await (await get(cookie)).json();
+    expect(body.items[0].post.redFlags).toEqual(["upfront_fee"]);
+    expect(body.items[0].post.noBudgetStated).toBe(true);
   });
 
   it("applyInstructions are passed through", async () => {
@@ -340,6 +353,55 @@ describe("POST /api/v1/feed/:matchId/status", () => {
     expect((await res.json()).error.code).toBe("BAD_ORIGIN");
   });
 
+  it("onlyIfNew marks a new match seen", async () => {
+    const { cookie, userId } = await setup();
+    const id = await seedMatch(userId, await seedPost());
+    const res = await post(
+      id,
+      { status: "seen", onlyIfNew: true },
+      headers(cookie),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "seen" });
+  });
+
+  it("onlyIfNew leaves a saved match saved and returns its status", async () => {
+    const { cookie, userId } = await setup();
+    const id = await seedMatch(userId, await seedPost());
+    await post(id, { status: "saved" }, headers(cookie));
+    const res = await post(
+      id,
+      { status: "seen", onlyIfNew: true },
+      headers(cookie),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "saved" });
+    const [row] = await getDb()
+      .select()
+      .from(matches)
+      .where(eq(matches.id, id));
+    expect(row!.status).toBe("saved");
+    const events = await getDb()
+      .select()
+      .from(matchEvents)
+      .where(eq(matchEvents.matchId, id));
+    expect(events).toHaveLength(1);
+  });
+
+  it("onlyIfNew works only with seen; another user's match is 404", async () => {
+    const a = await setup("a@example.com");
+    const b = await setup("b@example.com");
+    const id = await seedMatch(a.userId, await seedPost());
+    expect(
+      (await post(id, { status: "saved", onlyIfNew: true }, headers(a.cookie)))
+        .status,
+    ).toBe(400);
+    expect(
+      (await post(id, { status: "seen", onlyIfNew: true }, headers(b.cookie)))
+        .status,
+    ).toBe(404);
+  });
+
   it("19: signed out is 401", async () => {
     const { userId } = await setup();
     const id = await seedMatch(userId, await seedPost());
@@ -349,6 +411,54 @@ describe("POST /api/v1/feed/:matchId/status", () => {
       { origin: TEST_ENV.APP_ORIGIN },
     );
     expect(res.status).toBe(401);
+  });
+});
+
+describe("GET /api/v1/feed/:matchId", () => {
+  const one = (matchId: string, cookie?: string) =>
+    getOne(
+      req(`/api/v1/feed/${matchId}`, { headers: cookie ? { cookie } : {} }),
+      { params: Promise.resolve({ matchId }) },
+    );
+
+  it("returns the match with the post body and the withdrawn flag", async () => {
+    const { cookie, userId } = await setup();
+    const id = await seedMatch(userId, await seedPost());
+    const res = await one(id, cookie);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.matchId).toBe(id);
+    expect(body.withdrawn).toBe(false);
+    expect(typeof body.post.body).toBe("string");
+    expect(body.post.postedAt).toMatch(/Z$/);
+    // Same fields as a feed item, plus the two extras.
+    const feed = await (await get(cookie, "?view=all")).json();
+    const item = structuredClone(body);
+    delete item.withdrawn;
+    delete item.post.body;
+    expect(feed.items[0]).toEqual(item);
+  });
+
+  it("dismissed matches still open", async () => {
+    const { cookie, userId } = await setup();
+    const id = await seedMatch(userId, await seedPost());
+    await post(
+      id,
+      { status: "dismissed" },
+      { cookie, origin: TEST_ENV.APP_ORIGIN },
+    );
+    const res = await one(id, cookie);
+    expect(res.status).toBe(200);
+    expect((await res.json()).status).toBe("dismissed");
+  });
+
+  it("another user's match, a bad id, or signed out", async () => {
+    const a = await setup("a@example.com");
+    const b = await setup("b@example.com");
+    const id = await seedMatch(a.userId, await seedPost());
+    expect((await one(id, b.cookie)).status).toBe(404);
+    expect((await one("not-a-uuid", a.cookie)).status).toBe(404);
+    expect((await one(id)).status).toBe(401);
   });
 });
 

@@ -169,11 +169,11 @@ describe("failImportJob", () => {
     expect(r.runAfter.getTime()).toBeLessThan(Date.now() + 6_500);
   });
 
-  it("fails for good once attempts are used up", async () => {
+  it("fails for good once attempts are used up, deleting the text", async () => {
     const u = await newUser();
     const id = await enqueue(u.id);
     await db.execute(
-      sql`update import_jobs set status = 'running', attempts = ${MAX_JOB_ATTEMPTS} where id = ${id}`,
+      sql`update import_jobs set status = 'running', attempts = ${MAX_JOB_ATTEMPTS}, source_text = 'cv text' where id = ${id}`,
     );
     expect(
       await failImportJob(db, id, MAX_JOB_ATTEMPTS, {
@@ -186,6 +186,7 @@ describe("failImportJob", () => {
     expect(r.stage).toBe("failed");
     expect(r.errorCode).toBe("X");
     expect(r.fileBytes).toBeNull();
+    expect(r.sourceText).toBeNull();
     expect(r.finishedAt).toBeInstanceOf(Date);
   });
 
@@ -248,13 +249,13 @@ describe("fencing", () => {
 });
 
 describe("completeImportJob", () => {
-  it("stores the result and drops the file", async () => {
+  it("stores the result and deletes the file and the text, keeping the cache key", async () => {
     const u = await newUser();
     const id = await enqueue(u.id);
     await claimNextImportJob(db);
+    await clearImportFile(db, id, 1, "text");
     await completeImportJob(db, id, 1, {
       result: { skills: ["a"] },
-      sourceText: "text",
       contentHash: "h",
       pipelineVersion: "v1",
     });
@@ -263,7 +264,12 @@ describe("completeImportJob", () => {
     expect(r.stage).toBe("done");
     expect(r.fileBytes).toBeNull();
     expect(r.result).toEqual({ skills: ["a"] });
-    expect(r.sourceText).toBe("text");
+    expect(r.sourceText).toBeNull();
+    expect(r.contentHash).toBe("h");
+    expect(r.pipelineVersion).toBe("v1");
+    expect(await findCachedResumeResult(db, "h", "v1")).toEqual({
+      skills: ["a"],
+    });
     expect(r.finishedAt).toBeInstanceOf(Date);
   });
 });
@@ -278,7 +284,10 @@ describe("requeueStaleImportJobs", () => {
       sql`update import_jobs set status = 'running', attempts = 1, locked_at = now() - interval '3 minutes' where id = ${a}`,
     );
     await db.execute(
-      sql`update import_jobs set status = 'running', attempts = 3, locked_at = now() - interval '3 minutes' where id = ${b}`,
+      sql`update import_jobs set status = 'running', attempts = 3, source_text = 'cv', locked_at = now() - interval '3 minutes' where id = ${b}`,
+    );
+    await db.execute(
+      sql`update import_jobs set source_text = 'cv' where id = ${a}`,
     );
     await db.execute(
       sql`update import_jobs set status = 'running', attempts = 1, locked_at = now() where id = ${fresh}`,
@@ -289,10 +298,12 @@ describe("requeueStaleImportJobs", () => {
     expect(ra.lockedAt).toBeNull();
     expect(ra.stage).toBe("queued");
     expect(ra.fileBytes).not.toBeNull();
+    expect(ra.sourceText).toBe("cv");
     const rb = await row(b);
     expect(rb.status).toBe("failed");
     expect(rb.errorCode).toBe("TIMEOUT");
     expect(rb.fileBytes).toBeNull();
+    expect(rb.sourceText).toBeNull();
     expect((await row(fresh)).status).toBe("running");
   });
 });

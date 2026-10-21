@@ -1,0 +1,10 @@
+{
+  "id": "rw-09-custom-paid-test",
+  "baseCaseId": "vid-03-longterm-creative-partner",
+  "instruction": "Mention that I'd be glad to do a short paid test edit first.",
+  "expect": [
+    "follows the instruction",
+    "does not invent new experience",
+    "keeps it short"
+  ]
+}

@@ -94,6 +94,34 @@ async function parseInput(
   return result.data;
 }
 
+function tooMany(retryAfterMs: number): ApiError {
+  const seconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
+  return new ApiError(
+    "RATE_LIMITED",
+    `Too many requests. Try again in ${seconds} seconds.`,
+    undefined,
+    { "Retry-After": String(seconds) },
+  );
+}
+
+/**
+ * Per-IP bucket checked before the session lookup, so floods of junk or forged cookies are
+ * refused without a database read. Skipped when no IP can be determined (never one shared
+ * bucket for everyone), and for the health check (which must stay cheap). Fails open.
+ */
+async function enforceIpLimit(request: Request, pathname: string) {
+  if (pathname === "/api/v1/health") return;
+  const ip = clientIp(request);
+  if (ip === "unknown") return;
+  let result;
+  try {
+    result = await getRateLimiter().consume(`ip:${ip}`, "ip", BUCKETS.ip);
+  } catch {
+    return;
+  }
+  if (!result.allowed) throw tooMany(result.retryAfterMs);
+}
+
 async function enforceRateLimit(
   option: RateLimitOption | undefined,
   user: Session | null,
@@ -106,20 +134,12 @@ async function enforceRateLimit(
   const subject = user ? `u:${user.userId}` : `ip:${clientIp(request)}`;
   const result = await getRateLimiter().consume(subject, bucket, limits);
   if (!result.allowed) {
-    const seconds = Math.max(1, Math.ceil(result.retryAfterMs / 1000));
-    throw new ApiError(
-      "RATE_LIMITED",
-      `Too many requests. Try again in ${seconds} seconds.`,
-      undefined,
-      {
-        "Retry-After": String(seconds),
-      },
-    );
+    throw tooMany(result.retryAfterMs);
   }
 }
 
 /**
- * Every /api/v1 route goes through this: session → origin → params → input → rate limit → handler,
+ * Every /api/v1 route goes through this: IP limit → session → origin → params → input → user rate limit → handler,
  * stopping at the first failure, with one log line per request.
  */
 export function apiRoute<
@@ -141,6 +161,7 @@ export function apiRoute<
     let response: Response;
 
     try {
+      await enforceIpLimit(request, url.pathname);
       const user = await getSession(request);
       if ((options.auth ?? true) && !user)
         throw new ApiError("UNAUTHENTICATED", "Please sign in.");

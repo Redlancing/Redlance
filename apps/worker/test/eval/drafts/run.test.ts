@@ -1,4 +1,4 @@
-import { createClient, createFakeTransport } from "@redlance/llm";
+import { createClient, createFakeTransport, LlmError } from "@redlance/llm";
 import { describe, expect, it } from "vitest";
 import { stubDraftResponder } from "../../stub-llm";
 import { loadCases } from "./cases";
@@ -99,6 +99,55 @@ describe("run.ts with the stub LLM (case 6)", () => {
     expect(report.cases[0]!.error).toBeDefined();
     expect(report.cases[1]!.scores).not.toBeNull();
     expect(report.totals.errors).toBe(1);
+    // The errored case is left out of the validator rate, not counted as a fail.
+    expect(report.totals.validatorPassRate).toBe(1);
+  });
+
+  it("waits and re-runs a case that Vertex throttled", async () => {
+    let throttled = true;
+    const llm = createClient(
+      createFakeTransport((req) => {
+        if (throttled)
+          throw new LlmError("rate_limited", "Vertex AI rate limited");
+        return isJudgeRequest(req.prompt)
+          ? stubJudgeResponder(req.prompt)
+          : stubDraftResponder(req);
+      }),
+      { sleep: async () => {} },
+    );
+    const waited: number[] = [];
+    const report = await runEval({
+      cases: { drafts: cases.drafts.slice(0, 1), rewrites: [] },
+      llm,
+      models,
+      retryWaitsMs: [7, 9],
+      sleep: async (ms) => {
+        waited.push(ms);
+        throttled = false;
+      },
+    });
+    expect(waited).toEqual([7]);
+    expect(report.cases[0]!.error).toBeUndefined();
+    expect(report.cases[0]!.scores).not.toBeNull();
+  });
+
+  it("gives up on a throttled case after the last wait", async () => {
+    const llm = createClient(
+      createFakeTransport(() => {
+        throw new LlmError("rate_limited", "Vertex AI rate limited");
+      }),
+      { sleep: async () => {} },
+    );
+    const waited: number[] = [];
+    const report = await runEval({
+      cases: { drafts: cases.drafts.slice(0, 1), rewrites: [] },
+      llm,
+      models,
+      retryWaitsMs: [7, 9],
+      sleep: async (ms) => void waited.push(ms),
+    });
+    expect(waited).toEqual([7, 9]);
+    expect(report.cases[0]!.error).toMatch(/rate limited/);
   });
 
   it("skips a rewrite whose base case is not in the run", async () => {

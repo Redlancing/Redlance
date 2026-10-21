@@ -1,4 +1,4 @@
-import { CATEGORIES, SKILL_BY_ID } from "@redlance/core";
+import { CATEGORIES, SKILL_BY_ID, warningFlags } from "@redlance/core";
 import type { RescoreContext } from "@redlance/db";
 import { LlmError, type AttemptRecord, type LlmClient } from "@redlance/llm";
 import { z } from "zod";
@@ -68,7 +68,7 @@ export function buildRescorePrompt(ctx: RescoreContext): {
       `, deadline ${p.deadline ?? "none"}`,
     `Job types: ${list(p.categories.map(categoryName))}`,
     `Skills: ${list(p.skillIds.map(skillName))}`,
-    `Red flags: ${list(p.redFlags)}`,
+    `Red flags: ${list(warningFlags(p.redFlags))}`,
   ];
   const profileLines = [
     `Job types: ${list(pr.categories.map(categoryName))}`,

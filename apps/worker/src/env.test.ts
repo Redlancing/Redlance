@@ -223,22 +223,22 @@ describe("drafting budget settings", () => {
 });
 
 describe("drafting settings", () => {
-  it("21: defaults: on, Flash for drafts, Flash-Lite for rewrites, 4 at a time", () => {
+  it("21: defaults: on, Flash-Lite for drafts and rewrites, 4 at a time", () => {
     const env = parseWorkerEnv(base);
     expect(env.DRAFTS_ENABLED).toBe(true);
     expect(env.VOICE_ENABLED).toBe(true);
-    expect(env.DRAFT_MODEL).toBe("gemini-3.8-flash");
+    expect(env.DRAFT_MODEL).toBe("gemini-3.5-flash-lite");
     expect(env.REWRITE_MODEL).toBe("gemini-3.5-flash-lite");
     expect(env.DRAFT_CONCURRENCY).toBe(4);
   });
 
-  it("21: the models default to whatever VERTEX_MODEL_SMART / _FAST are", () => {
+  it("21: the models default to VERTEX_MODEL_FAST", () => {
     const env = parseWorkerEnv({
       ...base,
       VERTEX_MODEL_SMART: "smart-x",
       VERTEX_MODEL_FAST: "fast-x",
     });
-    expect(env.DRAFT_MODEL).toBe("smart-x");
+    expect(env.DRAFT_MODEL).toBe("fast-x");
     expect(env.REWRITE_MODEL).toBe("fast-x");
     const own = parseWorkerEnv({
       ...base,
@@ -267,5 +267,108 @@ describe("drafting settings", () => {
     expect(() => parseWorkerEnv({ ...base, DRAFTS_ENABLED: "yes" })).toThrow(
       /DRAFTS_ENABLED/,
     );
+  });
+
+  describe("alerts", () => {
+    const token = "123456789:AAH_abcdefghijklmnopqrstuvwxyz0123456";
+
+    it("defaults: on, no token, 25 a second, 24 hours", () => {
+      const env = parseWorkerEnv(base);
+      expect(env.ALERTS_ENABLED).toBe(true);
+      expect(env.TELEGRAM_BOT_TOKEN).toBeUndefined();
+      expect(env.TELEGRAM_BOT_USERNAME).toBeUndefined();
+      expect(env.TELEGRAM_MAX_PER_SECOND).toBe(25);
+      expect(env.ALERT_MAX_AGE_HOURS).toBe(24);
+      expect(env.APP_ORIGIN).toBeUndefined();
+    });
+
+    it("parses INSIGHTS_ENABLED (default true)", () => {
+      expect(parseWorkerEnv(base).INSIGHTS_ENABLED).toBe(true);
+      expect(
+        parseWorkerEnv({ ...base, INSIGHTS_ENABLED: "false" }).INSIGHTS_ENABLED,
+      ).toBe(false);
+    });
+
+    it("parses ALERTS_ENABLED like the other flags", () => {
+      expect(
+        parseWorkerEnv({ ...base, ALERTS_ENABLED: "false" }).ALERTS_ENABLED,
+      ).toBe(false);
+      expect(() => parseWorkerEnv({ ...base, ALERTS_ENABLED: "yes" })).toThrow(
+        /ALERTS_ENABLED/,
+      );
+    });
+
+    it("treats empty values as unset", () => {
+      const env = parseWorkerEnv({
+        ...base,
+        TELEGRAM_BOT_TOKEN: "",
+        TELEGRAM_BOT_USERNAME: "",
+        APP_ORIGIN: "",
+        TELEGRAM_MAX_PER_SECOND: "",
+        ALERT_MAX_AGE_HOURS: "",
+      });
+      expect(env.TELEGRAM_BOT_TOKEN).toBeUndefined();
+      expect(env.TELEGRAM_MAX_PER_SECOND).toBe(25);
+    });
+
+    it("accepts a token with APP_ORIGIN, and normalises the origin", () => {
+      const env = parseWorkerEnv({
+        ...base,
+        TELEGRAM_BOT_TOKEN: token,
+        TELEGRAM_BOT_USERNAME: "redlance_dev_bot",
+        APP_ORIGIN: "http://localhost:3001/",
+      });
+      expect(env.TELEGRAM_BOT_TOKEN).toBe(token);
+      expect(env.TELEGRAM_BOT_USERNAME).toBe("redlance_dev_bot");
+      expect(env.APP_ORIGIN).toBe("http://localhost:3001");
+    });
+
+    it("requires APP_ORIGIN when a token is set", () => {
+      expect(() =>
+        parseWorkerEnv({ ...base, TELEGRAM_BOT_TOKEN: token }),
+      ).toThrow(/APP_ORIGIN is required/);
+    });
+
+    it("rejects a malformed token without echoing it", () => {
+      const bad = "not-a-token-secret-value";
+      let message = "";
+      try {
+        parseWorkerEnv({
+          ...base,
+          TELEGRAM_BOT_TOKEN: bad,
+          APP_ORIGIN: "http://localhost:3000",
+        });
+      } catch (err) {
+        message = (err as Error).message;
+      }
+      expect(message).toMatch(/TELEGRAM_BOT_TOKEN/);
+      expect(message).not.toContain(bad);
+    });
+
+    it("rejects a bad APP_ORIGIN", () => {
+      for (const v of ["localhost:3000", "ftp://x.com", "nope"])
+        expect(() => parseWorkerEnv({ ...base, APP_ORIGIN: v })).toThrow(
+          /APP_ORIGIN/,
+        );
+    });
+
+    it("bounds TELEGRAM_MAX_PER_SECOND to 1-30 and ALERT_MAX_AGE_HOURS to 1-168", () => {
+      expect(
+        parseWorkerEnv({ ...base, TELEGRAM_MAX_PER_SECOND: "30" })
+          .TELEGRAM_MAX_PER_SECOND,
+      ).toBe(30);
+      expect(
+        parseWorkerEnv({ ...base, ALERT_MAX_AGE_HOURS: "168" })
+          .ALERT_MAX_AGE_HOURS,
+      ).toBe(168);
+      for (const v of ["0", "31", "2.5", "x"])
+        expect(() =>
+          parseWorkerEnv({ ...base, TELEGRAM_MAX_PER_SECOND: v }),
+        ).toThrow(/TELEGRAM_MAX_PER_SECOND/);
+      for (const v of ["0", "169", "x"])
+        expect(() =>
+          parseWorkerEnv({ ...base, ALERT_MAX_AGE_HOURS: v }),
+        ).toThrow(/ALERT_MAX_AGE_HOURS/);
+    });
   });
 });

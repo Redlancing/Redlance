@@ -113,3 +113,35 @@ describe("drafting budget settings", () => {
     ).toThrowError(/DRAFT_BUDGET_ALERT_USD/);
   });
 });
+
+describe("TELEGRAM_BOT_USERNAME", () => {
+  it("is optional, and empty means unset", () => {
+    expect(parseEnv(valid).TELEGRAM_BOT_USERNAME).toBeUndefined();
+    expect(
+      parseEnv({ ...valid, TELEGRAM_BOT_USERNAME: "" }).TELEGRAM_BOT_USERNAME,
+    ).toBeUndefined();
+  });
+
+  it.each(["redlance_bot", "RedlanceBot", "a_b_Bot", "x".repeat(29) + "bot"])(
+    "accepts %s",
+    (name) => {
+      expect(
+        parseEnv({ ...valid, TELEGRAM_BOT_USERNAME: name })
+          .TELEGRAM_BOT_USERNAME,
+      ).toBe(name);
+    },
+  );
+
+  it.each([
+    "bot",
+    "abot",
+    "redlance",
+    "@redlance_bot",
+    "red-lance_bot",
+    "x".repeat(30) + "bot",
+  ])("rejects %s", (name) => {
+    expect(() => parseEnv({ ...valid, TELEGRAM_BOT_USERNAME: name })).toThrow(
+      EnvError,
+    );
+  });
+});

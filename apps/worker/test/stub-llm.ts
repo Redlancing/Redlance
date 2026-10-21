@@ -1,45 +1,41 @@
-import {
-  CATEGORIES,
-  RESUME_STEP_NAMES,
-  SKILL_BY_ID,
-  type ResumeStepName,
-} from "@redlance/core";
+import { CATEGORIES, SKILL_BY_ID } from "@redlance/core";
 import {
   createClient,
   createFakeTransport,
   type GenerateRequest,
   type LlmClient,
 } from "@redlance/llm";
-import { WORK_SHORTLIST_HEADING } from "../src/resume/steps/shared";
 import {
-  FULL_LIST_HEADING,
   SHORTLIST_HEADING,
-} from "../src/resume/steps/skills";
+  type ResumeCallName,
+} from "../src/resume/steps/shared";
 
 // Test-only: a deterministic stand-in for Gemini so tests never call Vertex.
 // Built only from the request. Nothing under src/ may import this file.
 
-const CLOSE = "</resume>";
+const OPEN = "\n\n<resume>\n";
+const CLOSE = "\n</resume>";
+const CALL_NAMES: readonly ResumeCallName[] = ["profile", "skills", "work"];
 
+/** A resume prompt's task (before the resume) and resume (last, up to the closing tag). */
 function parts(
   req: GenerateRequest<unknown>,
 ): { resume: string; task: string } | null {
-  const open = req.prompt.indexOf("<resume>\n");
-  const close = req.prompt.lastIndexOf(CLOSE);
-  if (open !== 0 || close < 0) return null;
+  const open = req.prompt.indexOf(OPEN);
+  if (open < 0 || !req.prompt.endsWith(CLOSE)) return null;
   return {
-    resume: req.prompt.slice("<resume>\n".length, close).trim(),
-    task: req.prompt.slice(close + CLOSE.length),
+    task: req.prompt.slice(0, open),
+    resume: req.prompt.slice(open + OPEN.length, -CLOSE.length).trim(),
   };
 }
 
-/** Which resume step a request is for, from the `Task: <name>` marker after the resume. */
-export function stepOf(req: GenerateRequest<unknown>): ResumeStepName | null {
+/** Which resume call a request is for, from the `Task: <name>` marker before the resume. */
+export function callOf(req: GenerateRequest<unknown>): ResumeCallName | null {
   const p = parts(req);
   if (!p) return null;
   const m = /^Task: (\w+)$/m.exec(p.task);
-  const name = m?.[1] as ResumeStepName | undefined;
-  return name && RESUME_STEP_NAMES.includes(name) ? name : null;
+  const name = m?.[1] as ResumeCallName | undefined;
+  return name && CALL_NAMES.includes(name) ? name : null;
 }
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -124,18 +120,10 @@ function jobTypes(resume: string) {
 }
 
 function skills(resume: string, task: string) {
-  const start = task.indexOf(SHORTLIST_HEADING);
-  const end = task.indexOf(FULL_LIST_HEADING);
-  const block =
-    start >= 0
-      ? task.slice(start + SHORTLIST_HEADING.length, end >= 0 ? end : undefined)
-      : "";
   const out: { id: string; level: "core" | "secondary"; evidence: string }[] =
     [];
-  for (const line of block.split("\n")) {
-    const id = /^(\S+) — /.exec(line.trim())?.[1];
-    const skill = id ? SKILL_BY_ID.get(id) : undefined;
-    if (!skill) continue;
+  for (const id of shortlistOf(task)) {
+    const skill = SKILL_BY_ID.get(id)!;
     for (const label of [skill.name, ...skill.aliases]) {
       const hit = label.length >= 3 ? findWord(resume, label) : null;
       if (hit) {
@@ -149,29 +137,55 @@ function skills(resume: string, task: string) {
     }
     if (out.length >= 30) break;
   }
-  return { skills: out, customSkills: [] };
+  return { skills: out };
 }
 
 // ---------- projects and experience ----------
 
-/** The "[P1]" / "[E1]" blocks the work steps put inside <resume>. */
-function blocksOf(resume: string): { id: string; lines: string[] }[] {
-  const out: { id: string; lines: string[] }[] = [];
-  for (const raw of resume.split("\n")) {
-    const id = /^\[([PE]\d+)\]$/.exec(raw.trim())?.[1];
-    if (id) out.push({ id, lines: [] });
-    else if (out.length && raw.trim()) out.at(-1)!.lines.push(raw.trim());
+/** The text inside `<tag>` … `</tag>` in the work call's resume, or null. */
+function section(resume: string, tag: string): string | null {
+  const m = new RegExp(`<${tag}>\\n([\\s\\S]*?)\\n</${tag}>`).exec(resume);
+  return m ? m[1]! : null;
+}
+
+/**
+ * The work call numbers every line ("[P3] …", "[E3] …") inside <projects> and
+ * <experience>; the stub groups them into entries the simple way: a new entry starts at a
+ * line that isn't a bullet when a blank line or a bullet came before it.
+ */
+function blocksOf(
+  text: string,
+): { from: number; to: number; lines: string[] }[] {
+  const out: { from: number; to: number; lines: string[] }[] = [];
+  let gap = true;
+  let afterBullet = false;
+  for (const raw of text.split("\n")) {
+    const m = /^\[[PE](\d+)\] (.*)$/.exec(raw);
+    if (!m) {
+      gap = true;
+      continue;
+    }
+    const n = Number(m[1]);
+    const line = m[2]!.trim();
+    const bullet = BULLET.test(line);
+    if (!out.length || (!bullet && (gap || afterBullet)))
+      out.push({ from: n, to: n, lines: [] });
+    const cur = out.at(-1)!;
+    cur.to = n;
+    cur.lines.push(line);
+    gap = false;
+    afterBullet = bullet || line.length > 120;
   }
   return out;
 }
 
-/** The shortlist ids the work steps list under their heading (up to the first blank line). */
-function workShortlist(task: string): string[] {
-  const start = task.indexOf(WORK_SHORTLIST_HEADING);
+/** The shortlist ids the skills and work calls list under their heading (up to a blank line). */
+function shortlistOf(task: string): string[] {
+  const start = task.indexOf(SHORTLIST_HEADING);
   if (start < 0) return [];
   const ids: string[] = [];
   for (const line of task
-    .slice(start + WORK_SHORTLIST_HEADING.length)
+    .slice(start + SHORTLIST_HEADING.length)
     .split("\n")
     .slice(1)) {
     if (!line.trim()) break;
@@ -239,16 +253,15 @@ function blockSkills(text: string, shortlist: string[]): string[] {
     .slice(0, 10);
 }
 
-function projects(resume: string, task: string) {
-  const shortlist = workShortlist(task);
+function projects(text: string, shortlist: string[]) {
   return {
-    projects: blocksOf(resume)
+    projects: blocksOf(text)
       .slice(0, 8)
       .map((b) => {
         const text = b.lines.join("\n");
         const title = headParts(b.lines[0] ?? "")[0].slice(0, 80);
         return {
-          block: b.id,
+          lines: { from: b.from, to: b.to },
           title,
           summary: "A project listed on the resume.",
           role: "unknown",
@@ -265,10 +278,9 @@ function projects(resume: string, task: string) {
   };
 }
 
-function experience(resume: string, task: string) {
-  const shortlist = workShortlist(task);
+function experience(text: string, shortlist: string[]) {
   return {
-    experience: blocksOf(resume)
+    experience: blocksOf(text)
       .slice(0, 6)
       .map((b) => {
         const text = b.lines.join("\n");
@@ -282,7 +294,7 @@ function experience(resume: string, task: string) {
               ? "internship"
               : "unknown";
         return {
-          block: b.id,
+          lines: { from: b.from, to: b.to },
           title: title.slice(0, 80),
           // A head segment without digits (not a date) is read as the organisation.
           organisation: org && !/\d/.test(org) ? org.slice(0, 80) : null,
@@ -300,20 +312,27 @@ function experience(resume: string, task: string) {
   };
 }
 
-/** Deterministic, schema-valid answers for the resume steps. */
+/** The work call: a list for each labelled part of the resume it was given. */
+function work(resume: string, task: string) {
+  const shortlist = shortlistOf(task);
+  const p = section(resume, "projects");
+  const e = section(resume, "experience");
+  return {
+    ...(p !== null && projects(p, shortlist)),
+    ...(e !== null && experience(e, shortlist)),
+  };
+}
+
+/** Deterministic, schema-valid answers for the resume calls. */
 export function stubResumeResponder(req: GenerateRequest<unknown>): unknown {
   const p = parts(req);
-  switch (stepOf(req)) {
-    case "basics":
-      return basics(p!.resume);
-    case "jobTypes":
-      return jobTypes(p!.resume);
+  switch (callOf(req)) {
+    case "profile":
+      return { ...basics(p!.resume), ...jobTypes(p!.resume) };
     case "skills":
       return skills(p!.resume, p!.task);
-    case "projects":
-      return projects(p!.resume, p!.task);
-    case "experience":
-      return experience(p!.resume, p!.task);
+    case "work":
+      return work(p!.resume, p!.task);
     default:
       return {};
   }

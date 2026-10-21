@@ -1,6 +1,0 @@
-{
-  "id": "rw-07-formal-docs",
-  "baseCaseId": "wri-02-api-docs",
-  "option": "formal",
-  "expect": ["more formal", "no rate in the comment", "keeps the cited project"]
-}

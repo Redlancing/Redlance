@@ -1,0 +1,32 @@
+{
+  "id": "mkt-03-outreach-tasks-startup",
+  "tags": ["broad", "no_budget", "vague"],
+  "profileId": "broad-generalist",
+  "post": {
+    "title": "Looking for someone to do some lightweight outreach tasks",
+    "body": "Hello everyone,\n\nI am in search of a detail oriented individual with exceptional English to work on our team as a outreach and communications representative for our game server hosting startup!\n\nWe have a system in place where you can sign in, view your tasks for the day and work through them while logging your time. At the end of the day just record your time and get paid! You will be provided with a company email, login for our dashboard, and a direct line to myself if you have any questions throughout the day.\n\nI want to stress that this is a position that has the potential to develop into something much larger if you are a good match.\n\nI look forward to hearing from you!",
+    "subreddit": "freelances_forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["marketing", "admin"],
+    "skillIds": [],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": ["vague_pay"],
+    "summary": "Looking for a detail-oriented outreach and communications representative for a game server hosting startup.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "asks about pay and weekly hours instead of inventing them",
+    "does not claim outreach, game-hosting or startup experience beyond the profile's admin background",
+    "is short"
+  ]
+}

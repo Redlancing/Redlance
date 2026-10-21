@@ -32,7 +32,6 @@ const SUGGESTIONS = {
     id: ["react", "javascript", "typescript", "after-effects"][i % 4]!,
     level: "secondary" as const,
   })).filter((s, i, a) => a.findIndex((x) => x.id === s.id) === i),
-  customSkills: [{ name: "Descript", level: "secondary" as const }],
   githubUsername: null,
   projects: [],
   experience: [],
@@ -89,7 +88,7 @@ describe("describeImports", () => {
     const view = describeImports([job({ suggestions: SUGGESTIONS })], null);
     expect(view).toMatchObject({ busy: false, tone: "success" });
     expect(view.message).toBe(
-      "Done — we filled in your basics, 3 job types and 5 skills. Check them on the next steps.",
+      "Done — we filled in your basics, 3 job types and 4 skills. Check them on the next steps.",
     );
   });
 
@@ -97,7 +96,7 @@ describe("describeImports", () => {
     const view = describeImports(
       [
         job({
-          suggestions: { ...SUGGESTIONS, skills: [], customSkills: [] },
+          suggestions: { ...SUGGESTIONS, skills: [] },
           partial: ["skills"],
         }),
       ],

@@ -1,0 +1,45 @@
+{
+  "id": "dev-03-python-ai-engineer-monthly",
+  "tags": ["dm_only"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "[Hiring] Remote Python / AI / ML Engineer – $3,000 USD/Month",
+    "body": "Hi everyone!\n\nWe are hiring an experienced Python / AI Engineer for a long-term remote opportunity.\n\nWe are looking for someone with strong technical skills and hands-on experience building AI-powered applications and scalable backend systems.\n\nRequired Skills:\n\n* Python, FastAPI, Django\n* Artificial Intelligence and Machine Learning\n* LLMs, OpenAI APIs, LangChain\n* Microsoft Azure and AWS\n* REST APIs, SQL, PostgreSQL\n* Docker, Git, CI/CD\n\nResponsibilities:\n\n* Develop and maintain Python backend services\n* Build and integrate AI/ML solutions\n* Design and optimize APIs\n* Collaborate with our remote engineering team\n\nCompensation: $3,000 USD/month\n\nSchedule: [Specify expected weekly hours]\n\nLocation: Remote\n\nContract: Long-term\n\nHow to Apply:\n\nPlease send a Reddit DM with your resume, LinkedIn profile link, relevant experience, GitHub or portfolio, and availability.\n\nThank you!",
+    "subreddit": "forhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "contract",
+    "payType": "paid",
+    "categories": ["development", "data"],
+    "skillIds": [
+      "python",
+      "machine-learning",
+      "fastapi",
+      "django",
+      "llm-apps",
+      "rest-api",
+      "azure",
+      "aws",
+      "sql",
+      "postgresql",
+      "docker",
+      "devops"
+    ],
+    "budgetMin": 3000,
+    "budgetMax": 3000,
+    "currency": "USD",
+    "budgetUnit": "month",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Seeking an experienced remote Python and AI engineer to build and maintain scalable backend systems and AI-powered applications.",
+    "applyInstructions": "Please send a Reddit DM with your resume, LinkedIn profile link, relevant experience, GitHub or portfolio, and availability."
+  },
+  "expect": [
+    "follows the Reddit DM instruction: the comment is empty or a one-line note, the pitch is in the DM",
+    "ties the profile's Python, Node and PostgreSQL work to the post and does not claim LangChain, Azure, FastAPI or LLM experience the evidence does not show",
+    "does not make up weekly hours or availability (the post left its hours as an unfilled placeholder)"
+  ]
+}

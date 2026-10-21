@@ -77,13 +77,10 @@ export function ReviewStep({
   );
   const country =
     countries?.find((c) => c.code === basics.country)?.name ?? basics.country;
-  const named = [
-    ...skills.skills.map((s) => ({
-      name: SKILL_BY_ID.get(s.id)?.name ?? s.id,
-      level: s.level,
-    })),
-    ...skills.customSkills.map((s) => ({ name: s.name, level: s.level })),
-  ];
+  const named = skills.skills.map((s) => ({
+    name: SKILL_BY_ID.get(s.id)?.name ?? s.id,
+    level: s.level,
+  }));
   const core = named.filter((s) => s.level === "core").map((s) => s.name);
   const others = named.filter((s) => s.level !== "core").map((s) => s.name);
 

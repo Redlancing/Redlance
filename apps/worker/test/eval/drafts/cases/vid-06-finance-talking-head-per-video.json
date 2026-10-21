@@ -1,0 +1,32 @@
+{
+  "id": "vid-06-finance-talking-head-per-video",
+  "tags": ["below_min"],
+  "profileId": "video-editor",
+  "post": {
+    "title": "[task] Need an experienced/ advanced editor. $15-20 per video.",
+    "body": "I am in the finance education space and am looking for an editor for talking head videos.\n\nI need someone who can\n- clean up mistakes/ dead space\n- implement zooms and other visual effects\n- make charts, animated graphs, and text visuals\n- find and add copyright free visuals\n- find and add copyright free B-roll\n\nAdditional preferences:\n- 1-3 day turnaround\n- Willingness to do some minor research on the topic in order to add recent articles/ research on screen.\n\nI will pay $15 for videos <15 minutes. $20 for videos 15-25 minute videos, and $25 for 25+ minute videos.\n\nI can share some videos with the style I am thinking, and I would love to work together long term. Please dont apply if you cannot meet the above qualifications. Thank you!",
+    "subreddit": "slavelabour"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["video"],
+    "skillIds": ["vfx", "research"],
+    "budgetMin": 15,
+    "budgetMax": 25,
+    "currency": "USD",
+    "budgetUnit": "per_item",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for an experienced video editor for finance education talking head videos with B-roll, visual effects, and research.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "mentions talking-head cleanup, zooms, animated charts or text and B-roll, matching the post",
+    "does not name a rate in the public comment and does not guarantee a 1-3 day turnaround",
+    "does not claim finance or research expertise the profile lacks"
+  ]
+}

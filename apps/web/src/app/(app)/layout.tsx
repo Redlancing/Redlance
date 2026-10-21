@@ -1,9 +1,15 @@
+import { Settings } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { MobileTabBar } from "@/components/app/mobile-tab-bar";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { SignOutButton } from "@/components/app/sign-out-button";
 import { Logo } from "@/components/brand/logo";
+import { Toaster } from "@/components/ui/sonner";
+import { safeNextPath } from "@/lib/safe-next";
+import { REQUEST_PATH_HEADER } from "@/server/request-path";
 import { getCurrentUser } from "@/server/current-user";
 
 export const metadata: Metadata = {
@@ -17,26 +23,51 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/dashboard");
+  if (!user) {
+    // The proxy sets the requested path; only same-site paths survive safeNextPath.
+    const next = safeNextPath((await headers()).get(REQUEST_PATH_HEADER));
+    redirect(`/login?next=${encodeURIComponent(next)}`);
+  }
 
   return (
     <div className="flex min-h-svh flex-1">
-      <AppSidebar email={user.email} activeHref="/dashboard" />
+      <AppSidebar email={user.email} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-border px-4 py-3 md:hidden">
           <Link
             href="/dashboard"
+            prefetch={false}
             aria-label="Redlance dashboard"
             className="text-lg"
           >
             <Logo />
           </Link>
-          <SignOutButton />
+          {/* Settings left the phone tab bar (five items: Overview … Profile) for this spot. */}
+          <div className="flex items-center gap-1">
+            <Link
+              href="/settings"
+              prefetch={false}
+              aria-label="Settings"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-stone transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            >
+              <Settings
+                className="size-4"
+                strokeWidth={1.75}
+                aria-hidden="true"
+              />
+            </Link>
+            <SignOutButton />
+          </div>
         </header>
-        <main id="main" className="flex-1 px-4 py-8 sm:px-8 lg:px-12">
+        <main
+          id="main"
+          className="flex-1 px-4 py-8 pb-24 sm:px-8 md:pb-8 lg:px-12"
+        >
           {children}
         </main>
       </div>
+      <MobileTabBar />
+      <Toaster />
     </div>
   );
 }

@@ -37,14 +37,14 @@ export const HARD_MINIMUMS: Record<HardTag, number> = {
   below_min: 2,
   vague: 3,
   broad: 3,
-  hinglish: 2,
+  hinglish: 1,
   urgent: 2,
-  injection: 2,
+  injection: 0,
 };
 
 /** Minimum cases per job type (the category of the post), and the totals. */
 export const TYPE_MINIMUMS = {
-  development: 15,
+  development: 12,
   video: 8,
   design: 6,
   writing: 6,

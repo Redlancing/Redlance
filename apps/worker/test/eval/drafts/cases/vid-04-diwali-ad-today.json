@@ -1,0 +1,32 @@
+{
+  "id": "vid-04-diwali-ad-today",
+  "tags": ["urgent", "send_rate", "dm_only"],
+  "profileId": "video-editor",
+  "post": {
+    "title": "Need a freelancer to create 20 -30 seconds Ad for social media",
+    "body": "We need a kickass video editor to make a highly captivating video for running ads on MEta. We have original videos and pictures of the product.\n\nTurnaround time is today. We need to run ad by tomorrow since it’s focused on getting orders for Diwali. 😄\n\nBudget - 2000 and opportunity for more work in the future.\n\nDM asap with your work and quote.",
+    "subreddit": "freelanceindia"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["video", "marketing"],
+    "skillIds": ["video-editing"],
+    "budgetMin": 2000,
+    "budgetMax": 2000,
+    "currency": "INR",
+    "budgetUnit": "fixed",
+    "remote": "remote",
+    "location": null,
+    "deadline": "2026-10-22",
+    "redFlags": [],
+    "summary": "A video editor is needed to create a 20-30 second social media ad for Diwali orders.",
+    "applyInstructions": "DM asap with your work and quote."
+  },
+  "expect": [
+    "is honest about the same-day deadline: it does not promise delivery today unless the evidence supports it",
+    "gives the work link and, if it names a quote, does not mistake the INR 2,000 budget for USD",
+    "mentions the 20-30 second ad for Meta and the product footage the poster has"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "mkt-02-streetwear-social-partner",
+  "tags": ["broad", "no_budget", "vague"],
+  "profileId": "broad-generalist",
+  "post": {
+    "title": "[Hiring]Looking for a Creative Social Media Partner for an Independent Streetwear Brand. pay d.o.e %",
+    "body": "Hey everyone!\n\nI'm the founder of RECON, an independent streetwear brand inspired by automotive culture, tactical gaming, and contemporary graphic art.\n\nI'm looking to connect with a creative social media manager or content creator who understands streetwear, fashion, and online merchandise brands.\n\nI'm particularly interested in someone who can help with short-form video content, Instagram and TikTok marketing, brand storytelling, and building an audience around our designs.\n\nI'm looking for someone who can bring creative ideas to the table, understand the streetwear aesthetic, and help develop a consistent content strategy that increases brand awareness and drives traffic to our online store.\n\nExperience working with clothing brands, independent designers, or e-commerce businesses is a plus.\n\nI'd like to start with a small project and explore a longer-term working relationship if we're a good fit.\n\nIf you're interested, please send me a portfolio, examples of brands you've worked with, and a brief description of how you'd approach marketing an independent streetwear brand.\n\nLooking forward to connecting!\n\n— RECON",
+    "subreddit": "forhirefreelance"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "commission_only",
+    "categories": ["marketing"],
+    "skillIds": ["social-media-management", "short-form-video"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "unknown",
+    "location": null,
+    "deadline": null,
+    "redFlags": ["vague_pay"],
+    "summary": "An independent streetwear brand needs a social media manager for content creation and marketing strategy.",
+    "applyInstructions": "send me a portfolio, examples of brands you've worked with, and a brief description of how you'd approach marketing an independent streetwear brand."
+  },
+  "expect": [
+    "does not accept the percentage-only pay and does not invent a rate",
+    "does not invent brands worked with or a portfolio, and says what it can show honestly",
+    "answers the question of how to market an independent streetwear brand with one concrete idea, not generic filler"
+  ]
+}

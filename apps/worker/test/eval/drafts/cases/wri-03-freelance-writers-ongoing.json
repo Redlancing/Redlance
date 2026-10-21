@@ -1,0 +1,32 @@
+{
+  "id": "wri-03-freelance-writers-ongoing",
+  "tags": ["no_budget", "vague"],
+  "profileId": "senior-writer",
+  "post": {
+    "title": "Hiring Freelance Writers – Remote, Ongoing Work",
+    "body": "Hiring Freelance Writers – Remote, Ongoing Work\n\nI’m looking for skilled and dependable freelance writers to help with ongoing content-writing, rewriting, and editing projects.\n\nWhat you’ll do:\n\n- Rewrite and improve existing content while preserving its intended meaning\n- Create clear, engaging, and original copy\n- Edit content for grammar, readability, tone, and accuracy\n- Follow project guidelines and meet agreed deadlines\n\nWhat I’m looking for:\n\n- Strong written English\n- Excellent attention to detail\n- Reliable communication and responsiveness\n- Previous writing, editing, or content experience is preferred but not required\n\nWork details:\n\n- Fully remote\n- Ongoing projects available\n- Flexible workload depending on availability\n- Compensation is discussed based on the project, workload, and experience\n- Start: Immediately\n\nIf you’re interested, please comment or send me a DM with:\n\n1. A brief introduction\n2. Your writing/editing experience\n3. Your availability\n4. A sample of your previous work (if available)\n\nPlease note: This is freelance project work, not a salaried employment position. Specific project details and compensation will be discussed with suitable candidates before any work begins.",
+    "subreddit": "contentwritingjobs"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["writing"],
+    "skillIds": ["copywriting"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": ["vague_pay"],
+    "summary": "Looking for freelance writers for ongoing content-writing, rewriting, and editing projects.",
+    "applyInstructions": "If you’re interested, please comment or send me a DM with: 1. A brief introduction 2. Your writing/editing experience 3. Your availability 4. A sample of your previous work (if available)"
+  },
+  "expect": [
+    "gives what the post asks for: a brief introduction, writing and editing experience, availability and one sample, without inventing availability hours",
+    "does not state a rate (compensation is to be discussed)",
+    "does not name employers"
+  ]
+}

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { warningFlags } from "../job-post";
 import { BROAD_CAP } from "./constants";
 import {
   budgetFit,
@@ -149,11 +150,30 @@ describe("ruleScore", () => {
   });
   it("8: two red flags cost 30", () => {
     const r = ruleScore(
-      mk({ ...postA, redFlags: ["upfront_fee", "vague_pay"] }),
+      mk({ ...postA, redFlags: ["upfront_fee", "asks_for_free_work"] }),
       priya,
     );
     expect(r.score).toBe(50);
     expect(r.reason).toContain("red flag");
+  });
+  it("8b: vague_pay (no budget stated) costs nothing", () => {
+    const base = ruleScore(mk(postA), priya);
+    const r = ruleScore(mk({ ...postA, redFlags: ["vague_pay"] }), priya);
+    expect(r.score).toBe(base.score);
+    expect(r.features.some((f) => f.signal === "red_flag")).toBe(false);
+    const both = ruleScore(
+      mk({ ...postA, redFlags: ["vague_pay", "upfront_fee"] }),
+      priya,
+    );
+    expect(both.score).toBe(base.score - 15);
+  });
+  it("8c: old stored adult_content/unrealistic_pay/academic_dishonesty cost nothing", () => {
+    const base = ruleScore(mk(postA), priya);
+    const old = ["adult_content", "unrealistic_pay", "academic_dishonesty"];
+    expect(warningFlags(old)).toEqual([]);
+    const r = ruleScore(mk({ ...postA, redFlags: old }), priya);
+    expect(r.score).toBe(base.score);
+    expect(r.features.some((f) => f.signal === "red_flag")).toBe(false);
   });
   it("9: broad with a red flag is 5", () => {
     const c = mk({
@@ -233,7 +253,12 @@ describe("budgetFit", () => {
   it("rounds the converted amount to cents ($33 is exactly EUR 30 at 1.1)", () => {
     const eur = mp({ currency: "EUR", minRateMinor: 3000, rateType: "hourly" });
     expect(budgetFit(hourly(33), eur)).toBe("fits");
-    expect(budgetFit(hourly(55), mp({ currency: "EUR", minRateMinor: 5000, rateType: "hourly" }))).toBe("fits");
+    expect(
+      budgetFit(
+        hourly(55),
+        mp({ currency: "EUR", minRateMinor: 5000, rateType: "hourly" }),
+      ),
+    ).toBe("fits");
   });
   it("a reversed range (min above max) uses the higher figure", () => {
     expect(budgetFit(hourly(20, { budgetMin: 50 }), priya)).toBe("fits");

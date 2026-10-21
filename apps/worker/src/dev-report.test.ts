@@ -1,6 +1,6 @@
 import type { Suggestions } from "@redlance/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Block } from "./resume/entries";
+import { numberSection } from "./resume/entries";
 import type { PipelineInput } from "./resume/steps/shared";
 import { createDevReport } from "./dev-report";
 
@@ -8,20 +8,14 @@ const suggestions: Suggestions = {
   v: 2,
   basics: {},
   skills: [],
-  customSkills: [],
   githubUsername: null,
   projects: [],
   experience: [],
 };
 
-const block = (over: Partial<Block> = {}): Block => ({
-  id: "P1",
-  text: "Meal planner — React app for families\n- Built the menu planner",
-  range: { start: { year: 2021, month: 3 }, end: null, current: true },
-  year: 2024,
-  links: ["https://example.dev"],
-  ...over,
-});
+const PROJECTS =
+  "Meal planner — React app for families 2024\n- Built the menu planner";
+const EXPERIENCE = "Acme Realty — Designer\n2019 – Feb 2021";
 
 const input = (over: Partial<PipelineInput> = {}): PipelineInput => ({
   text: "resume text",
@@ -37,20 +31,8 @@ const input = (over: Partial<PipelineInput> = {}): PipelineInput => ({
   shortlist: [],
   yearsExperience: null,
   headed: true,
-  projectBlocks: [block()],
-  experienceBlocks: [
-    block({
-      id: "E1",
-      year: null,
-      links: [],
-      range: {
-        start: { year: 2019, month: null },
-        end: { year: 2021, month: 2 },
-        current: false,
-      },
-      text: "Acme Realty — Designer",
-    }),
-  ],
+  projectLines: numberSection(PROJECTS, "projects"),
+  experienceLines: numberSection(EXPERIENCE, "experience"),
   ...over,
 });
 
@@ -59,7 +41,8 @@ function exercise(report: ReturnType<typeof createDevReport>) {
   report.analysis("gemini");
   report.prepass(input(), null);
   report.step({
-    step: "basics",
+    call: "profile",
+    parts: ["basics", "jobTypes"],
     model: "m",
     ms: 5,
     attempts: [{ attempt: 1, outcome: "ok" }],
@@ -106,62 +89,63 @@ function capture(enabled: true) {
 describe("createDevReport", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("prints the pre-pass blocks with id, date range, year, links and a text snippet", () => {
+  it("prints how many lines each section has and its first line", () => {
     const { report, all } = capture(true);
     report.prepass(input(), null);
     const text = all();
     expect(text).toContain("headings found: yes");
-    expect(text).toContain("P1");
-    expect(text).toContain("2021-03 – present");
-    expect(text).toContain("year 2024");
-    expect(text).toContain("links 1");
+    expect(text).toContain("project lines: 2 (P1–P2)");
     expect(text).toContain("Meal planner — React app for families");
-    expect(text).toContain("E1");
-    expect(text).toContain("2019 – 2021-02");
+    expect(text).toContain("experience lines: 2 (E1–E2)");
   });
 
-  it("cuts each block's text to 60 characters on one line", () => {
+  it("cuts the first line to 60 characters", () => {
     const { report, all } = capture(true);
     const long = `${"A".repeat(50)} ${"B".repeat(50)}`;
     report.prepass(
       input({
-        projectBlocks: [block({ text: long })],
-        experienceBlocks: [],
+        projectLines: numberSection(long, "projects"),
+        experienceLines: null,
       }),
       null,
     );
+    expect(all()).toContain("experience lines: none");
     expect(all()).toContain(`${"A".repeat(50)} ${"B".repeat(9)}`);
     expect(all()).not.toContain("B".repeat(10));
   });
 
   it("says when no headings were found", () => {
     const { report, all } = capture(true);
-    report.prepass(input({ headed: false, projectBlocks: [] }), null);
+    report.prepass(input({ headed: false, projectLines: null }), null);
     expect(all()).toContain("headings found: no");
   });
 
-  it("prints the model, time, attempts and output counts of the new steps", () => {
+  it("prints the model, time, attempts and output counts of the work call", () => {
     const { report, all } = capture(true);
     report.step({
-      step: "projects",
+      call: "work",
+      parts: ["projects", "experience"],
       model: "flash-lite-x",
       ms: 1234,
       attempts: [{ attempt: 1, outcome: "ok" }],
-      output: { projects: [{}, {}] },
+      output: { projects: [{}, {}], experience: [{}] },
     });
     report.step({
-      step: "experience",
-      model: "flash-x",
+      call: "work",
+      parts: ["experience"],
+      model: "flash-lite-y",
       ms: 900,
       attempts: [{ attempt: 1, outcome: "ok" }],
-      output: { experience: [{}] },
+      output: { experience: [{}, {}] },
     });
     const text = all();
-    expect(text).toContain('Gemini step "projects" — flash-lite-x');
+    expect(text).toContain(
+      'Gemini call "work" (projects + experience) — flash-lite-x',
+    );
     expect(text).toContain("latency 1234 ms · attempts 1 (ok)");
-    expect(text).toContain("output: 2 projects");
-    expect(text).toContain('Gemini step "experience" — flash-x');
-    expect(text).toContain("output: 1 role");
+    expect(text).toContain("output: 2 projects, 1 role");
+    expect(text).toContain('Gemini call "work" (experience) — flash-lite-y');
+    expect(text).toContain("output: 2 roles");
   });
 
   it("prints skipped steps and why they were skipped", () => {
@@ -302,7 +286,7 @@ describe("createDevReport", () => {
     const all = lines.join("\n");
     expect(lines[0]).toContain("── resume import j1 (attempt 1) ──");
     expect(all).toContain("path: parser + Gemini");
-    expect(all).toContain('Gemini step "basics"');
+    expect(all).toContain('Gemini call "profile" (basics + jobTypes)');
     expect(all).toContain('"displayName": "A"');
     expect(all).toContain("── end resume import j1: done");
   });

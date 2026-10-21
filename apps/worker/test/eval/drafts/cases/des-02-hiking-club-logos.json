@@ -1,0 +1,32 @@
+{
+  "id": "des-02-hiking-club-logos",
+  "tags": [],
+  "profileId": "junior-designer",
+  "post": {
+    "title": "[Hiring] $30-50 looking for a couple simple logos for a local hiking group",
+    "body": "Hello! Im looking to hire someone to help draw a couple simplistic but stylized nature oriented logos for my local hiking club! Im really flexible and open to creative decisions, I just want to make some nice logos without invoking Abominable Intelligence. Look forward to working with you!",
+    "subreddit": "hungryartists"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["design", "art"],
+    "skillIds": ["logo-design"],
+    "budgetMin": 30,
+    "budgetMax": 50,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "unknown",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for an artist to design a couple simple, nature-oriented logos for a local hiking group.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "mentions simple, stylised nature logos for a hiking club",
+    "does not offer AI-generated artwork (the poster explicitly asks for none)",
+    "cites the campus cafe brand project honestly as a student project, with one link"
+  ]
+}

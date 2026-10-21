@@ -1,0 +1,10 @@
+{
+  "id": "rw-06-formal-freelance-writers",
+  "baseCaseId": "wri-03-freelance-writers-ongoing",
+  "option": "formal",
+  "expect": [
+    "more formal register",
+    "does not name the employers",
+    "no banned phrases such as 'Dear Sir/Madam' or 'kindly'"
+  ]
+}

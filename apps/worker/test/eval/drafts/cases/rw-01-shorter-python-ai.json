@@ -1,0 +1,10 @@
+{
+  "id": "rw-01-shorter-python-ai",
+  "baseCaseId": "dev-03-python-ai-engineer-monthly",
+  "option": "shorter",
+  "expect": [
+    "clearly shorter than the previous DM",
+    "keeps the Python, Node and PostgreSQL point and the one link",
+    "still does not invent weekly hours"
+  ]
+}

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { apiRoute } from "@/server/api-route";
 import { listVersions, startDraft } from "@/server/drafts";
 import { json } from "@/server/http";
+import { sentKindsForMatch } from "@/server/replies";
 
 export const POST = apiRoute({
   input: z.object({ matchId: z.uuid(), idempotencyKey: z.uuid() }),
@@ -17,6 +18,12 @@ export const POST = apiRoute({
 
 export const GET = apiRoute({
   input: z.object({ matchId: z.uuid() }),
-  handler: async ({ user, input }) =>
-    json(200, { versions: await listVersions(user, input.matchId) }),
+  // `sentKinds` rides along so a cached match page can check both in one call.
+  handler: async ({ user, input }) => {
+    const [versions, sentKinds] = await Promise.all([
+      listVersions(user, input.matchId),
+      sentKindsForMatch(user, input.matchId),
+    ]);
+    return json(200, { versions, sentKinds });
+  },
 });

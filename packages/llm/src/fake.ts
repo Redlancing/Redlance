@@ -19,7 +19,12 @@ export function createFakeTransport(
     const text = typeof value === "string" ? value : JSON.stringify(value);
     return {
       text,
-      usage: { model: req.model, inputTokens: 100, cachedInputTokens: 0, outputTokens: 50 },
+      usage: {
+        model: req.model,
+        inputTokens: 100,
+        cachedInputTokens: 0,
+        outputTokens: 50,
+      },
     };
   };
 }

@@ -1,9 +1,0 @@
-{
-  "id": "rw-05-casual-logo",
-  "baseCaseId": "des-01-cafe-logo",
-  "option": "casual",
-  "expect": [
-    "noticeably more casual",
-    "still honest that it is a student project"
-  ]
-}

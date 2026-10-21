@@ -9,9 +9,11 @@ Start here. `PROJECT.md` is the product spec (the "why"). Each feature has a fol
 | 3 | **Onboarding**: profile steps, resume and GitHub import, the worker, the model client | `onboarding/` | ✅ Built on `feat/onboarding` (not merged). Browser click-through and a live resume eval are still to do. Projects & experience extraction is designed (`projects-experience-design.md`) |
 | 4 | **Ingestion**: collect Reddit hiring posts by RSS, analyse each with Gemini | `ingestion/` | ✅ Built on `feat/ingestion` (stacked on onboarding, not merged). 24 h soak run and Phase 0.1/0.4 checks still open |
 | 5 | **Matching**: score each post 0–100 for each user, with a reason, plus the feed API | `matching/` | ✅ Backend built and verified 2026-10-18 (`matching/conclusion.md`); not run live end to end yet. Feed UI later |
-| 6 | **Alerts**: Telegram (and email) | — | Not started |
-| 7 | **Drafts**: comment and first DM in the user's voice | `docs/drafts/` | Backend built (2026-10-20), `conclusion.md`; UI not built |
+| 6 | **Alerts**: Telegram (email deferred) | `alerts/` | Built 2026-10-20 on feat/alerts, reviewed and fixed; not run live yet: `alerts/conclusion.md`, design in `alerts/README.md`, build plan in `alerts/plan/`, build notes in `alerts/build-notes.md` |
+| 7 | **Drafts**: comment and first DM in the user's voice | `docs/drafts/` | Backend built (2026-10-20), `conclusion.md`; UI built on `feat/ui` (`ui/conclusion.md`) |
 | 8 | **Tracker and learning**: outcomes, edits feed back, follow-ups | `docs/drafts/` | Backend built with drafts (2026-10-20); follow-ups and reminders wait for email |
+| 10 | **App UI**: overview, matches + reply composer, tracker, settings (Telegram) | `ui/` | Built 2026-10-20 on `feat/ui` (from feat/alerts), reviewed and fixed; not checked in a browser yet: `ui/conclusion.md`, design `ui/README.md`, plan `ui/plan/` |
+| 11 | **Subreddit insights**: per subreddit, hiring volume, strong fits, posted budgets, busiest hours, red flags (hourly precomputed table) | `insights/` | Built 2026-10-21 on `feat/insights` (from feat/ui), reviewed and fixed, checked in a browser; migrations 0018-0019 not applied to the dev db yet: `insights/conclusion.md`, design `insights/design.md`, plan `insights/plan/` |
 | 9 | **Deployment**: AWS (EC2, CloudFront, WAF) with CDK | `deployment/` | Not started. `cdn-waf-design.md` is an early, partly outdated draft |
 | — | Cognito login, payments, SEO pages | — | Not started |
 
@@ -25,6 +27,7 @@ Where this sits in the roadmap (`CLAUDE.md`): Collect and Understand are done, w
 | `homepage/` | `conclusion.md`; `attio-teardown.md`, the measured study of attio.com the page copies (layout, motion values) |
 | `onboarding/` | `conclusion.md`; `design.md`, the original spec (reasons, security and privacy rules; where it differs from the code, the conclusion says so) |
 | `ingestion/` | `conclusion.md`; `plan.md`, the phased plan with Phase 0 answers and build status (code comments point to it); `research/`, the subreddit study and `data/catalogue.json`, the source of `packages/core/src/subreddit-catalogue.ts` |
+| `insights/` | `conclusion.md`; `design.md`, the spec (the eleven insights, thresholds) |
 | `deployment/` | `cdn-waf-design.md` (not built; see its banner) |
 
 Step-by-step build plans are deleted once a feature is built. Git history keeps them (e.g. `git log --diff-filter=D -- docs/`).
@@ -52,9 +55,11 @@ Step-by-step build plans are deleted once a feature is built. Git history keeps 
                       │ import runner: resume + GitHub jobs (onboarding)                       │
                       │ poller: Reddit RSS, one request ≥ 65 s apart (ingestion, one per system)│
                       │ analyser: one Gemini call per post (ingestion)                         │
+                      │ alerts: router (match_alerts) → sender (alerts) · Telegram bot (1 poller)│
                       └──────────┬───────────────────────┬──────────────────────┬────────────┘
                                  ▼                       ▼                      ▼
                          Vertex AI (Gemini)       www.reddit.com (RSS)     api.github.com
+                                                        api.telegram.org (alerts)
 ```
 
 **Shared packages**, used by both apps:

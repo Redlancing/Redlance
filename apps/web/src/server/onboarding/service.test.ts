@@ -8,15 +8,15 @@ import {
   creditBalances,
   creditLedger,
   skills as skillsTable,
+  onboardingSteps,
   syncReferenceData,
-  customSkills,
   profileExperience,
   profileProjects,
   profileSkills,
   profiles,
   userSubreddits,
 } from "@redlance/db";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { getDb } from "../db";
 import { resetForReimport } from "./imports";
 import { finishOnboarding, getOnboardingState, saveStep } from "./service";
@@ -238,15 +238,6 @@ describe("finishOnboarding", () => {
         ["video-editing", "core", "manual"],
       ],
     );
-    const [custom] = await db
-      .select()
-      .from(customSkills)
-      .where(eq(customSkills.userId, id));
-    expect(custom).toMatchObject({
-      name: "Descript",
-      nameNormalized: "descript",
-    });
-
     // Users aren't connected to subreddits: the feed uses the whole catalogue.
     expect(await db.$count(userSubreddits, eq(userSubreddits.userId, id))).toBe(
       0,
@@ -365,6 +356,29 @@ describe("finishOnboarding", () => {
       .from(profiles)
       .where(eq(profiles.userId, id));
     expect(profile!.mentionEmployers).toBe(false);
+  });
+
+  it("finishes from a skills row saved with the old customSkills key, writing only taxonomy skills", async () => {
+    const id = await user();
+    await completeAll(id);
+    const db = getDb();
+    await db
+      .update(onboardingSteps)
+      .set({
+        data: {
+          ...VALID.skills,
+          customSkills: [
+            { name: "Descript", level: "secondary", source: "manual" },
+          ],
+        },
+      })
+      .where(
+        and(eq(onboardingSteps.userId, id), eq(onboardingSteps.step, "skills")),
+      );
+    expect(await finishOnboarding(id)).toEqual({ redirect: "/dashboard" });
+    expect(await db.$count(profileSkills, eq(profileSkills.userId, id))).toBe(
+      2,
+    );
   });
 
   it("sends the user back when work is a draft", async () => {

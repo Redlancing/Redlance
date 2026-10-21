@@ -6,13 +6,12 @@ function run(
   query: string,
   chosen: string[] = [],
   categories: CategoryId[] = [],
-  canAddCustom = true,
 ) {
   const set = new Set(chosen);
   const results = searchSkills(query, { categories, limit: 8 }).filter(
     (s) => !set.has(s.id),
   );
-  return enterAction(query, { results, chosen: set, canAddCustom });
+  return enterAction(query, { results, chosen: set });
 }
 
 describe("enterAction", () => {
@@ -22,17 +21,15 @@ describe("enterAction", () => {
   it("does nothing when the typed skill is already chosen", () => {
     expect(run("react", ["react"])).toEqual({ type: "none" });
   });
-  it("adds a custom skill instead of a fuzzy match", () => {
-    expect(run("Descript")).toEqual({ type: "custom" });
+  it("does nothing for a name that isn't a taxonomy skill, even with fuzzy results", () => {
+    expect(run("Descript")).toEqual({ type: "none" });
+    expect(run("underwater basket weaving")).toEqual({ type: "none" });
   });
   it("adds the prefix match", () => {
     expect(run("prem")).toEqual({ type: "skill", id: "premiere-pro" });
   });
-  it("prefers a label starting with the text over a custom skill", () => {
+  it("prefers a label starting with the text over the top-ranked result", () => {
     // "Video editing" ranks first (word match) but doesn't start with "edit".
     expect(run("edit")).toEqual({ type: "skill", id: "editing-proofreading" });
-  });
-  it("does nothing when a custom skill isn't allowed", () => {
-    expect(run("Descript", [], [], false)).toEqual({ type: "none" });
   });
 });

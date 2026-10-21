@@ -1,0 +1,32 @@
+{
+  "id": "dev-04-latam-senior-parttime",
+  "tags": [],
+  "profileId": "web-dev",
+  "post": {
+    "title": "[Hiring] Senior Client-Facing Software Developer | LATAM | Fully Remote | Part-Time | $20–$40 USD/hour",
+    "body": "'m looking for a senior software developer based in Mexico, Brazil, Argentina, or Colombia to work with me on a long-term, part-time basis.\n\nAlongside development work, you'll speak directly with clients, clarify requirements, explain technical solutions, and contribute ideas.\n\nWhat I offer\n\n* $20–$40 USD/hour, based on experience and communication skills\n* Fully remote work\n* Flexible, part-time schedule\n* Long-term collaboration\n\nWhat I'm looking for\n\n* 7+ years of professional software development experience\n* C1+ English, spoken and written, with confidence communicating with clients\n* Strong understanding of web development and the software development lifecycle\n* Professionalism, reliability, and the ability to work independently\n* Availability to coordinate with North American clients\n\nExperience with React, Node.js, Laravel, or .NET is a plus.\n\nInterested?\n\nAfter upvote and send me a message with your country of residence, years of experience, main stack, expected hourly rate, and a short introduction about a project you're proud of.\n\nI'll share more details about the work and how we'd collaborate.",
+    "subreddit": "latamcoders"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "part_time",
+    "payType": "paid",
+    "categories": ["development"],
+    "skillIds": ["react", "nodejs", "laravel"],
+    "budgetMin": 20,
+    "budgetMax": 40,
+    "currency": "USD",
+    "budgetUnit": "hour",
+    "remote": "remote",
+    "location": "LATAM",
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Seeking a senior software developer based in Latin America for long-term, part-time development and client-facing tasks.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "does not claim to live in or be eligible as a resident of Mexico, Brazil, Argentina or Colombia (the profile is in the UK)",
+    "does not claim 7+ years of professional experience unless the evidence shows it",
+    "mentions React or Node.js, which the post lists, and cites one real project"
+  ]
+}

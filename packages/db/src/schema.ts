@@ -113,6 +113,26 @@ export const AI_STATUSES = [
 ] as const;
 /** Every status change is an event. */
 export const MATCH_EVENTS = MATCH_STATUSES;
+// Alerts (core alerts/constants.ts).
+export const ALERT_OUTCOMES = [
+  "queued",
+  "sent",
+  "failed",
+  "below_threshold",
+  "skipped_backfill",
+  "skipped_stale",
+  "skipped_trial",
+  "skipped_cap",
+  "skipped_no_channel",
+  "skipped_withdrawn",
+] as const;
+export const DELIVERY_CHANNELS = ["telegram"] as const;
+export const DELIVERY_STATUSES = ["pending", "sending", "failed"] as const;
+export const CHANNEL_DISABLED_REASONS = [
+  "blocked",
+  "user_stop",
+  "relinked",
+] as const;
 /** job_posts.match_status (the matcher's queue); null = not analysed yet. */
 export const POST_MATCH_STATUSES = [
   "pending",
@@ -248,6 +268,10 @@ export const profiles = pgTable(
     rematchAfter: timestamp("rematch_after", { withTimezone: true }),
     /** Bumped when matching-relevant profile data changes; matches remember the version. */
     profileVersion: integer("profile_version").notNull().default(1),
+    /** Alerts: only matches scoring at least this are sent. */
+    alertMinScore: integer("alert_min_score").notNull().default(70),
+    /** Alerts: at most this many a day (the user's local day). */
+    alertsDailyCap: integer("alerts_daily_cap").notNull().default(20),
     createdAt: createdAt(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -277,6 +301,14 @@ export const profiles = pgTable(
     check("profiles_plan_check", sql`${t.plan} in (${sqlList(PLANS)})`),
     check("profiles_profile_version_check", sql`${t.profileVersion} >= 1`),
     check("profiles_rematch_attempts_check", sql`${t.rematchAttempts} >= 0`),
+    check(
+      "profiles_alert_min_score_check",
+      sql`${t.alertMinScore} between 0 and 100`,
+    ),
+    check(
+      "profiles_alerts_daily_cap_check",
+      sql`${t.alertsDailyCap} between 1 and 100`,
+    ),
     index("profiles_rematch_idx")
       .on(t.rematchSince)
       .where(sql`${t.rematchSince} is not null`),
@@ -441,30 +473,6 @@ export const profileExperience = pgTable(
 
 export type ProfileExperience = typeof profileExperience.$inferSelect;
 
-export const customSkills = pgTable(
-  "custom_skills",
-  {
-    id: v7Id(),
-    userId: userId(),
-    name: text("name").notNull(),
-    nameNormalized: text("name_normalized").notNull(),
-    level: text("level", { enum: SKILL_LEVEL_VALUES }).notNull(),
-    source: text("source", { enum: SKILL_SOURCE_VALUES }).notNull(),
-    createdAt: createdAt(),
-  },
-  (t) => [
-    unique("custom_skills_user_name_unique").on(t.userId, t.nameNormalized),
-    check(
-      "custom_skills_level_check",
-      sql`${t.level} in (${sqlList(SKILL_LEVEL_VALUES)})`,
-    ),
-    check(
-      "custom_skills_source_check",
-      sql`${t.source} in (${sqlList(SKILL_SOURCE_VALUES)})`,
-    ),
-  ],
-);
-
 // `subreddit` is plain text, not a foreign key: the dashboard will let users add boards
 // outside the seed list. Ingestion decides which ones to poll.
 export const userSubreddits = pgTable(
@@ -493,6 +501,10 @@ export const alertChannels = pgTable(
     target: text("target").notNull(),
     enabled: boolean("enabled").notNull().default(true),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    /** Why `enabled` is false: the bot was blocked, the user turned alerts off, or another account took the chat. */
+    disabledReason: text("disabled_reason", {
+      enum: CHANNEL_DISABLED_REASONS,
+    }),
     createdAt: createdAt(),
   },
   (t) => [
@@ -500,6 +512,10 @@ export const alertChannels = pgTable(
     check(
       "alert_channels_kind_check",
       sql`${t.kind} in (${sqlList(ALERT_KINDS)})`,
+    ),
+    check(
+      "alert_channels_disabled_reason_check",
+      sql`${t.disabledReason} is null or ${t.disabledReason} in (${sqlList(CHANNEL_DISABLED_REASONS)})`,
     ),
   ],
 );
@@ -733,6 +749,8 @@ export const jobPosts = pgTable(
       .where(sql`${t.analysisStatus} = 'running'`),
     index("job_posts_community_posted_idx").on(t.community, t.postedAt),
     index("job_posts_posted_idx").on(t.postedAt),
+    // min(first_seen_at) = when collection started (subreddit insights history)
+    index("job_posts_first_seen_idx").on(t.firstSeenAt),
     index("job_posts_author_idx").on(t.author),
     index("job_posts_author_posted_idx").on(t.author, t.postedAt),
     index("job_posts_duplicate_of_idx")
@@ -953,11 +971,40 @@ export const matches = pgTable(
     aiUnitDay: date("ai_unit_day", { mode: "string" }),
     /** When the AI re-score finished (done, failed or capped). */
     aiFinishedAt: timestamp("ai_finished_at", { withTimezone: true }),
+    // Alerts. Set once by the router and sender; a re-analysis never resets them.
+    /** The router's decision; null = not routed yet. */
+    alertOutcome: text("alert_outcome", { enum: ALERT_OUTCOMES }),
+    alertRoutedAt: timestamp("alert_routed_at", { withTimezone: true }),
+    /** When the first alert for this match was delivered. */
+    alertedAt: timestamp("alerted_at", { withTimezone: true }),
+    /** Channels the alert reached. */
+    alertChannels: textArray("alert_channels"),
+    /** The score when routed (the match's score can change later). */
+    alertScore: integer("alert_score"),
+    /** The message template version, e.g. "tg@1". */
+    alertTemplate: text("alert_template"),
+    telegramMessageId: bigint("telegram_message_id", { mode: "number" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     unique("matches_user_post_unique").on(t.userId, t.jobPostId),
+    check(
+      "matches_alert_outcome_check",
+      sql`${t.alertOutcome} is null or ${t.alertOutcome} in (${sqlList(ALERT_OUTCOMES)})`,
+    ),
+    check(
+      "matches_alert_score_check",
+      sql`${t.alertScore} is null or ${t.alertScore} between 0 and 100`,
+    ),
+    // The router's queue.
+    index("matches_alert_route_idx")
+      .on(t.createdAt)
+      .where(sql`${t.alertOutcome} is null`),
+    // The daily cap count.
+    index("matches_user_routed_idx")
+      .on(t.userId, t.alertRoutedAt)
+      .where(sql`${t.alertOutcome} in ('queued', 'sent', 'failed')`),
     check("matches_rule_score_check", sql`${t.ruleScore} between 0 and 100`),
     check("matches_score_check", sql`${t.score} between 0 and 100`),
     check(
@@ -1457,6 +1504,179 @@ export const draftFeedback = pgTable(
     check(
       "draft_feedback_reason_check",
       sql`${t.reason} is null or char_length(${t.reason}) <= 300`,
+    ),
+  ],
+);
+
+/**
+ * The alert queue: one row per (match, channel) waiting to be sent. Deleted when sent;
+ * failed rows are kept 30 days for debugging.
+ */
+export const alertDeliveries = pgTable(
+  "alert_deliveries",
+  {
+    id: v7Id(),
+    userId: userId(),
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    channel: text("channel", { enum: DELIVERY_CHANNELS }).notNull(),
+    status: text("status", { enum: DELIVERY_STATUSES })
+      .notNull()
+      .default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    runAfter: timestamp("run_after", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    /** An error code only, never message text. */
+    errorCode: text("error_code"),
+    providerMessageId: text("provider_message_id"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("alert_deliveries_match_channel_unique").on(t.matchId, t.channel),
+    check(
+      "alert_deliveries_channel_check",
+      sql`${t.channel} in (${sqlList(DELIVERY_CHANNELS)})`,
+    ),
+    check(
+      "alert_deliveries_status_check",
+      sql`${t.status} in (${sqlList(DELIVERY_STATUSES)})`,
+    ),
+    check("alert_deliveries_attempts_check", sql`${t.attempts} >= 0`),
+    index("alert_deliveries_due_idx")
+      .on(t.channel, t.runAfter)
+      .where(sql`${t.status} = 'pending'`),
+    index("alert_deliveries_sending_idx")
+      .on(t.lockedAt)
+      .where(sql`${t.status} = 'sending'`),
+    index("alert_deliveries_user_idx").on(t.userId),
+  ],
+);
+
+/** One-time links that connect a Telegram chat to a user. Only the sha256 is stored. */
+export const telegramLinkTokens = pgTable(
+  "telegram_link_tokens",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    userId: userId(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check(
+      "telegram_link_tokens_hash_check",
+      sql`${t.tokenHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+    index("telegram_link_tokens_user_idx").on(t.userId),
+  ],
+);
+
+/** Profile sections a user can edit after onboarding (apps/web `/profile`). */
+export const PROFILE_SECTIONS = [
+  "basics",
+  "skills",
+  "work",
+  "rates",
+  "github",
+] as const;
+
+/**
+ * One row per saved profile edit that changed something. The weekly limit (5 changes in any
+ * 7 days) counts these rows; no-op saves write none. Kept in Postgres, not Redis: it is a
+ * rule the user is held to, not rebuildable data.
+ */
+export const profileChanges = pgTable(
+  "profile_changes",
+  {
+    id: v7Id(),
+    userId: userId(),
+    section: text("section", { enum: PROFILE_SECTIONS }).notNull(),
+    /** profiles.profile_version after this change. */
+    profileVersion: integer("profile_version").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check(
+      "profile_changes_section_check",
+      sql`${t.section} in (${sqlList(PROFILE_SECTIONS)})`,
+    ),
+    check(
+      "profile_changes_profile_version_check",
+      sql`${t.profileVersion} >= 1`,
+    ),
+    index("profile_changes_user_created_idx").on(t.userId, t.createdAt),
+  ],
+);
+
+/**
+ * Shared subreddit insights (docs/insights/design.md): one row per subreddit, replaced by the
+ * worker's hourly refresh (refreshSubredditInsights). Raw counts only; the 20-data-point rule
+ * and the wording are applied when reading. No foreign key: a row exists for any community
+ * with posts in the last 56 days, catalogue or not.
+ */
+export const subredditInsights = pgTable(
+  "subreddit_insights",
+  {
+    subreddit: text("subreddit").primaryKey(),
+    computedAt: timestamp("computed_at", { withTimezone: true }).notNull(),
+    /** Start of the 28-day window these counts cover; the previous window ends here. */
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    hiringPosts: integer("hiring_posts").notNull(),
+    hiringPostsPrev: integer("hiring_posts_prev").notNull(),
+    forHirePosts: integer("for_hire_posts").notNull(),
+    budgetStated: integer("budget_stated").notNull(),
+    /** { paid: n, revshare: n, … } over the window's hiring posts. */
+    payCounts: jsonb("pay_counts").$type<Record<string, number>>().notNull(),
+    remoteCounts: jsonb("remote_counts")
+      .$type<Record<string, number>>()
+      .notNull(),
+    redFlagPosts: integer("red_flag_posts").notNull(),
+    redFlagCounts: jsonb("red_flag_counts")
+      .$type<Record<string, number>>()
+      .notNull(),
+    /** Top 20: [{ skillId, n }], most mentioned first. */
+    skillCounts: jsonb("skill_counts")
+      .$type<{ skillId: string; n: number }[]>()
+      .notNull(),
+    /** Top 6 groups by n: [{ currency, unit, n, p25, median, p75 }]; never converted. */
+    budgets: jsonb("budgets")
+      .$type<
+        {
+          currency: string;
+          unit: string;
+          n: number;
+          p25: number;
+          median: number;
+          p75: number;
+        }[]
+      >()
+      .notNull(),
+    /** Hiring posts per UTC half-hour of the week, Monday 00:00 = 0 (336 slots). */
+    hourSlots: integer("hour_slots").array().notNull(),
+    knownAuthorPosts: integer("known_author_posts").notNull(),
+    repeatAuthorPosts: integer("repeat_author_posts").notNull(),
+    /** When collection started (earliest first_seen_at, any subreddit): trends and repeat clients need history behind the window. */
+    historyStart: timestamp("history_start", { withTimezone: true }),
+  },
+  (t) => [
+    check(
+      "subreddit_insights_subreddit_check",
+      sql`${t.subreddit} ~ '^[a-z0-9_]{2,21}$'`,
+    ),
+    check(
+      "subreddit_insights_hour_slots_check",
+      sql`cardinality(${t.hourSlots}) = 336`,
+    ),
+    check(
+      "subreddit_insights_counts_check",
+      sql`${t.hiringPosts} >= 0 and ${t.hiringPostsPrev} >= 0 and ${t.forHirePosts} >= 0
+        and ${t.budgetStated} between 0 and ${t.hiringPosts}
+        and ${t.redFlagPosts} between 0 and ${t.hiringPosts}
+        and ${t.repeatAuthorPosts} between 0 and ${t.knownAuthorPosts}
+        and ${t.knownAuthorPosts} <= ${t.hiringPosts}`,
     ),
   ],
 );

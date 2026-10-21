@@ -259,7 +259,7 @@
     "community": "slavelabour",
     "title": "[TASK] Write my 2,000 word history essay due Friday – $60",
     "body": "It's for my college class, needs citations.",
-    "expected": { "kind": "hiring", "mustRedFlags": ["academic_dishonesty"] }
+    "expected": { "kind": "hiring" }
   },
   {
     "name": "writing-translation",

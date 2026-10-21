@@ -1,4 +1,4 @@
-import type { FeedCursor, FeedItem } from "@redlance/db";
+import type { FeedCursor, FeedItem, FeedItemDetail } from "@redlance/db";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
@@ -37,43 +37,65 @@ export function toFeedResponse(page: {
   next: FeedCursor | null;
 }): FeedResponse {
   return {
-    items: page.items.map((i) => ({
-      matchId: i.matchId,
-      score: i.score,
-      reason: i.reason,
-      broad: i.broad,
-      status: i.status,
-      aiStatus: i.aiStatus,
-      bestProject: i.bestProject
-        ? { id: i.bestProject.id, title: i.bestProject.title }
-        : null,
-      bestRole: i.bestRole
-        ? { id: i.bestRole.id, title: i.bestRole.title }
-        : null,
-      post: {
-        id: i.post.id,
-        title: i.post.title,
-        community: i.post.community,
-        url: i.post.url,
-        postedAt: i.post.postedAt.toISOString(),
-        summary: i.post.summary,
-        categories: i.post.categories,
-        budget: i.post.budget
-          ? {
-              min: i.post.budget.min,
-              max: i.post.budget.max,
-              currency: i.post.budget.currency,
-              unit: i.post.budget.unit,
-            }
-          : null,
-        payType: i.post.payType,
-        remote: i.post.remote,
-        deadline: i.post.deadline,
-        redFlags: i.post.redFlags,
-        applyInstructions: i.post.applyInstructions,
-        alsoPostedIn: i.post.alsoPostedIn,
-      },
-    })),
+    items: page.items.map(toFeedItemResponse),
     nextCursor: page.next ? encodeCursor(page.next) : null,
+  };
+}
+
+export type FeedItemDetailResponse = FeedItemResponse & {
+  withdrawn: boolean;
+  post: FeedItemResponse["post"] & { body: string };
+};
+
+/** The match page's shape: a feed item plus the post's text and the withdrawn flag. */
+export function toFeedItemDetailResponse(
+  i: FeedItemDetail,
+): FeedItemDetailResponse {
+  const item = toFeedItemResponse(i);
+  return {
+    ...item,
+    withdrawn: i.withdrawn,
+    post: { ...item.post, body: i.post.body },
+  };
+}
+
+function toFeedItemResponse(i: FeedItem): FeedItemResponse {
+  return {
+    matchId: i.matchId,
+    score: i.score,
+    reason: i.reason,
+    broad: i.broad,
+    status: i.status,
+    aiStatus: i.aiStatus,
+    bestProject: i.bestProject
+      ? { id: i.bestProject.id, title: i.bestProject.title }
+      : null,
+    bestRole: i.bestRole
+      ? { id: i.bestRole.id, title: i.bestRole.title }
+      : null,
+    post: {
+      id: i.post.id,
+      title: i.post.title,
+      community: i.post.community,
+      url: i.post.url,
+      postedAt: i.post.postedAt.toISOString(),
+      summary: i.post.summary,
+      categories: i.post.categories,
+      budget: i.post.budget
+        ? {
+            min: i.post.budget.min,
+            max: i.post.budget.max,
+            currency: i.post.budget.currency,
+            unit: i.post.budget.unit,
+          }
+        : null,
+      payType: i.post.payType,
+      remote: i.post.remote,
+      deadline: i.post.deadline,
+      redFlags: i.post.redFlags,
+      noBudgetStated: i.post.noBudgetStated,
+      applyInstructions: i.post.applyInstructions,
+      alsoPostedIn: i.post.alsoPostedIn,
+    },
   };
 }

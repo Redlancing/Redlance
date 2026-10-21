@@ -1,0 +1,32 @@
+{
+  "id": "mkt-01-seo-freelancer-projects",
+  "tags": ["broad", "no_budget", "vague"],
+  "profileId": "broad-generalist",
+  "post": {
+    "title": "Need an SEO freelancer for project work.",
+    "body": "We have a few SEO projects coming up and want to bring in freelancers who can own a project from start to finish, deliver, and move on to the next one with us.\n\nProjects you could pick up:\n\n→ Full website SEO audits with a clear, prioritized action plan\n→ Keyword research and content roadmaps for new or existing sites\n→ Technical clean ups: indexing, crawl errors, site speed, schema, redirects\n→ On-page optimization for key service, product, or category pages\n→ Google Business Profile setup and local SEO for service businesses\n→ Link building and citation campaigns\n→ Programmatic SEO page builds (templates, data, and rollout)\n\nWhat we need from you:\n\n✔ Real experience improving rankings and traffic, with proof you can show\n✔ Hands-on skills with Search Console, GA4, and Ahrefs, Semrush, or similar\n✔ The ability to scope a project, set a timeline, and stick to it\n✔ Clear communication, so we always know where things stand\n✔ A modern, white hat approach to SEO\n\nHow it works:\n\n1. We share the project brief and goals\n2. You send a quote and timeline\n3. You deliver in the agreed scope, with updates along the way\n4. If the work is great, more projects follow",
+    "subreddit": "seojobs"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["marketing"],
+    "skillIds": ["seo", "research", "analytics-tracking"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "unknown",
+    "location": null,
+    "deadline": null,
+    "redFlags": ["vague_pay"],
+    "summary": "Looking for SEO freelancers to handle audits, keyword research, technical cleanup, and link building projects.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "does not claim SEO ranking results or Search Console, GA4, Ahrefs or Semrush experience the profile lacks",
+    "does not invent a quote or timeline (the post asks for one); it may offer to send one after seeing a brief",
+    "is short and honest about a modest, admin-and-reporting background"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "dev-11-clinic-software-cofounder",
+  "tags": ["dm_only", "no_budget"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "Looking for a Technical Co-founder for Curedesk | Healthcare SaaS | India",
+    "body": "Hi everyone!\n\nI'm a doctor and the founder of Curedesk, a healthcare management software (SaaS) built to help clinics manage their day-to-day operations digitally.\n\nUnlike an idea-stage startup, Curedesk is already up and running in around 5–6 clinics. I'm now looking for a technical co-founder who can join me in improving, maintaining, and scaling the product.\n\nWhat is Curedesk?\n\nCuredesk is designed to simplify clinic operations through software. The goal is to build a practical, reliable product for healthcare providers and gradually expand its adoption.\n\nWho am I looking for?\n\nA full-stack developer who can help with:\n\n* Bug fixes, maintenance, and troubleshooting\n* Software installation, setup, and customer onboarding\n* Technical support for clinics using the product\n* New features, improvements, and long-term product development\n\nI'm looking for someone who can contribute part-time initially, alongside their existing work if needed, and grow with the venture.\n\nCompensation and partnership\n\nCuredesk is still an early-stage business, so I have a limited budget for now. I can discuss modest initial compensation, with the possibility of increasing it as the business grows.\n\nI'm also open to discussing equity or profit-sharing based on the person's contribution and commitment. If someone is interested in investing in the venture as well, I'm open to discussing that separately.\n\nI'm not looking for someone who simply completes a few tasks and leaves. I'd prefer a long-term collaborator who is interested in taking ownership of the technical side and helping build the business together.\n\nInterested?\n\nPlease DM me with a brief introduction, your tech stack, relevant projects or portfolio, and how much time you could commit.\n\nHappy to share more details about the product and discuss whether we're a good fit.",
+    "subreddit": "cofounderhunt"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "part_time",
+    "payType": "paid",
+    "categories": ["development"],
+    "skillIds": [],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "unknown",
+    "location": "India",
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for a technical co-founder to help build, scale, and maintain a healthcare management SaaS product for clinics.",
+    "applyInstructions": "Please DM me with a brief introduction, your tech stack, relevant projects or portfolio, and how much time you could commit."
+  },
+  "expect": [
+    "follows the DM instruction: the comment is empty or a one-line note, the intro is in the DM",
+    "gives the intro, tech stack and a relevant project, and does not invent how many hours a week the user can commit",
+    "addresses the maintenance, bug fixing and feature work for the clinic software, and does not claim healthcare software experience"
+  ]
+}

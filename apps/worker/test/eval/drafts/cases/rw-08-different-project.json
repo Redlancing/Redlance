@@ -1,9 +1,9 @@
 {
   "id": "rw-08-different-project",
-  "baseCaseId": "dev-01-react-dashboard",
+  "baseCaseId": "dev-05-health-tech-contract",
   "option": "different_project",
   "expect": [
-    "cites a different project than the first draft (not the ops dashboard)",
+    "cites a different project than the first draft",
     "uses the other project's link or the GitHub link, still only one link"
   ]
 }

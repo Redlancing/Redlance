@@ -327,14 +327,14 @@ describe("buildEvidence: red flags and privacy", () => {
   it("15: red flags and unpaid pay type go to the user, not the prompt text", () => {
     const e = buildEvidence(
       withAnalysis({
-        redFlags: ["asks for free samples"],
+        redFlags: ["asks_for_free_work"],
         payType: "unpaid",
         budgetMax: 400,
         currency: "USD",
         budgetUnit: "fixed",
       }),
     );
-    expect(e.redFlags).toEqual(["asks for free samples", "unpaid"]);
+    expect(e.redFlags).toEqual(["asks_for_free_work", "unpaid"]);
     expect(e.evidenceText).not.toContain("free samples");
     expect(e.evidenceText).not.toContain("unpaid");
   });
@@ -512,17 +512,24 @@ describe("buildEvidence: hidden-role employers and pay-type flags", () => {
       buildEvidence(withAnalysis({ payType: "commission_only" })).redFlags,
     ).toEqual(["commission_only"]);
     const r = buildEvidence(
-      withAnalysis({ payType: "revshare", redFlags: ["x"] }),
+      withAnalysis({ payType: "revshare", redFlags: ["upfront_fee"] }),
     );
-    expect(r.redFlags).toEqual(["x", "revshare"]);
+    expect(r.redFlags).toEqual(["upfront_fee", "revshare"]);
     expect(r.evidenceText).not.toContain("revshare");
     expect(payTypeRedFlags("paid")).toEqual([]);
     expect(payTypeRedFlags("unpaid")).toEqual(["unpaid"]);
     expect(
       draftRedFlags({
         payType: "commission_only",
-        redFlags: ["commission_only", "y"],
+        redFlags: ["upfront_fee"],
       }),
-    ).toEqual(["commission_only", "y"]);
+    ).toEqual(["upfront_fee", "commission_only"]);
+    // "No budget stated" is a note, not a red flag.
+    expect(
+      draftRedFlags({
+        payType: "paid",
+        redFlags: ["vague_pay", "upfront_fee", "adult_content"],
+      }),
+    ).toEqual(["upfront_fee"]);
   });
 });

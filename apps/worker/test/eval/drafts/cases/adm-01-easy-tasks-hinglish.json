@@ -1,0 +1,32 @@
+{
+  "id": "adm-01-easy-tasks-hinglish",
+  "tags": ["hinglish", "no_budget", "vague", "dm_only"],
+  "profileId": "broad-generalist",
+  "post": {
+    "title": "Anyone interested in easy peasy tasks?",
+    "body": "Just chota sa kaam hai if anyone's interested to dm.\n\nIdk which flair to set.",
+    "subreddit": "makemoneyindia"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "unknown",
+    "categories": ["admin"],
+    "skillIds": [],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "unknown",
+    "location": null,
+    "deadline": null,
+    "redFlags": ["vague_pay"],
+    "summary": "The poster is offering easy tasks and asks interested individuals to direct message them.",
+    "applyInstructions": "dm."
+  },
+  "expect": [
+    "is a short reply that is understandable for a Hinglish post (English, or light Hinglish if natural)",
+    "asks what the task and pay are instead of assuming, and makes no promise of availability",
+    "follows the DM instruction: the comment is empty or a one-line note"
+  ]
+}

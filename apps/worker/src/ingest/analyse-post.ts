@@ -21,8 +21,10 @@ import { z } from "zod";
 // from a shortlist found in the post's own text, and a budget is kept only when its quote is
 // really in the post: the model can't invent either.
 
+// Not bumped for the 2026-10-21 red-flag trim: a bump re-analyses every stored post (LLM cost),
+// and old rows' removed flags are already ignored by warningFlags().
 export const PIPELINE_VERSION = "post@3";
-export const PROMPT_VERSION = "post-extract@3";
+export const PROMPT_VERSION = "post-extract@4";
 export const MAX_SHORTLIST = 40;
 const MAX_PROMPT_BODY = 6_000;
 
@@ -152,7 +154,7 @@ export function buildPrompt(post: JobPostRow, shortlist: string[]): string {
     "- budget: what the client offers. quote = the exact words from the post that state it (copied verbatim); min/max as numbers (equal for a single amount); currency as ISO 4217 (USD for a bare $); unit = fixed, hour, day, week, month or per_item. All null if no amount is stated.",
     "- remote: remote, onsite, hybrid or unknown. location: the place if one is required, else null.",
     '- deadline: the due date as YYYY-MM-DD if stated (work out relative dates like "in 2 weeks" from the Posted date), else null.',
-    "- redFlags: only those clearly present: asks_for_free_work (unpaid test work), off_platform_payment (pay via gift cards, crypto only, or outside protection), upfront_fee (the worker must pay first), vague_pay (hiring with no pay information at all), unrealistic_pay (pay far too high for the work), personal_info_request (asks for ID, bank details), adult_content, academic_dishonesty (homework, exams, essays for school).",
+    "- redFlags: only those clearly present: asks_for_free_work (unpaid test work), off_platform_payment (pay via gift cards, crypto only, or outside protection), upfront_fee (the worker must pay first), vague_pay (hiring with no pay information at all), personal_info_request (asks for ID, bank details).",
     "- applyInstructions: how the poster wants people to apply, only if the post says so: where to reply (comment or DM), what to include (portfolio, rate, links, a code word), and any format rule. Copy their exact words into quote. Return null (and a null quote) when the post gives no instructions. Never invent instructions.",
     "- summary: one plain sentence (at most 140 characters) saying what the work is (for hiring posts, what the client needs), without the budget and without anyone's name or handle.",
   ].join("\n");

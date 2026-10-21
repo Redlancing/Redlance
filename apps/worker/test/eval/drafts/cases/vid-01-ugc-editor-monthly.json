@@ -1,0 +1,32 @@
+{
+  "id": "vid-01-ugc-editor-monthly",
+  "tags": ["dm_only"],
+  "profileId": "video-editor",
+  "post": {
+    "title": "[HIRING] - Paid Short-form UGC Video Editor (remote)",
+    "body": "Looking for an editor for ongoing short-form UGC content (TikTok, Reels, Shorts).\n\n* Around 7 vids a day (would take around ~2 hours)\n* simple edits: cuts, captions, hooks, music, sometimes b-roll\n* paid monthly, ongoing work if it goes well\n* fast turnaround and consistency matter more than fancy effects (fancy edits are not needed)\n\nTo apply, DM me with:\n\n1. 2-3 short form edits you've done or your portfolio\n2. your time zone and turnaround time\n\nCompensation:\n\n* $300-400/month, can be negotiable ($2 a video)\n\nThere's a small paid test edit before we start.\n\nThese videos are typically 30 seconds to a minute long and do not require much work. I am preferably looking for an editor who has previous experience working as a (Canvas) UGC video editor.\n\nNO AI VIDEOS ARE NEEDED.",
+    "subreddit": "findvideoeditors"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "contract",
+    "payType": "paid",
+    "categories": ["video"],
+    "skillIds": ["video-editing", "ugc", "short-form-video", "subtitles"],
+    "budgetMin": 300,
+    "budgetMax": 400,
+    "currency": "USD",
+    "budgetUnit": "month",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for a remote short-form UGC video editor for ongoing daily content.",
+    "applyInstructions": "To apply, DM me with: 1. 2-3 short form edits you've done or your portfolio 2. your time zone and turnaround time"
+  },
+  "expect": [
+    "gives what the post asks for in the DM: the work link for short-form edits and the user's time zone (from the profile, India), with only one link",
+    "mentions short-form cuts, captions and fast turnaround matching the 7-videos-a-day workflow, and does not claim Canvas UGC experience",
+    "does not invent a turnaround time or availability hours"
+  ]
+}

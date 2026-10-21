@@ -201,9 +201,9 @@ describe("GitHub import", () => {
     expect((await gh(cookie, "  ")).status).toBe(400);
   });
 
-  it("429s on the 11th of the day", async () => {
+  it("429s on the 6th of the day", async () => {
     const cookie = await cookieFor();
-    for (let i = 0; i < 10; i++)
+    for (let i = 0; i < 5; i++)
       expect((await gh(cookie, "octocat")).status).toBe(202);
     expect((await gh(cookie, "octocat")).status).toBe(429);
   });

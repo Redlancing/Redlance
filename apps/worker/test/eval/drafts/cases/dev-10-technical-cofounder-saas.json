@@ -1,0 +1,32 @@
+{
+  "id": "dev-10-technical-cofounder-saas",
+  "tags": ["no_budget", "vague"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "React / Typescript",
+    "body": "Co-Founder & CTO Wanted 90% Built B2B SaaS\n\nWe are seeking a Technical Co-Founder to take full ownership of the codebase and scale our B2B SaaS platform through launch and beyond.\n\nThe Details:\n\nComp: Equity-based (Co-founder level split)\n\nLocation: Remote (US / CAN / UK)\n\nStage: Pre-revenue, near launch\n\nThe Situation: We experienced a massive operational headache, built a working solution, and validated market demand. The platform is 90% completeâ€”we just need a technical leader to audit the architecture, finish the final push to launch, and own tech strategy moving forward.\n\nWhat We Need:\n\nFull-stack capabilities to jump into an existing codebase and ship code fast.\n\nA builder mindset that prioritizes speed to market over over-engineering.\n\nLocation in US, Canada, or UK time zones.\n\nWhy Join: Zero ideation purgatory. The runway to market is short, the product is built, and you get a co-founder seat at the table with true equity.\n\nInterested? Send over a brief summary of what you've built and a link to your GitHub or LinkedIn.",
+    "subreddit": "cofounderhunt"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "contract",
+    "payType": "revshare",
+    "categories": ["development"],
+    "skillIds": ["react", "typescript"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": "US / CAN / UK",
+    "deadline": null,
+    "redFlags": ["vague_pay"],
+    "summary": "Seeking a technical co-founder to take ownership of the codebase and help launch a near-complete B2B SaaS platform.",
+    "applyInstructions": "Send over a brief summary of what you've built and a link to your GitHub or LinkedIn."
+  },
+  "expect": [
+    "does not accept the co-founder or CTO role or the equity terms; it reads as an interested first reply that asks for details",
+    "gives a brief summary of what the profile has built, with the allowed GitHub or project link, as the post asks",
+    "mentions React or TypeScript, which the post names"
+  ]
+}

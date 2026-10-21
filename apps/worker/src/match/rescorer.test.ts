@@ -213,6 +213,7 @@ async function pending(
       aiStatus: opts.broad ? "not_needed" : "pending",
       profileVersion: 1,
     })),
+    { origin: "post" },
   );
   const rows = await db
     .select({ id: matches.id, jobPostId: matches.jobPostId })
@@ -750,18 +751,22 @@ describe("re-scorer edge cases (database)", () => {
   /** The matcher re-matches the pair under a new profile version (as not_needed, so it stays put). */
   const reVersion = async (matchId: string) => {
     const m = await matchRow(matchId);
-    await upsertMatches(db, [
-      {
-        userId: m.userId,
-        jobPostId: m.jobPostId,
-        ruleScore: m.ruleScore,
-        broad: false,
-        features: [],
-        ruleReason: "Matches your Next.js skills",
-        aiStatus: "not_needed",
-        profileVersion: m.profileVersion + 1,
-      },
-    ]);
+    await upsertMatches(
+      db,
+      [
+        {
+          userId: m.userId,
+          jobPostId: m.jobPostId,
+          ruleScore: m.ruleScore,
+          broad: false,
+          features: [],
+          ruleReason: "Matches your Next.js skills",
+          aiStatus: "not_needed",
+          profileVersion: m.profileVersion + 1,
+        },
+      ],
+      { origin: "post" },
+    );
   };
 
   it("a pair re-versioned between claim and prepare is let go: no unit, no model call", async () => {

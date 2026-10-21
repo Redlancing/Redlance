@@ -293,7 +293,7 @@ describe("analysePost", () => {
 
     it("16: PIPELINE_VERSION and PROMPT_VERSION are bumped", () => {
       expect(PIPELINE_VERSION).toBe("post@3");
-      expect(PROMPT_VERSION).toBe("post-extract@3");
+      expect(PROMPT_VERSION).toBe("post-extract@4");
     });
   });
 

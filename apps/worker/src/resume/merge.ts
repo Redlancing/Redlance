@@ -9,10 +9,7 @@ import {
   SKILL_BY_ID,
   WORK_LIMITS,
   experienceSuggestion,
-  findSkill,
   isCountryCode,
-  isUsableSkillName,
-  normalizeSkillName,
   projectSuggestion,
   suggestionsSchema,
   type ExperienceSuggestion,
@@ -20,8 +17,13 @@ import {
   type ResumeStepName,
   type Suggestions,
 } from "@redlance/core";
-import { findRanges, type DateRange } from "./dates";
-import { projectYear, type Block } from "./entries";
+import {
+  resolveRanges,
+  stripMarker,
+  type Block,
+  type LineRange,
+  type SectionLines,
+} from "./entries";
 import { hasEvidence, hasSkillEvidence } from "./evidence";
 import {
   cutPartialName,
@@ -32,9 +34,10 @@ import {
   removeNamedUrls,
   replaceNames,
   sharesNameWord,
+  MAX_GENERIC_CHARS,
   type ClientName,
 } from "./names";
-import { projectLinks, skillLabelOccurs, TLDS } from "./prepass";
+import { skillLabelOccurs, TLDS } from "./prepass";
 import type { ResumeSections } from "./sections";
 import type {
   BasicsOutput,
@@ -55,7 +58,6 @@ export type DroppedItem = {
     | "country"
     | "category"
     | "skill"
-    | "customSkill"
     // projects and experience
     | "project"
     | "role"
@@ -65,10 +67,12 @@ export type DroppedItem = {
     | "organisation"
     | "organisationDescription"
     | "domain"
-    | "link";
+    | "link"
+    // a range the model gave that code had to fix (the entry itself is kept)
+    | "lines";
   value: string;
   reason: string;
-  /** The entry block (projects and experience only). */
+  /** The entry's lines, like "P3–P7" ("projects" / "experience": the whole section). */
   block?: string;
 };
 
@@ -124,12 +128,13 @@ export function mergeResumeSteps(
     yearsExperience: number | null;
     githubUsername: string | null;
     pipelineVersion: string;
-    promptVersions: Partial<Record<ResumeStepName, string>>;
+    /** By call (profile, skills, work); older results keyed them by step. */
+    promptVersions: Record<string, string>;
     partial: ResumeStepName[];
     /** Steps that didn't run for this resume (no section for them). */
     skipped?: ResumeStepName[];
-    projectBlocks?: Block[];
-    experienceBlocks?: Block[];
+    projectLines?: SectionLines | null;
+    experienceLines?: SectionLines | null;
     /** When given, collects what was left out and why. */
     dropped?: DroppedItem[];
     /** When given, collects the names taken out of projects and experience. */
@@ -139,14 +144,17 @@ export function mergeResumeSteps(
   const drop = (what: DroppedItem["what"], value: string, reason: string) =>
     ctx.dropped?.push({ what, value, reason });
   const basics: Record<string, unknown> = {};
-  const displayName = steps.basics?.displayName
-    ?.trim()
-    .slice(0, LIMITS.displayName);
+  const rawName = steps.basics?.displayName?.trim() ?? "";
+  // Checked on the full text, then trimmed.
+  const displayName =
+    rawName && isPlainName(rawName)
+      ? fit(rawName, LIMITS.displayName)
+      : rawName;
   if (displayName && isPlainName(displayName)) basics.displayName = displayName;
   else if (displayName)
     drop("displayName", displayName, "looks like contact details or a link");
   const rawHeadline = steps.basics?.headline?.trim() ?? "";
-  const headline = stripLinks(rawHeadline).slice(0, LIMITS.headline).trim();
+  const headline = fit(stripLinks(rawHeadline).trim(), LIMITS.headline);
   if (headline) basics.headline = headline;
   else if (rawHeadline) drop("headline", rawHeadline, "only links");
   const country = steps.basics?.country?.trim().toUpperCase();
@@ -177,7 +185,6 @@ export function mergeResumeSteps(
 
   const shortlist = new Set(ctx.shortlist);
   const skills = new Map<string, Level>();
-  const custom = new Map<string, { name: string; level: Level }>();
   const add = (id: string, lvl: Level) => {
     const have = skills.get(id);
     if (!have || lvl === "core") skills.set(id, lvl);
@@ -196,29 +203,6 @@ export function mergeResumeSteps(
       add(sk.id, sk.level);
     else drop("skill", sk.id, "evidence not found in the text");
   }
-  for (const c of steps.skills?.customSkills ?? []) {
-    const known = findSkill(c.name);
-    const labels = known ? [known.name, ...known.aliases, c.name] : [c.name];
-    if (!hasSkillEvidence(ctx.text, c.evidence, labels)) {
-      drop("customSkill", c.name, "evidence not found in the text");
-      continue;
-    }
-    if (known) {
-      if (!known.retired) add(known.id, c.level);
-      else drop("customSkill", c.name, `matches retired id ${known.id}`);
-      continue;
-    }
-    const name = c.name.trim();
-    if (!isUsableSkillName(name)) {
-      drop("customSkill", c.name, "not a usable skill name");
-      continue;
-    }
-    const key = normalizeSkillName(name);
-    const have = custom.get(key);
-    if (!have) custom.set(key, { name, level: c.level });
-    else if (c.level === "core") have.level = "core";
-  }
-
   let core = 0;
   const cap = (lvl: Level): Level => {
     if (lvl !== "core") return lvl;
@@ -230,18 +214,12 @@ export function mergeResumeSteps(
     .map(([id, lvl]) => ({ id, level: cap(lvl) }));
   for (const [id] of [...skills].slice(LIMITS.totalSkills))
     drop("skill", id, `over the limit of ${LIMITS.totalSkills}`);
-  const customCap = Math.min(10, LIMITS.totalSkills - skillList.length);
-  const customList = [...custom.values()]
-    .slice(0, customCap)
-    .map((c) => ({ name: c.name, level: cap(c.level) }));
-  for (const c of [...custom.values()].slice(customCap))
-    drop("customSkill", c.name, "over the skill limit");
 
   const { projects, experience } = mergeWork(
     { projects: steps.projects, experience: steps.experience },
     {
-      projectBlocks: ctx.projectBlocks ?? [],
-      experienceBlocks: ctx.experienceBlocks ?? [],
+      projectLines: ctx.projectLines ?? null,
+      experienceLines: ctx.experienceLines ?? null,
       shortlist: ctx.shortlist,
       dropped: ctx.dropped,
       replaced: ctx.replaced,
@@ -258,7 +236,6 @@ export function mergeResumeSteps(
     },
     basics,
     skills: skillList,
-    customSkills: customList,
     githubUsername: ctx.githubUsername,
     projects,
     experience,
@@ -306,8 +283,8 @@ function hasContactDetails(text: string): boolean {
 const tooShort = (s: string) => (s.match(/[\p{L}\p{N}]+/gu)?.length ?? 0) < 2;
 
 type WorkCtx = {
-  projectBlocks: Block[];
-  experienceBlocks: Block[];
+  projectLines: SectionLines | null;
+  experienceLines: SectionLines | null;
   shortlist: string[];
   dropped?: DroppedItem[];
   replaced?: ReplacedName[];
@@ -325,7 +302,10 @@ class EntryScrub {
   addNames(names: ClientName[]): void {
     for (const c of names)
       if (nameOccurs(this.block.text, c.name))
-        this.names.push({ name: c.name, generic: c.generic });
+        this.names.push({
+          name: c.name,
+          generic: fit(c.generic, MAX_GENERIC_CHARS),
+        });
   }
 
   /** Adds the names the model listed on the entry's lines (dropped lines count too). */
@@ -371,46 +351,66 @@ const oneOf = <T extends string>(list: readonly T[], v: string, d: T): T =>
   (list as readonly string[]).includes(v) ? (v as T) : d;
 
 /**
- * Where an entry sits in its block. When several entries share one block (DOCX drops list
- * bullets, so one-line projects run together), each owns only the lines from its title to
- * the next entry's title. `own` is null for an entry alone in its block (it owns all of it)
- * and empty for one whose title isn't on a single line.
+ * Each entry's block from the model's line range (see `resolveRanges`), with the notes and
+ * drops it caused, and the entry's place in the resume (its first line; the whole-section
+ * fallback goes where its title first appears). An entry whose title isn't in its own range
+ * is dropped first, so an invented entry can't take lines from a real one.
  */
-type Span = { own: string | null; first: boolean };
-
-function spansFor(items: { block?: Block; title: string }[]): Span[] {
-  const spans: Span[] = items.map(() => ({ own: null, first: true }));
-  const groups = new Map<Block, number[]>();
-  items.forEach((it, i) => {
-    if (!it.block || !inBlock(it.block, it.title)) return;
-    groups.set(it.block, [...(groups.get(it.block) ?? []), i]);
-  });
-  for (const [block, idx] of groups) {
-    if (idx.length < 2) continue;
-    const lines = block.text.split("\n");
-    const at = idx.map((i) =>
-      lines.findIndex((l) => norm(l).includes(norm(items[i]!.title))),
-    );
-    const starts = unique(at.filter((p) => p >= 0)).sort((a, b) => a - b);
-    const firstAt = starts[0];
-    idx.forEach((i, k) => {
-      const p = at[k]!;
-      if (p < 0) {
-        spans[i] = { own: "", first: false };
-        return;
-      }
-      const next = starts.find((s) => s > p) ?? lines.length;
-      // Entries on the same title line are one entry listed twice (the dedupe drops one).
-      const first = p === firstAt;
-      spans[i] = { own: lines.slice(p, next).join("\n"), first };
-    });
+function blocksFor(
+  items: { lines: LineRange; title: string }[],
+  section: SectionLines | null,
+  what: "project" | "role",
+  drop: (w: DroppedItem["what"], v: string, r: string, b: string) => void,
+): ({ block: Block; rank: number } | null)[] {
+  if (!section) {
+    for (const it of items)
+      drop(
+        what,
+        it.title,
+        "its section isn't in the resume",
+        what === "project" ? "projects" : "experience",
+      );
+    return items.map(() => null);
   }
-  return spans;
+  const titleOf = (it: { title: string }) => tidy(stripMarker(it.title));
+  const kept: number[] = [];
+  items.forEach((it, i) => {
+    const [alone] = resolveRanges([it.lines], section);
+    if (alone?.ok && !inBlock(alone.block, titleOf(it)))
+      drop(what, it.title, "title not in its lines", alone.block.id);
+    else kept.push(i);
+  });
+  const resolved = resolveRanges(
+    kept.map((i) => items[i]!.lines),
+    section,
+  );
+  const out: ({ block: Block; rank: number } | null)[] = items.map(() => null);
+  resolved.forEach((r, k) => {
+    const i = kept[k]!;
+    const title = items[i]!.title;
+    if (!r.ok) {
+      drop(what, title, r.reason, section.kind);
+      return;
+    }
+    for (const note of r.notes) drop("lines", title, note, r.block.id);
+    if (r.from !== null) {
+      out[i] = { block: r.block, rank: r.from };
+      return;
+    }
+    const t = norm(titleOf(items[i]!));
+    const at = section.lines.findIndex((l) => t && norm(l).includes(t));
+    out[i] = {
+      block: r.block,
+      rank: at < 0 ? Number.MAX_SAFE_INTEGER : at + 1,
+    };
+  });
+  return out;
 }
 
 /**
- * Projects and experience from the two model steps, checked against their own blocks
- * (projects-experience-design.md, "Checks and merge" and "Removing client names").
+ * Projects and experience from the work call, each checked against its own lines (the
+ * range the model gave, checked by code; projects-experience-design.md, "Checks and merge"
+ * and "Removing client names").
  * Never throws: anything that fails a check is dropped and recorded.
  */
 export function mergeWork(
@@ -424,12 +424,6 @@ export function mergeWork(
     block: string,
   ) => ctx.dropped?.push({ what, value, reason, block });
   const shortlist = new Set(ctx.shortlist);
-  const order = (blocks: Block[]) => new Map(blocks.map((b, i) => [b.id, i]));
-  const projectOrder = order(ctx.projectBlocks);
-  const roleOrder = order(ctx.experienceBlocks);
-  const byId = new Map(
-    [...ctx.projectBlocks, ...ctx.experienceBlocks].map((b) => [b.id, b]),
-  );
 
   const skillsFor = (ids: string[], block: Block) => {
     const out: string[] = [];
@@ -438,7 +432,7 @@ export function mergeWork(
       if (!shortlist.has(id) || !skill || skill.retired)
         drop("skill", id, "not on the shortlist", block.id);
       else if (!skillLabelOccurs(skill, block.text))
-        drop("skill", id, "label not in its block", block.id);
+        drop("skill", id, "label not in its lines", block.id);
       else out.push(id);
     }
     return out.slice(0, WORK_LIMITS.entrySkills);
@@ -470,9 +464,10 @@ export function mergeWork(
     max: number,
   ) => {
     const out: string[] = [];
-    for (const l of lines) {
+    for (const raw of lines) {
+      const l = { ...raw, text: stripMarker(raw.text) };
       if (!hasEvidence(scrub.block.text, l.text)) {
-        drop(what, l.text, "not word for word in its block", scrub.block.id);
+        drop(what, l.text, "not word for word in its lines", scrub.block.id);
         continue;
       }
       const text = tidy(l.text);
@@ -506,6 +501,7 @@ export function mergeWork(
   type Kept<T> = {
     value: T;
     block: Block;
+    rank: number;
     key: string;
     label: string;
     scrub: EntryScrub;
@@ -514,36 +510,25 @@ export function mergeWork(
   // ----- projects -----
   const projects: Kept<ProjectSuggestion>[] = [];
   const projectItems = steps.projects?.projects ?? [];
-  const projectSpans = spansFor(
-    projectItems.map((p) => ({
-      block: projectOrder.has(p.block) ? byId.get(p.block) : undefined,
-      title: tidy(p.title),
-    })),
+  const projectBlocks = blocksFor(
+    projectItems.map((p) => ({ lines: p.lines, title: p.title })),
+    ctx.projectLines,
+    "project",
+    drop,
   );
   projectItems.forEach((p, i) => {
-    const block = projectOrder.has(p.block) ? byId.get(p.block) : undefined;
-    const rawTitle = tidy(p.title);
-    if (!block) {
-      drop("project", p.title, "unknown block", p.block);
-      return;
-    }
+    const placed = projectBlocks[i];
+    if (!placed) return;
+    const { block, rank } = placed;
+    const rawTitle = tidy(stripMarker(p.title));
     if (!inBlock(block, rawTitle)) {
-      drop("project", p.title, "title not in its block", block.id);
+      drop("project", p.title, "title not in its lines", block.id);
       return;
     }
     const scrub = new EntryScrub(block);
     scrub.addNames(p.clientNames ?? []);
     scrub.addLineNames(p.outcomes);
-    // Entries sharing a block keep only the links and year on their own lines.
-    const { own } = projectSpans[i]!;
-    const ownLinks = own === null ? null : projectLinks(own);
-    const links = ownLinks
-      ? block.links.filter((l) => ownLinks.includes(l))
-      : block.links;
-    const year =
-      own === null
-        ? block.year
-        : projectYear(own, findRanges(own)[0] ?? null, new Date());
+    const { links, year } = block;
     const value = projectSuggestion.safeParse({
       title: fit(scrub.apply(rawTitle), WORK_LIMITS.entryTitle),
       summary: fit(
@@ -570,6 +555,7 @@ export function mergeWork(
     projects.push({
       value: value.data,
       block,
+      rank,
       key: norm(rawTitle),
       label: p.title,
       scrub,
@@ -579,21 +565,19 @@ export function mergeWork(
   // ----- experience -----
   const roles: Kept<ExperienceSuggestion>[] = [];
   const roleItems = steps.experience?.experience ?? [];
-  const roleSpans = spansFor(
-    roleItems.map((r) => ({
-      block: roleOrder.has(r.block) ? byId.get(r.block) : undefined,
-      title: tidy(r.title),
-    })),
+  const roleBlocks = blocksFor(
+    roleItems.map((r) => ({ lines: r.lines, title: r.title })),
+    ctx.experienceLines,
+    "role",
+    drop,
   );
   roleItems.forEach((r, i) => {
-    const block = roleOrder.has(r.block) ? byId.get(r.block) : undefined;
-    const rawTitle = tidy(r.title);
-    if (!block) {
-      drop("role", r.title, "unknown block", r.block);
-      return;
-    }
+    const placed = roleBlocks[i];
+    if (!placed) return;
+    const { block, rank } = placed;
+    const rawTitle = tidy(stripMarker(r.title));
     if (!inBlock(block, rawTitle)) {
-      drop("role", r.title, "title not in its block", block.id);
+      drop("role", r.title, "title not in its lines", block.id);
       return;
     }
     const employmentType = oneOf(
@@ -611,7 +595,7 @@ export function mergeWork(
       ? findOrganisation(block.text, modelOrg)
       : null;
     if (modelOrg && !organisation) {
-      drop("organisation", modelOrg, "not in its block", block.id);
+      drop("organisation", modelOrg, "not in its lines", block.id);
       // A freelance or contract organisation is often a client: ask the user to check.
       if (orgFree) scrub.removed = true;
     }
@@ -639,16 +623,12 @@ export function mergeWork(
       for (const name of unique([organisation, modelOrg]))
         scrub.names.push({ name, generic: description || fallback });
 
-    // Entries sharing a block: the block's dates belong to the first role only, unless a
-    // role's own lines carry a range.
-    const span = roleSpans[i]!;
-    const ownRange: DateRange | null =
-      span.own === null
-        ? block.range
-        : (findRanges(span.own)[0] ?? (span.first ? block.range : null));
+    const ownRange = block.range;
     const value = experienceSuggestion.safeParse({
       title: fit(scrub.apply(rawTitle), WORK_LIMITS.entryTitle),
-      organisation: orgFree ? null : organisation,
+      organisation: orgFree
+        ? null
+        : organisation && fit(organisation, WORK_LIMITS.organisation),
       organisationDescription: fit(
         scrub.apply(description),
         WORK_LIMITS.orgDescription,
@@ -690,6 +670,7 @@ export function mergeWork(
     roles.push({
       value: value.data,
       block,
+      rank,
       key: [
         norm(rawTitle),
         norm(organisation ?? ""),
@@ -703,12 +684,11 @@ export function mergeWork(
 
   const finish = <T>(
     list: Kept<T>[],
-    rank: Map<string, number>,
     what: "project" | "role",
     max: number,
   ): T[] => {
-    // Resume order (block order); sort is stable for entries from one block.
-    list.sort((a, b) => rank.get(a.block.id)! - rank.get(b.block.id)!);
+    // Resume order (each entry's first line); the sort is stable for equal ranks.
+    list.sort((a, b) => a.rank - b.rank);
     const seen = new Set<string>();
     const out: T[] = [];
     for (const e of list) {
@@ -728,7 +708,7 @@ export function mergeWork(
   };
 
   return {
-    projects: finish(projects, projectOrder, "project", WORK_LIMITS.projects),
-    experience: finish(roles, roleOrder, "role", WORK_LIMITS.roles),
+    projects: finish(projects, "project", WORK_LIMITS.projects),
+    experience: finish(roles, "role", WORK_LIMITS.roles),
   };
 }

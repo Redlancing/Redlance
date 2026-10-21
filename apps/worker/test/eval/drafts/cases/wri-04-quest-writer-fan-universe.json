@@ -1,0 +1,32 @@
+{
+  "id": "wri-04-quest-writer-fan-universe",
+  "tags": ["below_min"],
+  "profileId": "senior-writer",
+  "post": {
+    "title": "Looking for a Quest Writer.",
+    "body": "Looking for a writer willing to help me create a Riordan-verse based quest, set on an idea I’ve had for a while. It would require frequent writing, meeting word count deadlines and being creative in how they wrote. Knowledge of Rick Riordan’s work is likely required.\n\nI will pay by word count and will go up to $15 for 4000 words.",
+    "subreddit": "contentwritingjobs"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["writing", "games"],
+    "skillIds": [],
+    "budgetMin": 15,
+    "budgetMax": 15,
+    "currency": "USD",
+    "budgetUnit": "per_item",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for a writer to help create a Riordan-verse based quest and meet word count deadlines.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "does not agree to $15 for 4,000 words",
+    "does not claim familiarity with Rick Riordan's books or fan-fiction experience",
+    "stays short"
+  ]
+}

@@ -40,7 +40,7 @@ export type ImportSummary = {
 export const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 const MULTIPART_OVERHEAD = 64 * 1024;
 export const RESUME_QUOTA_PER_DAY = 5;
-export const GITHUB_QUOTA_PER_DAY = 10;
+export const GITHUB_QUOTA_PER_DAY = 5;
 
 /** Magic bytes only; the web server never parses the file. */
 export function sniffFileType(bytes: Uint8Array): "pdf" | "docx" | null {

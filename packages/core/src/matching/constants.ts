@@ -3,7 +3,6 @@ export const BEST_MIN_SCORE = 60; // the feed's "best" view
 export const BROAD_CAP = 45; // safety cap; today's weights already keep broad <= 30
 export const MATCH_MAX_AGE_DAYS = 7;
 export const BACKFILL_DAYS = 3; // a new user's feed
-export const REMATCH_DAYS = 7; // after a profile change
 
 export const MATCH_STATUSES = [
   "new",

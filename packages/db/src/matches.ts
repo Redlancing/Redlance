@@ -1,7 +1,8 @@
 import {
   BEST_MIN_SCORE,
-  REMATCH_DAYS,
+  hasNoBudgetFlag,
   scrubOrganisations,
+  warningFlags,
   type AiStatus,
   type BudgetUnit,
   type EmploymentType,
@@ -25,6 +26,8 @@ import { matchEvents, matches } from "./schema";
 
 /** NOTIFY channel: a match is waiting for an AI re-score. */
 export const MATCHES_CHANNEL = "matches";
+/** NOTIFY channel: new-post matches are waiting for the alert router. */
+export const MATCH_ALERTS_CHANNEL = "match_alerts";
 export const MAX_MATCH_ATTEMPTS = 3;
 export const MAX_RESCORE_ATTEMPTS = 3;
 /** A given-back re-score (provider error, shutdown, budget pause) is due again after this, so a pair-specific error cannot hot-loop. */
@@ -383,15 +386,25 @@ const UPSERT_CHUNK = 500;
  * clears withdrawn_at. A dismissed match keeps its status and gets ai_status not_needed. Wakes the
  * re-scorer (NOTIFY matches, on commit) when a written row is pending. Returns how many rows
  * were written.
+ *
+ * Alerts: `origin` says why the rows were matched. A new post's matches are inserted with
+ * alert_outcome null (the router picks them up, woken by NOTIFY match_alerts); a backfill's
+ * (a new user's last few days) are inserted as skipped_backfill and never alert. An update
+ * never touches the alert columns, so a re-analysis can't alert twice. When a new-post match
+ * and a backfill race for the same pair, whichever inserts first decides.
  */
 export async function upsertMatches(
   db: Database,
   rows: NewMatch[],
+  opts: { origin: "post" | "backfill" },
 ): Promise<number> {
   if (rows.length === 0) return 0;
+  const alertOutcome =
+    opts.origin === "backfill" ? ("skipped_backfill" as const) : null;
   return db.transaction(async (tx) => {
     let written = 0;
     let wake = false;
+    let inserted = false;
     for (let i = 0; i < rows.length; i += UPSERT_CHUNK) {
       const chunk = rows.slice(i, i + UPSERT_CHUNK);
       const res = await tx
@@ -411,10 +424,12 @@ export async function upsertMatches(
             analysedAt:
               r.analysedAt ??
               sql`(select date_trunc('milliseconds', created_at) from job_post_analyses where job_post_id = ${r.jobPostId}::uuid)`,
+            alertOutcome,
           })),
         )
         .onConflictDoUpdate({
           target: [matches.userId, matches.jobPostId],
+          // Never add alert_* or telegram_message_id here: an alert is decided once per match.
           set: {
             ruleScore: sql`excluded.rule_score`,
             broad: sql`excluded.broad`,
@@ -445,11 +460,19 @@ export async function upsertMatches(
           // analysis. Never `<>`, which would let a stale snapshot overwrite a newer one.
           setWhere: sql`(${matches.profileVersion}, ${matches.analysedAt}) < (excluded.profile_version, excluded.analysed_at)`,
         })
-        .returning({ aiStatus: matches.aiStatus });
+        // xmax = 0 only on a freshly inserted row (an update sets it).
+        .returning({
+          aiStatus: matches.aiStatus,
+          inserted: sql<boolean>`xmax = 0`,
+        });
       written += res.length;
       if (res.some((r) => r.aiStatus === "pending")) wake = true;
+      if (res.some((r) => r.inserted)) inserted = true;
     }
     if (wake) await tx.execute(sql`select pg_notify(${MATCHES_CHANNEL}, '')`);
+    if (inserted && opts.origin === "post") {
+      await tx.execute(sql`select pg_notify(${MATCH_ALERTS_CHANNEL}, '')`);
+    }
     return written;
   });
 }
@@ -539,32 +562,6 @@ export async function requestRematch(
       rematch_after = null,
       rematch_attempts = 0
     where user_id = ${userId}`);
-}
-
-/**
- * The hook for profile edits: bumps profile_version (so existing matches get re-scored) and
- * requests a re-match over the last REMATCH_DAYS. Returns the new version, or null without a
- * profile.
- */
-export async function bumpProfileVersion(
-  db: Database,
-  userId: string,
-  now: Date,
-): Promise<number | null> {
-  return db.transaction(async (tx) => {
-    const res = await tx.execute<{ profile_version: number }>(sql`
-      update profiles set profile_version = profile_version + 1, updated_at = now()
-      where user_id = ${userId}
-      returning profile_version`);
-    const version = res.rows[0]?.profile_version;
-    if (version === undefined) return null;
-    await requestRematch(
-      tx,
-      userId,
-      new Date(now.getTime() - REMATCH_DAYS * 86_400_000),
-    );
-    return version;
-  });
 }
 
 /** A claimed re-match request. `claimedAt` is the lease that fences completeRematch / failRematch. */
@@ -865,8 +862,6 @@ export async function loadRescoreContext(
   }>(sql`
     select s.name, ps.level from profile_skills ps join skills s on s.id = ps.skill_id
     where ps.user_id = ${r.user_id}
-    union all
-    select cs.name, cs.level from custom_skills cs where cs.user_id = ${r.user_id}
     order by level, name`);
   const projects = await db.execute<{
     id: string;
@@ -1151,7 +1146,10 @@ export type FeedItem = {
     remote: RemoteType;
     /** YYYY-MM-DD */
     deadline: string | null;
+    /** Warning flags only; "vague_pay" is `noBudgetStated` instead. */
     redFlags: string[];
+    /** The analysis flagged no pay information at all (a neutral note, not a red flag). */
+    noBudgetStated: boolean;
     /** How the post says to apply; null when it doesn't say (or an older analysis). */
     applyInstructions: string | null;
     /** Other communities the same gig was cross-posted to (its duplicates), sorted. */
@@ -1165,8 +1163,111 @@ export type FeedOptions = {
   /** Only posts sharing one of these job types. */
   categories?: string[];
   pay?: "paid" | "any";
+  /** Only gigs posted in this subreddit, or cross-posted to it. */
+  community?: string;
   limit: number;
 };
+
+/** One feed row before mapping; `body` and `withdrawn` only on the single-match read. */
+type FeedRow = {
+  id: string;
+  score: number;
+  reason: string;
+  broad: boolean;
+  status: MatchStatus;
+  ai_status: AiStatus;
+  posted_at: string;
+  bp_id: string | null;
+  bp_title: string | null;
+  br_id: string | null;
+  br_title: string | null;
+  post_id: string;
+  title: string;
+  community: string;
+  url: string;
+  summary: string;
+  categories: string[];
+  budget_min: string | null;
+  budget_max: string | null;
+  currency: string | null;
+  budget_unit: BudgetUnit | null;
+  pay_type: PayType;
+  remote: RemoteType;
+  deadline: string | null;
+  red_flags: string[];
+  apply_instructions: string | null;
+  also_posted_in: string[];
+  body?: string;
+  withdrawn?: boolean;
+};
+
+/** The feed's select and joins, shared by the page and the single-match read. */
+function feedRows(
+  db: Executor,
+  where: SQL[],
+  opts: { limit: number; detail?: boolean },
+) {
+  const detail = opts.detail
+    ? sql`, j.body, (m.withdrawn_at is not null) as withdrawn`
+    : sql``;
+  return db.execute<FeedRow>(sql`
+    select m.id, m.score, m.broad, m.status, m.ai_status, m.posted_at,
+      case when m.ai_status = 'done' and m.ai_reason is not null then m.ai_reason else m.rule_reason end as reason,
+      bp.id as bp_id, bp.title as bp_title, br.id as br_id, br.title as br_title,
+      j.id as post_id, j.title, j.community, j.url,
+      a.summary, a.categories, a.budget_min, a.budget_max, a.currency, a.budget_unit,
+      a.pay_type, a.remote, a.deadline, a.red_flags, a.apply_instructions,
+      coalesce((
+        select array_agg(distinct d.community order by d.community) from job_posts d
+        where d.duplicate_of = j.id and d.community <> j.community), '{}'::text[]) as also_posted_in
+      ${detail}
+    from matches m
+    join job_posts j on j.id = m.job_post_id and j.duplicate_of is null
+    join job_post_analyses a on a.job_post_id = j.id
+    left join profile_projects bp
+      on bp.id = m.best_project_id and bp.user_id = m.user_id and not bp.hidden
+    left join profile_experience br
+      on br.id = m.best_role_id and br.user_id = m.user_id and not br.hidden
+    where ${sql.join(where, sql` and `)}
+    order by m.posted_at desc, m.id desc
+    limit ${opts.limit}`);
+}
+
+function toFeedItem(r: FeedRow): FeedItem {
+  const min = toNum(r.budget_min);
+  const max = toNum(r.budget_max);
+  return {
+    matchId: r.id,
+    score: r.score,
+    reason: r.reason,
+    broad: r.broad,
+    status: r.status,
+    aiStatus: r.ai_status,
+    bestProject:
+      r.bp_id && r.bp_title ? { id: r.bp_id, title: r.bp_title } : null,
+    bestRole: r.br_id && r.br_title ? { id: r.br_id, title: r.br_title } : null,
+    post: {
+      id: r.post_id,
+      title: r.title,
+      community: r.community,
+      url: r.url,
+      postedAt: toDate(r.posted_at),
+      summary: r.summary,
+      categories: r.categories,
+      budget:
+        min === null && max === null
+          ? null
+          : { min, max, currency: r.currency, unit: r.budget_unit },
+      payType: r.pay_type,
+      remote: r.remote,
+      deadline: toDay(r.deadline),
+      redFlags: warningFlags(r.red_flags),
+      noBudgetStated: hasNoBudgetFlag(r.red_flags),
+      applyInstructions: r.apply_instructions,
+      alsoPostedIn: r.also_posted_in,
+    },
+  };
+}
 
 /**
  * One page of a user's feed, newest post first, keyset-paged on (posted_at, match id) so
@@ -1192,96 +1293,50 @@ export async function feedPage(
   if (opts.categories?.length)
     where.push(sql`a.categories && ${textArray(opts.categories)}`);
   if (opts.pay === "paid") where.push(sql`a.pay_type = 'paid'`);
-  const res = await db.execute<{
-    id: string;
-    score: number;
-    reason: string;
-    broad: boolean;
-    status: MatchStatus;
-    ai_status: AiStatus;
-    posted_at: string;
-    bp_id: string | null;
-    bp_title: string | null;
-    br_id: string | null;
-    br_title: string | null;
-    post_id: string;
-    title: string;
-    community: string;
-    url: string;
-    summary: string;
-    categories: string[];
-    budget_min: string | null;
-    budget_max: string | null;
-    currency: string | null;
-    budget_unit: BudgetUnit | null;
-    pay_type: PayType;
-    remote: RemoteType;
-    deadline: string | null;
-    red_flags: string[];
-    apply_instructions: string | null;
-    also_posted_in: string[];
-  }>(sql`
-    select m.id, m.score, m.broad, m.status, m.ai_status, m.posted_at,
-      case when m.ai_status = 'done' and m.ai_reason is not null then m.ai_reason else m.rule_reason end as reason,
-      bp.id as bp_id, bp.title as bp_title, br.id as br_id, br.title as br_title,
-      j.id as post_id, j.title, j.community, j.url,
-      a.summary, a.categories, a.budget_min, a.budget_max, a.currency, a.budget_unit,
-      a.pay_type, a.remote, a.deadline, a.red_flags, a.apply_instructions,
-      coalesce((
-        select array_agg(distinct d.community order by d.community) from job_posts d
-        where d.duplicate_of = j.id and d.community <> j.community), '{}'::text[]) as also_posted_in
-    from matches m
-    join job_posts j on j.id = m.job_post_id and j.duplicate_of is null
-    join job_post_analyses a on a.job_post_id = j.id
-    left join profile_projects bp
-      on bp.id = m.best_project_id and bp.user_id = m.user_id and not bp.hidden
-    left join profile_experience br
-      on br.id = m.best_role_id and br.user_id = m.user_id and not br.hidden
-    where ${sql.join(where, sql` and `)}
-    order by m.posted_at desc, m.id desc
-    limit ${opts.limit + 1}`);
-  const rows = res.rows.slice(0, opts.limit);
-  const items: FeedItem[] = rows.map((r) => {
-    const min = toNum(r.budget_min);
-    const max = toNum(r.budget_max);
-    return {
-      matchId: r.id,
-      score: r.score,
-      reason: r.reason,
-      broad: r.broad,
-      status: r.status,
-      aiStatus: r.ai_status,
-      bestProject:
-        r.bp_id && r.bp_title ? { id: r.bp_id, title: r.bp_title } : null,
-      bestRole:
-        r.br_id && r.br_title ? { id: r.br_id, title: r.br_title } : null,
-      post: {
-        id: r.post_id,
-        title: r.title,
-        community: r.community,
-        url: r.url,
-        postedAt: toDate(r.posted_at),
-        summary: r.summary,
-        categories: r.categories,
-        budget:
-          min === null && max === null
-            ? null
-            : { min, max, currency: r.currency, unit: r.budget_unit },
-        payType: r.pay_type,
-        remote: r.remote,
-        deadline: toDay(r.deadline),
-        redFlags: r.red_flags,
-        applyInstructions: r.apply_instructions,
-        alsoPostedIn: r.also_posted_in,
-      },
-    };
-  });
+  if (opts.community)
+    where.push(
+      sql`(j.community = ${opts.community} or exists (
+        select 1 from job_posts c where c.duplicate_of = j.id and c.community = ${opts.community}))`,
+    );
+  const res = await feedRows(db, where, { limit: opts.limit + 1 });
+  const items = res.rows.slice(0, opts.limit).map(toFeedItem);
   const last = items[items.length - 1];
   const next =
     res.rows.length > opts.limit && last
       ? { postedAt: last.post.postedAt, id: last.matchId }
       : null;
   return { items, next };
+}
+
+export type FeedItemDetail = FeedItem & {
+  /** The post was re-analysed and no longer fits; drafting is refused. */
+  withdrawn: boolean;
+  post: FeedItem["post"] & { body: string };
+};
+
+/**
+ * One of the user's matches with the post's own text, for the match page. Unlike the feed it
+ * includes dismissed and withdrawn matches, so a link from an alert always opens. Null when
+ * the match isn't the user's.
+ */
+export async function feedItem(
+  db: Executor,
+  userId: string,
+  matchId: string,
+): Promise<FeedItemDetail | null> {
+  const res = await feedRows(
+    db,
+    [sql`m.user_id = ${userId}`, sql`m.id = ${matchId}`],
+    { limit: 1, detail: true },
+  );
+  const r = res.rows[0];
+  if (!r) return null;
+  const item = toFeedItem(r);
+  return {
+    ...item,
+    withdrawn: r.withdrawn ?? false,
+    post: { ...item.post, body: r.body ?? "" },
+  };
 }
 
 /**
@@ -1318,5 +1373,31 @@ export async function setMatchStatus(
       where id = ${matchId}`);
     await tx.insert(matchEvents).values({ matchId, userId, event: status });
     return { status };
+  });
+}
+
+/**
+ * Opening a match: "new" becomes "seen" (logged as an event, like `setMatchStatus`); any other
+ * status is left as it is. A page shown from a browser cache can still say "new" for a match
+ * saved, dismissed or replied to since, and must not overwrite that. Returns the status the
+ * match has afterwards, so the caller can show it; null when the match isn't the user's.
+ */
+export async function markMatchSeen(
+  db: Database,
+  userId: string,
+  matchId: string,
+): Promise<{ status: MatchStatus } | null> {
+  return db.transaction(async (tx) => {
+    const res = await tx.execute<{ status: MatchStatus }>(sql`
+      select status from matches where id = ${matchId} and user_id = ${userId}
+      for update`);
+    const current = res.rows[0];
+    if (!current) return null;
+    if (current.status !== "new") return { status: current.status };
+    await tx.execute(sql`
+      update matches set status = 'seen', updated_at = now()
+      where id = ${matchId}`);
+    await tx.insert(matchEvents).values({ matchId, userId, event: "seen" });
+    return { status: "seen" };
   });
 }

@@ -19,7 +19,7 @@ import { makeDocx } from "../../test/fixtures";
 import { parseWorkerEnv } from "../env";
 import {
   stubResumeResponder as fakeResumeResponder,
-  stepOf,
+  callOf,
 } from "../../test/stub-llm";
 import { createLogger } from "../logger";
 import { resumeCacheKey } from "../resume/pipeline";
@@ -129,25 +129,24 @@ describe("resumeHandler", () => {
       expect.arrayContaining(["react"]),
     );
     expect(out.pipelineVersion).toBe(
-      "resume@2|basics@1|jobTypes@1|skills@1|projects@2|experience@2|" +
-        `${env.VERTEX_MODEL_FAST}|${env.VERTEX_MODEL_SMART}`,
+      `resume@6|profile@1|skills@3|work@2|${env.VERTEX_MODEL_FAST}`,
     );
     expect(out.contentHash).toMatch(/^[0-9a-f]{64}$/);
-    expect(out.sourceText).toContain("Jane Doe");
+    expect(out).not.toHaveProperty("sourceText");
     expect(stages).toEqual(["reading", "analysing", "checking"]);
 
     const r = await row(job.id);
     expect(r.fileBytes).toBeNull();
     expect(r.sourceText).toContain("Jane Doe");
 
-    // LINES has an Experience heading and no Projects heading: projects is skipped.
+    // LINES has an Experience heading and no Projects heading: the work call runs for
+    // experience only. One usage row per call.
     const usage = await usageRows();
-    expect(usage).toHaveLength(4);
-    expect(usage.map((u) => u.promptVersion).sort()).toEqual([
-      "basics@1",
-      "experience@2",
-      "jobTypes@1",
-      "skills@1",
+    expect(usage).toHaveLength(3);
+    expect(usage.map((u) => [u.step, u.promptVersion]).sort()).toEqual([
+      ["profile", "profile@1"],
+      ["skills", "skills@3"],
+      ["work", "work@2"],
     ]);
     for (const u of usage) {
       expect(u.userId).toBe(userId);
@@ -162,10 +161,11 @@ describe("resumeHandler", () => {
     const userId = await newUser();
     const job = await claimed(userId, makeDocx(LINES));
     const { ctx } = ctxFor(job);
-    const text = (await resumeHandler(job, ctx)).sourceText!;
+    const first = await resumeHandler(job, ctx);
+    const text = (await row(job.id)).sourceText!;
     const retry = { ...job, fileBytes: null, sourceText: text };
     const out = await resumeHandler(retry, ctxFor(retry).ctx);
-    expect(out.sourceText).toBe(text);
+    expect(out.contentHash).toBe(first.contentHash);
   });
 
   it("reuses a cached result for the same text without calling the model", async () => {
@@ -189,30 +189,59 @@ describe("resumeHandler", () => {
     expect(out2.result).toEqual(out1.result);
     expect(out2.contentHash).toBe(out1.contentHash);
     expect(stages).toEqual(["reading", "checking"]);
-    expect(await usageRows()).toHaveLength(4);
+    expect(await usageRows()).toHaveLength(3);
   });
 
-  it("misses the cache when a model name changes", async () => {
+  it("deletes the text when the job completes, and a second upload still hits the cache", async () => {
+    const userId = await newUser();
+    const first = await claimed(userId, makeDocx(LINES));
+    const out1 = await resumeHandler(first, ctxFor(first).ctx);
+    expect((await row(first.id)).sourceText).toContain("Jane Doe");
+    await completeImportJob(db, first.id, first.attempts, out1);
+    const r = await row(first.id);
+    expect(r.sourceText).toBeNull();
+    expect(r.fileBytes).toBeNull();
+    expect(r.contentHash).toBe(out1.contentHash);
+    expect(r.pipelineVersion).toBe(out1.pipelineVersion);
+    expect(r.result).toEqual(out1.result);
+
+    const before = (await usageRows()).length;
+    const second = await claimed(userId, makeDocx(LINES));
+    const { ctx, stages } = ctxFor(second);
+    const out2 = await resumeHandler(second, ctx);
+    expect(out2.result).toEqual(out1.result);
+    expect(stages).toEqual(["reading", "checking"]);
+    expect((await usageRows()).length).toBe(before);
+  });
+
+  it("misses the cache when the model the calls use changes, not the unused one", async () => {
     const userId = await newUser();
     const first = await claimed(userId, makeDocx(LINES));
     const out1 = await resumeHandler(first, ctxFor(first).ctx);
     await completeImportJob(db, first.id, first.attempts, out1);
 
+    // The smart model isn't used by any resume call: still a cache hit.
     const second = await claimed(userId, makeDocx(LINES));
-    const { ctx, stages } = ctxFor(second);
-    ctx.env = { ...env, VERTEX_MODEL_SMART: "some-newer-model" };
-    const out2 = await resumeHandler(second, ctx);
+    const hit = ctxFor(second);
+    hit.ctx.env = { ...env, VERTEX_MODEL_SMART: "some-newer-model" };
+    await resumeHandler(second, hit.ctx);
+    expect(hit.stages).toEqual(["reading", "checking"]);
+
+    const third = await claimed(userId, makeDocx(LINES));
+    const { ctx, stages } = ctxFor(third);
+    ctx.env = { ...env, VERTEX_MODEL_FAST: "some-newer-model" };
+    const out3 = await resumeHandler(third, ctx);
     expect(stages).toEqual(["reading", "analysing", "checking"]);
-    expect(out2.contentHash).toBe(out1.contentHash);
-    expect(out2.pipelineVersion).not.toBe(out1.pipelineVersion);
-    expect(out2.pipelineVersion).toContain("some-newer-model");
+    expect(out3.contentHash).toBe(out1.contentHash);
+    expect(out3.pipelineVersion).not.toBe(out1.pipelineVersion);
+    expect(out3.pipelineVersion).toContain("some-newer-model");
   });
 
   it("never caches a partial result", async () => {
     const userId = await newUser();
     const flaky = createClient(
       createFakeTransport((req) => {
-        if (stepOf(req) === "skills") throw new LlmError("server", "down");
+        if (callOf(req) === "skills") throw new LlmError("server", "down");
         return fakeResumeResponder(req);
       }),
       { sleep: async () => {} },
@@ -224,10 +253,11 @@ describe("resumeHandler", () => {
     ).toEqual(["skills"]);
     expect(out1.contentHash).toBeUndefined();
     expect(out1.pipelineVersion).toBeUndefined();
+    const storedText = (await row(first.id)).sourceText!;
     await completeImportJob(db, first.id, first.attempts, out1);
 
     // An older row that did store a partial result under the hash is ignored too.
-    const hash = createHash("sha256").update(out1.sourceText!).digest("hex");
+    const hash = createHash("sha256").update(storedText).digest("hex");
     await db
       .update(importJobs)
       .set({ contentHash: hash, pipelineVersion: resumeCacheKey(env) })
@@ -238,7 +268,7 @@ describe("resumeHandler", () => {
     const { ctx, stages } = ctxFor(second);
     const out2 = await resumeHandler(second, ctx);
     expect(stages).toEqual(["reading", "analysing", "checking"]);
-    expect((await usageRows()).length).toBe(before + 4);
+    expect((await usageRows()).length).toBe(before + 3);
     expect(out2.contentHash).toBe(hash);
   });
 
@@ -269,9 +299,10 @@ describe("resumeHandler", () => {
     expect(stored.v).toBe(2);
     expect(stored.meta?.partial).toEqual([]);
     expect(stored.meta?.skipped).toEqual([]);
-    expect(stored.meta?.promptVersions).toMatchObject({
-      projects: "projects@2",
-      experience: "experience@2",
+    expect(stored.meta?.promptVersions).toEqual({
+      profile: "profile@1",
+      skills: "skills@3",
+      work: "work@2",
     });
     expect(stored.projects).toEqual([
       expect.objectContaining({
@@ -296,25 +327,19 @@ describe("resumeHandler", () => {
     ]);
     expect(JSON.stringify(stored)).not.toMatch(/acme|globex|bright/i);
     expect((await usageRows()).map((u) => u.step).sort()).toEqual([
-      "basics",
-      "experience",
-      "jobTypes",
-      "projects",
+      "profile",
       "skills",
+      "work",
     ]);
   });
 
-  it("does not reuse a result cached by resume@1", async () => {
+  it("does not reuse a result cached by resume@2", async () => {
     const userId = await newUser();
     const first = await claimed(userId, makeDocx(LINES));
     const out1 = await resumeHandler(first, ctxFor(first).ctx);
-    // The same text analysed by the old pipeline: same hash, the resume@1 key.
-    const oldKey = resumeCacheKey(env)
-      .replace("resume@2", "resume@1")
-      .replace("|projects@2|experience@2", "");
-    expect(oldKey).toBe(
-      `resume@1|basics@1|jobTypes@1|skills@1|${env.VERTEX_MODEL_FAST}|${env.VERTEX_MODEL_SMART}`,
-    );
+    // The same text analysed by the five-call pipeline: same hash, the resume@2 key.
+    const oldKey = `resume@2|basics@1|jobTypes@1|skills@2|projects@2|experience@2|${env.VERTEX_MODEL_FAST}|${env.VERTEX_MODEL_SMART}`;
+    expect(oldKey).not.toBe(resumeCacheKey(env));
     await completeImportJob(db, first.id, first.attempts, {
       ...out1,
       pipelineVersion: oldKey,
@@ -325,7 +350,7 @@ describe("resumeHandler", () => {
     const { ctx, stages } = ctxFor(second);
     const out2 = await resumeHandler(second, ctx);
     expect(stages).toEqual(["reading", "analysing", "checking"]);
-    expect((await usageRows()).length).toBe(before + 4);
+    expect((await usageRows()).length).toBe(before + 3);
     expect(out2.contentHash).toBe(out1.contentHash);
     expect(out2.pipelineVersion).toBe(resumeCacheKey(env));
   });

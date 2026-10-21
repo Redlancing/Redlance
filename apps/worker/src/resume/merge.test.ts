@@ -1,7 +1,20 @@
-import { SKILLS, SKILL_BY_ID, suggestionsSchema } from "@redlance/core";
+import {
+  SKILLS,
+  SKILL_BY_ID,
+  suggestionsSchema,
+  WORK_LIMITS,
+  projectSuggestion,
+  experienceSuggestion,
+} from "@redlance/core";
 import { describe, expect, it } from "vitest";
 import { findRanges } from "./dates";
-import { splitEntries, type Block } from "./entries";
+import {
+  numberSection,
+  rangeLabel,
+  type Block,
+  type EntryKind,
+  type LineRange,
+} from "./entries";
 import {
   fit,
   mergeResumeSteps,
@@ -33,14 +46,7 @@ const sk = (
   level: "core" | "secondary" = "core",
   evidence = "",
 ) => ({ id, level, evidence });
-const skillsOut = (
-  skills: ReturnType<typeof sk>[],
-  customSkills: {
-    name: string;
-    level: "core" | "secondary";
-    evidence: string;
-  }[] = [],
-) => ({ skills, customSkills });
+const skillsOut = (skills: ReturnType<typeof sk>[]) => ({ skills });
 
 describe("mergeResumeSteps", () => {
   it("drops unknown ids and fake evidence outside the shortlist", () => {
@@ -72,40 +78,6 @@ describe("mergeResumeSteps", () => {
   it("keeps a shortlisted skill listed in the skills section without evidence", () => {
     const r = mergeResumeSteps({ skills: skillsOut([sk("python")]) }, ctx());
     expect(r.skills.map((s) => s.id)).toEqual(["python"]);
-  });
-  it("maps custom 'reactjs' to react", () => {
-    const r = mergeResumeSteps(
-      {
-        skills: skillsOut(
-          [],
-          [{ name: "reactjs", level: "core", evidence: "with React and Node" }],
-        ),
-      },
-      ctx(),
-    );
-    expect(r.skills.map((s) => s.id)).toEqual(["react"]);
-    expect(r.customSkills).toEqual([]);
-  });
-  it("keeps a real custom skill with evidence, drops one without", () => {
-    const r = mergeResumeSteps(
-      {
-        skills: skillsOut(
-          [],
-          [
-            {
-              name: "Acme tooling",
-              level: "secondary",
-              evidence: "for Acme tooling",
-            },
-            { name: "Zzz", level: "secondary", evidence: "not in text at all" },
-          ],
-        ),
-      },
-      ctx(),
-    );
-    expect(r.customSkills).toEqual([
-      { name: "Acme tooling", level: "secondary" },
-    ]);
   });
   it("caps core at 8", () => {
     const ids = SKILLS.filter((x) => x.category === "development")
@@ -254,11 +226,27 @@ const E2: Block = {
 
 type ProjectOut = ProjectsOutput["projects"][number];
 type RoleOut = ExperienceOutput["experience"][number];
+/**
+ * The tests write each entry's section as test blocks ({ id: "P2", text }) and point an
+ * entry at one with `block: "P2"`; `work()` joins the blocks into a section (a blank line
+ * between them), gives each entry its block's line range (unless the test sets `lines`) and
+ * maps the range labels in the drops back to the block ids. An unknown id gets lines 999–999.
+ */
+type TestBlock = Pick<Block, "id" | "text">;
+type ProjectIn = Omit<ProjectOut, "lines"> & {
+  block: string;
+  lines?: LineRange;
+};
+type RoleIn = Omit<RoleOut, "lines"> & { block: string; lines?: LineRange };
+type StepsIn = {
+  projects?: { projects: ProjectIn[] };
+  experience?: { experience: RoleIn[] };
+};
 const line = (text: string, clientNames: ClientName[] = []) => ({
   text,
   clientNames,
 });
-const proj = (over: Partial<ProjectOut> = {}): ProjectOut => ({
+const proj = (over: Partial<ProjectIn> = {}): ProjectIn => ({
   block: "P1",
   title: "Shopfront",
   summary: "A fast storefront for a property agency.",
@@ -271,7 +259,7 @@ const proj = (over: Partial<ProjectOut> = {}): ProjectOut => ({
   clientNames: [],
   ...over,
 });
-const role = (over: Partial<RoleOut> = {}): RoleOut => ({
+const role = (over: Partial<RoleIn> = {}): RoleIn => ({
   block: "E1",
   title: "Senior Engineer",
   organisation: "Finlytics",
@@ -286,16 +274,87 @@ const role = (over: Partial<RoleOut> = {}): RoleOut => ({
   ...over,
 });
 const workCtx = () => ({
-  projectBlocks: [P1, P2],
-  experienceBlocks: [E1, E2],
+  projectBlocks: [P1, P2] as TestBlock[],
+  experienceBlocks: [E1, E2] as TestBlock[],
   shortlist: ["react", "nodejs", "wordpress", "seo", "react-native"],
   dropped: [] as DroppedItem[],
   replaced: [] as ReplacedName[],
 });
-const work = (
-  steps: Parameters<typeof mergeWork>[0],
-  c: ReturnType<typeof workCtx> = workCtx(),
-) => mergeWork(steps, c);
+type TestCtx = ReturnType<typeof workCtx>;
+
+/** A section from test blocks, each block's line range, and range label → block id. */
+function sectionOf(kind: EntryKind, blocks: TestBlock[]) {
+  const section = numberSection(blocks.map((b) => b.text).join("\n\n"), kind);
+  const ranges = new Map<string, LineRange>();
+  const ids = new Map<string, string>();
+  let n = 0;
+  for (const b of blocks) {
+    const count = b.text.split("\n").filter((l) => l.trim()).length;
+    const r = { from: n + 1, to: n + count };
+    ranges.set(b.id, r);
+    if (section) ids.set(rangeLabel(section, r.from, r.to), b.id);
+    n += count;
+  }
+  return { section, ranges, ids };
+}
+
+/** The real work context and steps for a test context and test steps. */
+function realWork(steps: StepsIn, c: TestCtx) {
+  const p = sectionOf("projects", c.projectBlocks);
+  const e = sectionOf("experience", c.experienceBlocks);
+  const at = (
+    ranges: Map<string, LineRange>,
+    it: { block: string; lines?: LineRange },
+  ) => it.lines ?? ranges.get(it.block) ?? { from: 999, to: 999 };
+  const real: Parameters<typeof mergeWork>[0] = {
+    ...(steps.projects && {
+      projects: {
+        projects: steps.projects.projects.map(({ block: _b, ...it }) => ({
+          ...it,
+          lines: at(p.ranges, { block: _b, lines: it.lines }),
+        })),
+      },
+    }),
+    ...(steps.experience && {
+      experience: {
+        experience: steps.experience.experience.map(({ block: _b, ...it }) => ({
+          ...it,
+          lines: at(e.ranges, { block: _b, lines: it.lines }),
+        })),
+      },
+    }),
+  };
+  const back = (label: string) => p.ids.get(label) ?? e.ids.get(label) ?? label;
+  return {
+    steps: real,
+    projectLines: p.section,
+    experienceLines: e.section,
+    /** Copies drops and replaced names into the test context, labels mapped back to ids. */
+    report(dropped: DroppedItem[], replaced: ReplacedName[]) {
+      c.dropped.push(
+        ...dropped.map((d) =>
+          d.block === undefined ? d : { ...d, block: back(d.block) },
+        ),
+      );
+      c.replaced.push(...replaced.map((r) => ({ ...r, block: back(r.block) })));
+    },
+  };
+}
+
+const work = (steps: StepsIn, c: TestCtx = workCtx()) => {
+  const w = realWork(steps, c);
+  const dropped: DroppedItem[] = [];
+  const replaced: ReplacedName[] = [];
+  const r = mergeWork(w.steps, {
+    projectLines: w.projectLines,
+    experienceLines: w.experienceLines,
+    shortlist: c.shortlist,
+    dropped,
+    replaced,
+  });
+  w.report(dropped, replaced);
+  return r;
+};
 
 describe("mergeWork", () => {
   it("drops an entry whose title isn't in its block", () => {
@@ -325,13 +384,13 @@ describe("mergeWork", () => {
         {
           what: "project",
           value: "Invented App",
-          reason: "title not in its block",
+          reason: "title not in its lines",
           block: "P1",
         },
         {
           what: "role",
           value: "CTO",
-          reason: "title not in its block",
+          reason: "title not in its lines",
           block: "E1",
         },
       ]),
@@ -392,7 +451,7 @@ describe("mergeWork", () => {
       {
         what: "highlight",
         value: "Managed a team of 40",
-        reason: "not word for word in its block",
+        reason: "not word for word in its lines",
         block: "E1",
       },
     ]);
@@ -630,7 +689,7 @@ describe("mergeWork", () => {
     expect(c.dropped).toContainEqual({
       what: "organisation",
       value: "Finly",
-      reason: "not in its block",
+      reason: "not in its lines",
       block: "E1",
     });
   });
@@ -675,7 +734,7 @@ describe("mergeWork", () => {
       {
         what: "skill",
         value: "wordpress",
-        reason: "label not in its block",
+        reason: "label not in its lines",
         block: "P1",
       },
       {
@@ -780,7 +839,11 @@ describe("mergeWork", () => {
       Array.from({ length: 6 }, (_, i) => `Engineer ${i + 1}`),
     );
     expect(c.dropped.map((d) => [d.what, d.value, d.reason])).toEqual([
-      ["project", "project  1", "duplicate title"],
+      [
+        "project",
+        "project  1",
+        "starts on the same line as another entry (P1)",
+      ],
       ["project", "Project 9", "over the limit of 8"],
       ["project", "Project 10", "over the limit of 8"],
       ["role", "Engineer 7", "over the limit of 6"],
@@ -813,16 +876,19 @@ describe("mergeWork", () => {
     ]);
   });
 
-  it("drops an entry that points at an unknown block", () => {
+  it("checks an entry whose lines are outside the section against the whole section", () => {
     const c = workCtx();
     const r = work({ projects: { projects: [proj({ block: "P9" })] } }, c);
-    expect(r.projects).toEqual([]);
+    expect(r.projects.map((p) => [p.title, p.year, p.links])).toEqual([
+      ["Shopfront", null, []],
+    ]);
     expect(c.dropped).toEqual([
       {
-        what: "project",
+        what: "lines",
         value: "Shopfront",
-        reason: "unknown block",
-        block: "P9",
+        reason:
+          "P999 starts outside the section; checked against the whole section",
+        block: "projects",
       },
     ]);
   });
@@ -859,7 +925,7 @@ describe("mergeWork", () => {
 describe("mergeResumeSteps with projects and experience", () => {
   it("writes projects, experience and meta.skipped, and passes the schema", () => {
     const c = workCtx();
-    const r = mergeResumeSteps(
+    const w = realWork(
       {
         projects: {
           projects: [
@@ -877,13 +943,19 @@ describe("mergeResumeSteps with projects and experience", () => {
           ],
         },
       },
+      c,
+    );
+    const replaced: ReplacedName[] = [];
+    const r = mergeResumeSteps(
+      w.steps,
       ctx({
-        projectBlocks: c.projectBlocks,
-        experienceBlocks: c.experienceBlocks,
+        projectLines: w.projectLines,
+        experienceLines: w.experienceLines,
         skipped: ["experience"],
-        replaced: c.replaced,
+        replaced,
       }),
     );
+    w.report([], replaced);
     expect(suggestionsSchema.safeParse(r).success).toBe(true);
     expect(r.meta?.skipped).toEqual(["experience"]);
     expect(r.experience).toEqual([]);
@@ -929,15 +1001,15 @@ const block = (id: string, text: string, over: Partial<Block> = {}): Block => ({
   ...over,
 });
 const only = (
-  steps: Parameters<typeof mergeWork>[0],
-  blocks: { projects?: Block[]; experience?: Block[] },
+  steps: StepsIn,
+  blocks: { projects?: TestBlock[]; experience?: TestBlock[] },
 ) => {
   const c = {
     ...workCtx(),
     projectBlocks: blocks.projects ?? [],
     experienceBlocks: blocks.experience ?? [],
   };
-  return { r: mergeWork(steps, c), c };
+  return { r: work(steps, c), c };
 };
 
 describe("mergeWork: entry-level client names", () => {
@@ -1406,98 +1478,430 @@ describe("mergeWork: full-time employer names", () => {
   });
 });
 
-describe("mergeWork: several entries in one block", () => {
-  const now = new Date("2026-10-01T00:00:00Z");
+describe("mergeWork: entries checked against the lines the model picked", () => {
+  /** One section, with the entries given as line ranges (no test blocks). */
+  const ranged = (
+    kind: EntryKind,
+    text: string,
+    items: { title: string; from: number; to: number; outcomes?: string[] }[],
+  ) => {
+    const c = {
+      ...workCtx(),
+      projectBlocks: kind === "projects" ? [{ id: "P", text }] : [],
+      experienceBlocks: kind === "experience" ? [{ id: "E", text }] : [],
+    };
+    const steps: StepsIn =
+      kind === "projects"
+        ? {
+            projects: {
+              projects: items.map((it) =>
+                proj({
+                  title: it.title,
+                  lines: { from: it.from, to: it.to },
+                  outcomes: (it.outcomes ?? []).map((o) => line(o)),
+                }),
+              ),
+            },
+          }
+        : {
+            experience: {
+              experience: items.map((it) =>
+                role({
+                  title: it.title,
+                  organisation: "Acme Corp",
+                  lines: { from: it.from, to: it.to },
+                  highlights: (it.outcomes ?? []).map((o) => line(o)),
+                }),
+              ),
+            },
+          };
+    return { r: work(steps, c), c };
+  };
 
-  it("gives each project only the links and year on its own lines", () => {
-    // DOCX drops list bullets, so one-line projects end up in a single block.
-    const blocks = splitEntries(
-      [
-        "Meal Planner | React | 2023 | mealplanner.web.app/demo",
-        "Budget Buddy | Vue | budgetbuddy.app/try",
-        "Weather Now | Svelte | 2021 | github.com/jane/weather",
-      ].join("\n"),
-      "projects",
-      { headed: true, now },
-    );
-    expect(blocks).toHaveLength(1);
-    expect(blocks[0]!.links).toHaveLength(3);
-    const { r } = only(
+  it("splits a dash-bulleted list of three projects; an outcome claimed by the wrong project is dropped", () => {
+    // Code splitting made this one block (fixture 02's layout).
+    const text = [
+      "- Recipe finder: a Next.js app that suggests meals, 2023",
+      "  Cut search time by half for 300 users",
+      "- Discord bot in Python for a gaming server, github.com/jane/bot",
+      "  Handles 5,000 commands a day",
+      "- Portfolio site in Astro, 2021",
+    ].join("\n");
+    const { r, c } = ranged("projects", text, [
       {
-        projects: {
-          projects: ["Meal Planner", "Budget Buddy", "Weather Now"].map(
-            (title) => proj({ title }),
-          ),
-        },
+        title: "Recipe finder",
+        from: 1,
+        to: 2,
+        outcomes: [
+          "Cut search time by half for 300 users",
+          "Handles 5,000 commands a day",
+        ],
       },
-      { projects: blocks },
-    );
-    expect(r.projects.map((p) => [p.title, p.year, p.links])).toEqual([
-      ["Meal Planner", 2023, ["https://mealplanner.web.app/demo"]],
-      ["Budget Buddy", null, ["https://budgetbuddy.app/try"]],
-      ["Weather Now", 2021, ["https://github.com/jane/weather"]],
+      {
+        title: "Discord bot",
+        from: 3,
+        to: 4,
+        outcomes: ["Handles 5,000 commands a day"],
+      },
+      { title: "Portfolio site", from: 5, to: 5 },
+    ]);
+    expect(
+      r.projects.map((p) => [p.title, p.year, p.links, p.outcomes]),
+    ).toEqual([
+      ["Recipe finder", 2023, [], ["Cut search time by half for 300 users"]],
+      [
+        "Discord bot",
+        null,
+        ["https://github.com/jane/bot"],
+        ["Handles 5,000 commands a day"],
+      ],
+      ["Portfolio site", 2021, [], []],
+    ]);
+    expect(c.dropped).toEqual([
+      {
+        what: "outcome",
+        value: "Handles 5,000 commands a day",
+        reason: "not word for word in its lines",
+        block: "P1–P2",
+      },
     ]);
   });
 
-  it("keeps a single entry's block links and year as before", () => {
-    const { r } = only(
-      { projects: { projects: [proj()] } },
-      { projects: [P1] },
-    );
-    expect(r.projects[0]!.year).toBe(2023);
-    expect(r.projects[0]!.links).toEqual(["https://github.com/jane/shopfront"]);
+  it("keeps every outcome of a project whose description code used to cut in two", () => {
+    const text = [
+      "Shopfront — Next.js storefront, 2023",
+      "A headless store for a bakery.",
+      "- Cut page load from 4 s to 1 s",
+      "",
+      "Payments",
+      "- Added Stripe checkout for 2,000 orders a month",
+      "",
+      "TaskFlow (2022)",
+      "- Offline sync for 300 users",
+    ].join("\n");
+    const { r } = ranged("projects", text, [
+      {
+        title: "Shopfront",
+        from: 1,
+        to: 5,
+        outcomes: [
+          "Cut page load from 4 s to 1 s",
+          "Added Stripe checkout for 2,000 orders a month",
+        ],
+      },
+      {
+        title: "TaskFlow",
+        from: 6,
+        to: 7,
+        outcomes: ["Offline sync for 300 users"],
+      },
+    ]);
+    expect(r.projects.map((p) => [p.title, p.year, p.outcomes])).toEqual([
+      [
+        "Shopfront",
+        2023,
+        [
+          "Cut page load from 4 s to 1 s",
+          "Added Stripe checkout for 2,000 orders a month",
+        ],
+      ],
+      ["TaskFlow", 2022, ["Offline sync for 300 users"]],
+    ]);
   });
 
-  it("still drops a role listed twice from the same block", () => {
-    const E = block(
-      "E1",
-      "Acme Corp, Jan 2019 – Present\nDeveloper\n- Led the team\nTester\n- Tested",
+  it("gives each role only the dates on its own lines", () => {
+    const text = [
+      "Acme Corp",
+      "Senior Developer, Jan 2021 – Present",
+      "- Led the team",
+      "Junior Developer",
+      "- Fixed bugs",
+      "Intern, Jun 2018 – Dec 2018",
+      "- Wrote tests",
+    ].join("\n");
+    const { r } = ranged("experience", text, [
+      { title: "Senior Developer", from: 1, to: 3, outcomes: ["Led the team"] },
+      { title: "Junior Developer", from: 4, to: 5, outcomes: ["Led the team"] },
+      { title: "Intern", from: 6, to: 7 },
+    ]);
+    expect(
+      r.experience.map((e) => [
+        e.title,
+        e.start,
+        e.end,
+        e.current,
+        e.highlights,
+      ]),
+    ).toEqual([
+      [
+        "Senior Developer",
+        { year: 2021, month: 1 },
+        null,
+        true,
+        ["Led the team"],
+      ],
+      ["Junior Developer", null, null, false, []],
+      [
+        "Intern",
+        { year: 2018, month: 6 },
+        { year: 2018, month: 12 },
+        false,
+        [],
+      ],
+    ]);
+  });
+
+  it("ends an overlapping entry above the next one, in line order, and notes it", () => {
+    const text = ["Alpha app", "- Did alpha", "Beta app", "- Did beta"].join(
+      "\n",
     );
-    const { r, c } = only(
+    const { r, c } = ranged("projects", text, [
+      { title: "Beta app", from: 3, to: 4, outcomes: ["Did beta"] },
+      // Runs into Beta and claims its outcome.
       {
-        experience: {
-          experience: ["Developer", "Tester", "Tester"].map((title) =>
-            role({ title, organisation: "Acme Corp" }),
-          ),
-        },
+        title: "Alpha app",
+        from: 1,
+        to: 4,
+        outcomes: ["Did alpha", "Did beta"],
       },
-      { experience: [E] },
-    );
+    ]);
+    expect(r.projects.map((p) => [p.title, p.outcomes])).toEqual([
+      ["Alpha app", ["Did alpha"]],
+      ["Beta app", ["Did beta"]],
+    ]);
+    expect(c.dropped.map((d) => [d.what, d.reason, d.block])).toEqual([
+      ["lines", "P1–P4 overlaps the next entry; ends at line 2", "P1–P2"],
+      ["outcome", "not word for word in its lines", "P1–P2"],
+    ]);
+  });
+
+  it("drops the later of two entries that start on the same line", () => {
+    const text = ["Alpha app", "- Did alpha", "Beta app"].join("\n");
+    const { r, c } = ranged("projects", text, [
+      { title: "Alpha app", from: 1, to: 2 },
+      { title: "Beta app", from: 1, to: 3 },
+    ]);
+    expect(r.projects.map((p) => p.title)).toEqual(["Alpha app"]);
+    expect(c.dropped).toEqual([
+      {
+        what: "project",
+        value: "Beta app",
+        reason: "starts on the same line as another entry (P1)",
+        block: "projects",
+      },
+    ]);
+  });
+
+  it("checks a reversed or outside range against the whole section, without dates, year or links", () => {
+    const text = [
+      "Alpha app, 2020, alpha.dev",
+      "- Did alpha",
+      "Beta app, 2022",
+      "- Did beta",
+    ].join("\n");
+    const { r, c } = ranged("projects", text, [
+      { title: "Beta app", from: 4, to: 3, outcomes: ["Did beta"] },
+      { title: "Alpha app", from: 7, to: 9, outcomes: ["Did alpha"] },
+    ]);
+    // Resume order from where each title is; no year or links from someone else's lines.
+    expect(
+      r.projects.map((p) => [p.title, p.year, p.links, p.outcomes]),
+    ).toEqual([
+      ["Alpha app", null, [], ["Did alpha"]],
+      ["Beta app", null, [], ["Did beta"]],
+    ]);
+    expect(c.dropped.map((d) => [d.what, d.value, d.reason, d.block])).toEqual([
+      [
+        "lines",
+        "Beta app",
+        "P4–P3 ends before it starts; checked against the whole section",
+        "projects",
+      ],
+      [
+        "lines",
+        "Alpha app",
+        "P7–P9 starts outside the section; checked against the whole section",
+        "projects",
+      ],
+    ]);
+  });
+
+  it("cuts a range that runs past the section and keeps the entry", () => {
+    const text = ["Alpha app", "- Did alpha"].join("\n");
+    const { r, c } = ranged("projects", text, [
+      { title: "Alpha app", from: 1, to: 30, outcomes: ["Did alpha"] },
+    ]);
+    expect(r.projects[0]!.outcomes).toEqual(["Did alpha"]);
+    expect(c.dropped.map((d) => d.reason)).toEqual([
+      "P1–P30 ends past the section; cut at line 2",
+    ]);
+  });
+
+  it("drops entries for a section the resume doesn't have", () => {
+    const c = { ...workCtx(), projectBlocks: [] };
+    const r = work({ projects: { projects: [proj()] } }, c);
+    expect(r.projects).toEqual([]);
+    expect(c.dropped).toEqual([
+      {
+        what: "project",
+        value: "Shopfront",
+        reason: "its section isn't in the resume",
+        block: "projects",
+      },
+    ]);
+  });
+
+  it("ignores our line marker copied into a title or an outcome", () => {
+    const text = ["Alpha app", "- Did alpha well"].join("\n");
+    const { r } = ranged("projects", text, [
+      {
+        title: "[P1] Alpha app",
+        from: 1,
+        to: 2,
+        outcomes: ["[P2] Did alpha well"],
+      },
+    ]);
+    expect(r.projects.map((p) => [p.title, p.outcomes])).toEqual([
+      ["Alpha app", ["Did alpha well"]],
+    ]);
+  });
+
+  it("still drops a role listed twice", () => {
+    const text = [
+      "Acme Corp, Jan 2019 – Present",
+      "Developer",
+      "- Led the team",
+      "Tester",
+      "- Tested",
+    ].join("\n");
+    const { r, c } = ranged("experience", text, [
+      { title: "Developer", from: 1, to: 3 },
+      { title: "Tester", from: 4, to: 5 },
+      { title: "Tester", from: 4, to: 5 },
+    ]);
     expect(r.experience.map((e) => e.title)).toEqual(["Developer", "Tester"]);
     expect(c.dropped).toContainEqual(
-      expect.objectContaining({ what: "role", reason: "duplicate title" }),
+      expect.objectContaining({
+        what: "role",
+        reason: "starts on the same line as another entry (E4)",
+      }),
     );
   });
+});
 
-  it("gives block dates only to the first role, unless a role has its own", () => {
-    const E = block(
-      "E1",
-      [
-        "Acme Corp, Jan 2019 – Present",
-        "Senior Developer",
-        "- Led the team",
-        "Junior Developer",
-        "- Fixed bugs",
-        "Intern, Jun 2018 – Dec 2018",
-        "- Wrote tests",
-      ].join("\n"),
-    );
-    const { r } = only(
+describe("over-long values never fail a call (checked in full, then trimmed)", () => {
+  const long = (n: number, w = "word") =>
+    Array.from({ length: Math.ceil(n / (w.length + 1)) }, () => w)
+      .join(" ")
+      .slice(0, n)
+      .trim();
+  const longTitle = `Shopfront ${long(78)}`; // 88 chars
+  const block = (id: string, text: string): Block => ({
+    id,
+    text,
+    range: null,
+    year: 2023,
+    links: [],
+  });
+
+  it("keeps a project whose title (88 chars), summary, outcome and names are too long", () => {
+    const outcome = `Cut page load ${long(150)} for Acme Realty.`;
+    const P: Block = block("P1", `${longTitle}\n- ${outcome}`);
+    const c = { ...workCtx(), projectBlocks: [P, P2] };
+    const r = work(
       {
-        experience: {
-          experience: ["Senior Developer", "Junior Developer", "Intern"].map(
-            (title) => role({ title, organisation: "Acme Corp" }),
-          ),
+        projects: {
+          projects: [
+            proj({
+              title: longTitle,
+              summary: long(250),
+              outcomes: [
+                line(outcome, [
+                  { name: "Acme Realty", generic: long(100, "agency") },
+                ]),
+              ],
+            }),
+            proj({ block: "P2", title: "TaskFlow" }),
+          ],
         },
       },
-      { experience: [E] },
+      c,
     );
-    expect(
-      r.experience.map((e) => [e.title, e.start, e.end, e.current]),
-    ).toEqual([
-      ["Senior Developer", { year: 2019, month: 1 }, null, true],
-      ["Junior Developer", null, null, false],
-      ["Intern", { year: 2018, month: 6 }, { year: 2018, month: 12 }, false],
-    ]);
+    expect(r.projects.map((p) => p.title)[1]).toBe("TaskFlow");
+    const first = r.projects[0]!;
+    expect(first.title.length).toBeLessThanOrEqual(WORK_LIMITS.entryTitle);
+    expect(first.title.endsWith("…")).toBe(true);
+    expect(longTitle.startsWith(first.title.slice(0, -2))).toBe(true);
+    expect(first.summary.length).toBeLessThanOrEqual(WORK_LIMITS.entrySummary);
+    expect(first.outcomes[0]!.length).toBeLessThanOrEqual(
+      WORK_LIMITS.entrySummary,
+    );
+    expect(projectSuggestion.safeParse(first).success).toBe(true);
+  });
+
+  it("keeps a role whose title, organisation, description, summary and highlight are too long", () => {
+    const org = `Finlytics ${long(80, "Labs")}`;
+    const title = `Senior ${long(100, "Engineer")}`;
+    const hl = `Led the team ${long(200)}.`;
+    const E: Block = block(
+      "E1",
+      `${title}, ${org}\tJan 2021 – Present\n• ${hl}`,
+    );
+    const r = work(
+      {
+        experience: {
+          experience: [
+            role({
+              title,
+              organisation: org,
+              organisationDescription: long(150, "payments"),
+              summary: long(300),
+              highlights: [line(hl)],
+            }),
+          ],
+        },
+      },
+      { ...workCtx(), experienceBlocks: [E, E2] },
+    );
+    expect(r.experience).toHaveLength(1);
+    const e = r.experience[0]!;
+    expect(e.title.length).toBeLessThanOrEqual(WORK_LIMITS.entryTitle);
+    expect((e.organisation ?? "").length).toBeLessThanOrEqual(
+      WORK_LIMITS.organisation,
+    );
+    expect(e.organisationDescription.length).toBeLessThanOrEqual(
+      WORK_LIMITS.orgDescription,
+    );
+    expect(e.summary.length).toBeLessThanOrEqual(WORK_LIMITS.entrySummary);
+    expect(e.highlights[0]!.length).toBeLessThanOrEqual(
+      WORK_LIMITS.entrySummary,
+    );
+    expect(experienceSuggestion.safeParse(e).success).toBe(true);
+  });
+
+  it("trims a 100-char displayName and a 200-char headline", () => {
+    const r = mergeResumeSteps(
+      {
+        basics: {
+          displayName: long(100, "Jane"),
+          headline: long(200),
+          country: null,
+        },
+      },
+      ctx(),
+    );
+    expect(r.basics.displayName!.length).toBeLessThanOrEqual(60);
+    expect(r.basics.headline!.length).toBeLessThanOrEqual(120);
+    expect(suggestionsSchema.safeParse(r).success).toBe(true);
+  });
+
+  it("keeps a skill whose 250-char evidence quote is word for word in the resume", () => {
+    const quote = `Built dashboards with React ${long(220)}`;
+    const t = `Jane Doe\nSkills\nPython\nExperience\n${quote}`;
+    const r = mergeResumeSteps(
+      { skills: skillsOut([sk("react", "core", quote)]) },
+      ctx({ text: t, sections: splitSections(t) }),
+    );
+    expect(r.skills).toEqual([{ id: "react", level: "core" }]);
   });
 });
