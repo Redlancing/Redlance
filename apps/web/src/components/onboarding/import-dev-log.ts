@@ -42,7 +42,6 @@ export function logImportChanges(
         partial: job.partial,
       });
       if (s.skills.length) out.table(s.skills);
-      if (s.customSkills.length) out.table(s.customSkills);
     }
   }
 }

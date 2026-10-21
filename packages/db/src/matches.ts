@@ -862,8 +862,6 @@ export async function loadRescoreContext(
   }>(sql`
     select s.name, ps.level from profile_skills ps join skills s on s.id = ps.skill_id
     where ps.user_id = ${r.user_id}
-    union all
-    select cs.name, cs.level from custom_skills cs where cs.user_id = ${r.user_id}
     order by level, name`);
   const projects = await db.execute<{
     id: string;

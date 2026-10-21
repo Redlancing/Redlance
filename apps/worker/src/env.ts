@@ -9,6 +9,7 @@ export type WorkerEnv = {
   GOOGLE_CLOUD_PROJECT: string;
   GOOGLE_CLOUD_LOCATION: string;
   VERTEX_MODEL_FAST: string;
+  /** Only the draft eval's judge uses it; no worker job does (resume Skills moved to FAST). */
   VERTEX_MODEL_SMART: string;
   GITHUB_TOKEN?: string;
   WORKER_CONCURRENCY: number;

@@ -2,7 +2,6 @@
 export type Suggested = {
   basics: { categories?: readonly string[]; experienceLevel?: string };
   skills: readonly { id: string }[];
-  customSkills: readonly { name: string }[];
 };
 
 export type Expected = {
@@ -42,11 +41,6 @@ export function score(expected: Expected, suggestions: Suggested): Score {
   const union = new Set([...want, ...got]);
   const both = [...want].filter((c) => got.has(c)).length;
 
-  const everything = new Set([
-    ...suggested,
-    ...suggestions.customSkills.map((c) => norm(c.name)),
-  ]);
-
   return {
     skillPrecision: suggested.size ? good / suggested.size : 1,
     skillRecall: must.size ? found / must.size : 1,
@@ -54,7 +48,7 @@ export function score(expected: Expected, suggestions: Suggested): Score {
     levelCorrect:
       suggestions.basics.experienceLevel === expected.experienceLevel,
     mustNotViolations: expected.mustNotSkills.filter((s) =>
-      everything.has(norm(s)),
+      suggested.has(norm(s)),
     ),
   };
 }

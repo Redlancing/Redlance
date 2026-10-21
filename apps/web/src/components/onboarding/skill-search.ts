@@ -1,20 +1,15 @@
 import { findSkill, normalizeSkillName, type Skill } from "@redlance/core";
 
-export type EnterAction =
-  { type: "skill"; id: string } | { type: "custom" } | { type: "none" };
+export type EnterAction = { type: "skill"; id: string } | { type: "none" };
 
 /**
  * What Enter does in the skill search: the skill that was typed, else the first result whose
- * name or alias starts with the text, else the custom skill the UI offers, else nothing.
+ * name or alias starts with the text, else nothing (only taxonomy skills can be added).
  * `results` must already exclude chosen skills.
  */
 export function enterAction(
   query: string,
-  ctx: {
-    results: readonly Skill[];
-    chosen: ReadonlySet<string>;
-    canAddCustom: boolean;
-  },
+  ctx: { results: readonly Skill[]; chosen: ReadonlySet<string> },
 ): EnterAction {
   const found = findSkill(query);
   if (found && !found.retired)
@@ -27,6 +22,5 @@ export function enterAction(
         [s.name, ...s.aliases].some((l) => normalizeSkillName(l).startsWith(q)),
       )
     : undefined;
-  if (prefixMatch) return { type: "skill", id: prefixMatch.id };
-  return ctx.canAddCustom ? { type: "custom" } : { type: "none" };
+  return prefixMatch ? { type: "skill", id: prefixMatch.id } : { type: "none" };
 }

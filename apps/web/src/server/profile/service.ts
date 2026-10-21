@@ -1,7 +1,6 @@
 import "server-only";
 import {
   STEP_SCHEMAS,
-  normalizeSkillName,
   projectEntry as projectEntrySchema,
   roleEntry as roleEntrySchema,
   toFieldErrors,
@@ -9,7 +8,6 @@ import {
   type RoleEntry,
 } from "@redlance/core";
 import {
-  customSkills,
   profileChanges,
   profileExperience,
   profileProjects,
@@ -144,16 +142,7 @@ async function readSection<K extends ProfileSection>(
         .from(profileSkills)
         .where(eq(profileSkills.userId, userId))
         .orderBy(asc(profileSkills.createdAt), asc(profileSkills.skillId));
-      const custom = await db
-        .select({
-          name: customSkills.name,
-          level: customSkills.level,
-          source: customSkills.source,
-        })
-        .from(customSkills)
-        .where(eq(customSkills.userId, userId))
-        .orderBy(asc(customSkills.createdAt), asc(customSkills.id));
-      data = { skills: rows, customSkills: custom };
+      data = { skills: rows };
       break;
     }
     case "work": {
@@ -253,22 +242,11 @@ async function writeSkills(
   data: SectionData<"skills">,
 ) {
   await tx.delete(profileSkills).where(eq(profileSkills.userId, userId));
-  await tx.delete(customSkills).where(eq(customSkills.userId, userId));
   if (data.skills.length)
     await tx.insert(profileSkills).values(
       data.skills.map((s) => ({
         userId,
         skillId: s.id,
-        level: s.level,
-        source: s.source,
-      })),
-    );
-  if (data.customSkills.length)
-    await tx.insert(customSkills).values(
-      data.customSkills.map((s) => ({
-        userId,
-        name: s.name,
-        nameNormalized: normalizeSkillName(s.name),
         level: s.level,
         source: s.source,
       })),

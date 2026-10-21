@@ -332,10 +332,10 @@ function SectionSummary({
     }
     case "skills": {
       const s = sections.skills;
-      const all = [
-        ...s.skills.map((k) => ({ name: skillName(k.id), level: k.level })),
-        ...s.customSkills.map((k) => ({ name: k.name, level: k.level })),
-      ];
+      const all = s.skills.map((k) => ({
+        name: skillName(k.id),
+        level: k.level,
+      }));
       const core = all.filter((k) => k.level === "core").map((k) => k.name);
       const other = all.filter((k) => k.level !== "core").map((k) => k.name);
       return (

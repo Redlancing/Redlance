@@ -15,7 +15,6 @@ describe("suggestionsSchema", () => {
     expect(s({})).toMatchObject({
       basics: {},
       skills: [],
-      customSkills: [],
       githubUsername: null,
     });
     expect(
@@ -35,7 +34,7 @@ describe("suggestionsSchema", () => {
     ).toBe(false);
   });
 
-  it("rejects duplicate ids, reserved GitHub names and unusable custom names", () => {
+  it("rejects duplicate ids and reserved GitHub names", () => {
     const dup = { id: "react", level: "core" };
     expect(
       suggestionsSchema.safeParse({ v: 2, skills: [dup, dup] }).success,
@@ -43,12 +42,17 @@ describe("suggestionsSchema", () => {
     expect(
       suggestionsSchema.safeParse({ v: 2, githubUsername: "settings" }).success,
     ).toBe(false);
-    expect(
-      suggestionsSchema.safeParse({
-        v: 2,
-        customSkills: [{ name: "--", level: "core" }],
-      }).success,
-    ).toBe(false);
+  });
+
+  it("drops a customSkills key from results stored before custom skills were removed", () => {
+    const legacy = suggestionsSchema.safeParse({
+      v: 2,
+      skills: [{ id: "react", level: "core" }],
+      customSkills: [{ name: "Descript", level: "secondary" }],
+    });
+    expect(legacy.success).toBe(true);
+    expect(legacy.data?.skills).toEqual([{ id: "react", level: "core" }]);
+    expect(legacy.data && "customSkills" in legacy.data).toBe(false);
   });
 });
 
@@ -82,7 +86,7 @@ describe("mergeSuggestions", () => {
     expect(m.githubUsername).toBe("asha");
   });
 
-  it("caps core at 8 and total at 30, and dedupes custom skills", () => {
+  it("caps core at 8", () => {
     const ids = [
       "javascript",
       "typescript",
@@ -100,38 +104,17 @@ describe("mergeSuggestions", () => {
         source: "resume",
         suggestions: s({
           skills: ids.map((id) => ({ id, level: "core" })),
-          customSkills: [
-            { name: "Descript", level: "secondary" },
-            { name: " descript ", level: "core" },
-          ],
         }),
       },
     ]);
     expect(m.skills.filter((x) => x.level === "core")).toHaveLength(8);
-    expect(m.customSkills).toHaveLength(1);
-  });
-
-  it("drops custom skills that are already a taxonomy skill", () => {
-    const m = mergeSuggestions([
-      {
-        source: "resume",
-        suggestions: s({
-          skills: [{ id: "react", level: "core" }],
-          customSkills: [
-            { name: "React", level: "secondary" },
-            { name: "Descript", level: "secondary" },
-          ],
-        }),
-      },
-    ]);
-    expect(m.customSkills.map((c) => c.name)).toEqual(["Descript"]);
+    expect(m.skills).toHaveLength(10);
   });
 
   it("returns empty results for no parts", () => {
     expect(mergeSuggestions([])).toEqual({
       basics: {},
       skills: [],
-      customSkills: [],
       githubUsername: null,
       projects: [],
       experience: [],
@@ -151,7 +134,6 @@ describe("suggestedStepData", () => {
           country: "IN",
         },
         skills: [{ id: "video-editing", level: "core" }],
-        customSkills: [{ name: "Descript", level: "secondary" }],
         githubUsername: "asha-edits",
       }),
     },
@@ -171,10 +153,6 @@ describe("suggestedStepData", () => {
       level: "core",
       source: "resume",
     });
-    expect(skills.customSkills[0]).toMatchObject({
-      name: "Descript",
-      source: "resume",
-    });
     expect(suggestedStepData("import", m)).toEqual({
       githubUsername: "asha-edits",
     });
@@ -187,10 +165,7 @@ describe("suggestedStepData", () => {
       categories: [],
       country: null,
     });
-    expect(suggestedStepData("skills", e)).toEqual({
-      skills: [],
-      customSkills: [],
-    });
+    expect(suggestedStepData("skills", e)).toEqual({ skills: [] });
   });
 });
 

@@ -27,7 +27,6 @@ describe("logImportChanges", () => {
         v: 2,
         basics: { displayName: "A" },
         skills: [{ id: "react", level: "core" }],
-        customSkills: [],
         githubUsername: null,
         projects: [],
         experience: [],

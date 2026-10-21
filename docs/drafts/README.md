@@ -323,7 +323,7 @@ The first failure → one retry: the problems are sent back ("You wrote 60%, whi
 | Day | credits | 105 / 210 / 560 | Postgres ledger (UTC day) | blocks (it's Postgres) |
 | Day | AI cost per user | $0.20 / $0.40 / $1.00 | Postgres `llm_usage` (UTC day) | blocks |
 | Day | voice notes updates per user | 2 | Postgres | — |
-| Day | resume / GitHub imports | 5 / 10 | Redis quota (built) | blocks (built) |
+| Day | resume / GitHub imports | 5 / 5 | Redis quota (built) | blocks (built) |
 | Week | profile changes | 5 | profile edit page (later) | — |
 | Plan period | credits | 210 / 2,100 / 5,600 | Postgres balance | — |
 | System | daily drafting budget | alert at `DRAFT_BUDGET_ALERT_USD` (default $40), pause at `DRAFT_BUDGET_PAUSE_USD` (default $80) | `llm_usage` today, tasks `draft`/`rewrite`/`voice` | — |

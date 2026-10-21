@@ -99,7 +99,6 @@ export async function completeImportJob(
   claimAttempts: number,
   done: {
     result: unknown;
-    sourceText?: string;
     contentHash?: string;
     pipelineVersion?: string;
   },
@@ -110,7 +109,7 @@ export async function completeImportJob(
       status: "done",
       stage: "done",
       result: done.result,
-      sourceText: done.sourceText ?? null,
+      sourceText: null, // the resume text is only kept until the job ends
       contentHash: done.contentHash ?? null,
       pipelineVersion: done.pipelineVersion ?? null,
       fileBytes: null,
@@ -139,6 +138,7 @@ export async function failImportJob(
         else run_after end,
       error_code = case when ${fail.retryable} and attempts < ${MAX_JOB_ATTEMPTS} then error_code else ${fail.errorCode} end,
       file_bytes = case when ${fail.retryable} and attempts < ${MAX_JOB_ATTEMPTS} then file_bytes else null end,
+      source_text = case when ${fail.retryable} and attempts < ${MAX_JOB_ATTEMPTS} then source_text else null end,
       finished_at = case when ${fail.retryable} and attempts < ${MAX_JOB_ATTEMPTS} then null else now() end
     where id = ${id} and status = 'running' and attempts = ${claimAttempts}
     returning status`);
@@ -159,6 +159,7 @@ export async function requeueStaleImportJobs(
       locked_at = null,
       error_code = case when attempts < ${MAX_JOB_ATTEMPTS} then error_code else 'TIMEOUT' end,
       file_bytes = case when attempts < ${MAX_JOB_ATTEMPTS} then file_bytes else null end,
+      source_text = case when attempts < ${MAX_JOB_ATTEMPTS} then source_text else null end,
       finished_at = case when attempts < ${MAX_JOB_ATTEMPTS} then null else now() end
     where status = 'running'
       and locked_at < now() - make_interval(secs => ${olderThanMs / 1000})`);

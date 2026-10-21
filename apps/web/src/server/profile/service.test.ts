@@ -1,6 +1,5 @@
 import { STEP_IDS } from "@redlance/core";
 import {
-  customSkills,
   profileChanges,
   profileExperience,
   profileProjects,
@@ -237,7 +236,6 @@ describe("saveProfileSection", () => {
     await saveProfileSection(id, "skills", {
       data: {
         skills: [{ id: "after-effects", level: "core" }],
-        customSkills: [],
       },
       expectedVersion: 2,
     });
@@ -309,7 +307,6 @@ describe("saveProfileSection", () => {
     await saveProfileSection(id, "skills", {
       data: {
         skills: [{ id: "after-effects", level: "core" }],
-        customSkills: [{ name: "CapCut", level: "secondary" }],
       },
       expectedVersion: 1,
     });
@@ -333,12 +330,6 @@ describe("saveProfileSection", () => {
         .from(profileSkills)
         .where(eq(profileSkills.userId, id)),
     ).toEqual([{ id: "after-effects" }]);
-    expect(
-      await db
-        .select({ name: customSkills.name, norm: customSkills.nameNormalized })
-        .from(customSkills)
-        .where(eq(customSkills.userId, id)),
-    ).toEqual([{ name: "CapCut", norm: "capcut" }]);
     expect(await profileRow(id)).toMatchObject({
       minRateMinor: 1250,
       currency: "GBP",

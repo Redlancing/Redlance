@@ -95,15 +95,8 @@ describe("stableJson and sectionKey", () => {
         { id: "react", level: "core", source: "manual" },
         { id: "css", level: "secondary", source: "manual" },
       ],
-      customSkills: [
-        { name: "Zapier", level: "secondary", source: "manual" },
-        { name: "airtable", level: "core", source: "manual" },
-      ],
     };
-    const b = {
-      skills: [...a.skills].reverse(),
-      customSkills: [...a.customSkills].reverse(),
-    };
+    const b = { skills: [...a.skills].reverse() };
     expect(sameSection("skills", a, b)).toBe(true);
     expect(
       sameSection("skills", a, {

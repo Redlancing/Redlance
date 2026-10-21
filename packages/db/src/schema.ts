@@ -473,30 +473,6 @@ export const profileExperience = pgTable(
 
 export type ProfileExperience = typeof profileExperience.$inferSelect;
 
-export const customSkills = pgTable(
-  "custom_skills",
-  {
-    id: v7Id(),
-    userId: userId(),
-    name: text("name").notNull(),
-    nameNormalized: text("name_normalized").notNull(),
-    level: text("level", { enum: SKILL_LEVEL_VALUES }).notNull(),
-    source: text("source", { enum: SKILL_SOURCE_VALUES }).notNull(),
-    createdAt: createdAt(),
-  },
-  (t) => [
-    unique("custom_skills_user_name_unique").on(t.userId, t.nameNormalized),
-    check(
-      "custom_skills_level_check",
-      sql`${t.level} in (${sqlList(SKILL_LEVEL_VALUES)})`,
-    ),
-    check(
-      "custom_skills_source_check",
-      sql`${t.source} in (${sqlList(SKILL_SOURCE_VALUES)})`,
-    ),
-  ],
-);
-
 // `subreddit` is plain text, not a foreign key: the dashboard will let users add boards
 // outside the seed list. Ingestion decides which ones to poll.
 export const userSubreddits = pgTable(

@@ -142,9 +142,8 @@ export const resumeHandler: JobHandler = async (job, ctx) => {
   return complete
     ? {
         result: suggestions,
-        sourceText: text,
         contentHash,
         pipelineVersion: cacheKey,
       }
-    : { result: suggestions, sourceText: text };
+    : { result: suggestions };
 };

@@ -370,7 +370,7 @@ To try a user by hand: set `profiles.plan` in SQL (`update profiles set plan = '
 ## Trade-offs chosen in the last review round (F5)
 
 - **A profile edit can cost up to one unit per in-flight pair.** A new `profile_version` resets a pair's AI fields so it pays for its own re-score. A unit the old version held but whose pair is mid-call is not refunded (its fenced refund is a no-op). Otherwise every profile edit would re-score today's pairs for free.
-- **Post text and custom skill names are not scrubbed.** Only the user's own organisation names are removed. The post is the client's own text, and custom skill names are the user's own words.
+- **Post text is not scrubbed.** Only the user's own organisation names are removed. The post is the client's own text. (The re-score context reads only taxonomy skills from `profile_skills`; custom skills were removed on 2026-10-21.)
 - **Give-backs retry after 5 seconds, not with a growing backoff.** A pair that gets a provider error every time while other pairs succeed (so the breaker never trips) is retried every 5 s, and each try writes two zero-token `llm_usage` rows. Rate limits are rarely per pair, so this was left.
 - **The daily cap is first come, first served** by rule score at the moment of claiming; there is no smarter budgeting (rising threshold, reserve, batching).
 

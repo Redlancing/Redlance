@@ -6,7 +6,6 @@ import {
   STEP_SCHEMAS,
   canOpen,
   emptyDraft,
-  isUsableSkillName,
   isValidTimeZone,
   nextPage,
   checkGithubInput,
@@ -14,6 +13,7 @@ import {
   resumeAt,
   toFieldErrors,
 } from "./onboarding";
+import { SKILLS } from "./taxonomy";
 
 const basics = {
   displayName: "Asha",
@@ -145,7 +145,7 @@ describe("skills", () => {
   const skill = (id: string, level = "core") => ({ id, level });
 
   it("needs at least one core skill to complete, not to draft", () => {
-    const data = { skills: [skill("react", "secondary")], customSkills: [] };
+    const data = { skills: [skill("react", "secondary")] };
     expect(STEP_SCHEMAS.skills.draft.safeParse(data).success).toBe(true);
     expect(STEP_SCHEMAS.skills.complete.safeParse(data).success).toBe(false);
   });
@@ -181,43 +181,37 @@ describe("skills", () => {
         skills: [skill("react"), skill("react")],
       }).success,
     ).toBe(false);
-    expect(
-      STEP_SCHEMAS.skills.draft.safeParse({
-        customSkills: [
-          { name: "Three.js", level: "secondary" },
-          { name: " three.JS ", level: "secondary" },
-        ],
-      }).success,
-    ).toBe(false);
     const thirtyOne = {
-      skills: [skill("react")],
-      customSkills: Array.from({ length: 30 }, (_, i) => ({
-        name: `Tool ${i}`,
-        level: "secondary",
-      })),
+      skills: SKILLS.slice(0, 31).map((s) => skill(s.id, "secondary")),
     };
-    expect(STEP_SCHEMAS.skills.draft.safeParse(thirtyOne).success).toBe(false);
+    const over = STEP_SCHEMAS.skills.draft.safeParse(thirtyOne);
+    expect(over.success).toBe(false);
+    expect(over.error?.issues[0]?.message).toBe("Keep it to 30 skills.");
   });
 
-  it("rejects custom skill names without a letter or digit", () => {
-    const invisible = STEP_SCHEMAS.skills.draft.safeParse({
-      customSkills: [{ name: "\u200b", level: "secondary" }],
-    });
-    expect(invisible.success).toBe(false);
-    expect(invisible.error?.issues[0]?.message).toBe("Use letters or numbers.");
+  it("drops a customSkills key from rows saved before custom skills were removed", () => {
+    const legacy = {
+      skills: [skill("react")],
+      customSkills: [
+        { name: "Descript", level: "secondary", source: "manual" },
+      ],
+    };
+    for (const schema of [
+      STEP_SCHEMAS.skills.draft,
+      STEP_SCHEMAS.skills.complete,
+    ]) {
+      const parsed = schema.parse(legacy);
+      expect(parsed).toEqual({
+        skills: [{ id: "react", level: "core", source: "manual" }],
+      });
+      expect("customSkills" in parsed).toBe(false);
+    }
+  });
+
+  it("still refuses other unknown keys", () => {
     expect(
-      STEP_SCHEMAS.skills.draft.safeParse({
-        customSkills: [{ name: "--", level: "secondary" }],
-      }).success,
+      STEP_SCHEMAS.skills.draft.safeParse({ skills: [], extra: 1 }).success,
     ).toBe(false);
-    expect(
-      STEP_SCHEMAS.skills.draft.safeParse({
-        customSkills: [{ name: "C#", level: "secondary" }],
-      }).success,
-    ).toBe(true);
-    expect(isUsableSkillName("\u200b")).toBe(false);
-    expect(isUsableSkillName(" Figma ")).toBe(true);
-    expect(isUsableSkillName("日本語")).toBe(true);
   });
 });
 

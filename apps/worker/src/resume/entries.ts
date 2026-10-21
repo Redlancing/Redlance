@@ -2,20 +2,39 @@ import { findRanges, type DateRange } from "./dates";
 import { projectLinks } from "./prepass";
 
 /**
- * Splits a resume section into entry blocks (one per job or project), so the
- * model can name the block an entry came from ("E2") and code can attach the
- * dates, year and links and check everything against that block alone.
- * Pure, no model.
+ * Numbers the lines of the Projects and Experience sections for the work call. The model
+ * answers each entry's first and last line number, and code turns that range into the
+ * entry's block: the text every check runs against, and where its dates, year and links
+ * come from. Pure, no model.
  */
 
 export type EntryKind = "experience" | "projects";
 
-export type Block = {
-  /** "E1".."En" or "P1".."Pn". */
-  id: string;
-  /** The block's lines exactly as in the resume (blank lines kept inside). */
+/** Keeps the work prompt bounded; a longer section is cut with a note. */
+export const MAX_SECTION_CHARS = 12_000;
+export const MAX_SECTION_LINES = 300;
+/** Shown (unnumbered) where a section was cut. */
+export const CUT_NOTE = "(the section is cut here)";
+
+/** A section's numbered lines, as the work call sees them. */
+export type SectionLines = {
+  kind: EntryKind;
+  /** "P" for projects, "E" for experience: line 3 is shown as "[P3]". */
+  prefix: "P" | "E";
+  /** The numbered lines, trimmed, with marker lookalikes escaped: `lines[0]` is line 1. */
+  lines: string[];
+  /** The prompt text: every line after its number; blank lines kept (at most one in a row), unnumbered. */
   text: string;
-  /** The block's first date range. */
+  truncated: boolean;
+};
+
+/** One entry's lines and what code takes from them. */
+export type Block = {
+  /** "P3–P7" for a range, or "projects" / "experience" for the whole section (fallback). */
+  id: string;
+  /** The entry's lines, joined with "\n". */
+  text: string;
+  /** The first date range in the lines (null for the whole-section fallback). */
   range: DateRange | null;
   /** Projects only: the range's end year (this year if current), else the latest plain year. */
   year: number | null;
@@ -23,192 +42,179 @@ export type Block = {
   links: string[];
 };
 
-export const MAX_BLOCKS = 12;
-export const MAX_BLOCK_CHARS = 3_000;
-/** A longer line that isn't a bullet is body text, not a title or company line. */
-export const MAX_HEAD_CHARS = 120;
-/** A title-like line (one that can move down into the next block): short, no closing punctuation. */
-const MAX_TITLE_CHARS = 60;
-/** How many title lines can sit above a dated line ("Senior Developer" / "Acme Corp" / "2021 – 2023"). */
-const MAX_LEAD_LINES = 2;
+/**
+ * Anything in the resume that reads like a line marker ("[P5]", "[ E 12 ]", "【L3】",
+ * "［P5］") gets round brackets, so the text can't forge a line number. Citations like "[1]"
+ * change too, which is harmless.
+ */
+const MARKER_LOOKALIKE =
+  /[[［【]\s*([A-Za-z]{0,3}\s*[-–]?\s*\d{1,4})\s*[\]］】]/g;
+export const escapeMarkers = (line: string) =>
+  line.replace(MARKER_LOOKALIKE, "($1)");
 
-// "-", "–", "•", "▪", "◦", "●", other glyphs PDFs use, private-use symbol-font
-// bullets, and "1." / "1)" (followed by a space, so "3.5 years" isn't one).
-const BULLET_RE = /^(?:[-–—•*▪◦●■□○·‣⁃➢►▶✓✔❖-]|\d{1,2}[.)](?=\s))/u;
+/** The model sometimes copies our marker into a value: "[P3] Built X" → "Built X". */
+export const stripMarker = (s: string) =>
+  s.replace(/^\s*\[[PE]\d{1,4}\]\s*/, "");
+
+/**
+ * The section's lines, numbered from 1. Returns null when there is nothing to number, or for
+ * projects when the resume has no headings (projects can't be told apart from jobs then).
+ */
+export function numberSection(
+  section: string,
+  kind: EntryKind,
+  opts: { headed?: boolean } = {},
+): SectionLines | null {
+  if (kind === "projects" && !(opts.headed ?? true)) return null;
+  const prefix = kind === "projects" ? "P" : "E";
+  const lines: string[] = [];
+  const shown: string[] = [];
+  let chars = 0;
+  let truncated = false;
+  for (const raw of section.split("\n")) {
+    const t = escapeMarkers(raw.trim());
+    if (!t) {
+      if (shown.length && shown.at(-1) !== "") shown.push("");
+      continue;
+    }
+    if (lines.length >= MAX_SECTION_LINES || chars >= MAX_SECTION_CHARS) {
+      truncated = true;
+      break;
+    }
+    const room = MAX_SECTION_CHARS - chars;
+    const kept = t.length > room ? Array.from(t).slice(0, room).join("") : t;
+    if (kept !== t) truncated = true;
+    lines.push(kept);
+    chars += kept.length;
+    shown.push(`[${prefix}${lines.length}] ${kept}`);
+    if (truncated) break;
+  }
+  if (lines.length === 0) return null;
+  while (shown.at(-1) === "") shown.pop();
+  if (truncated) shown.push(CUT_NOTE);
+  return { kind, prefix, lines, text: shown.join("\n"), truncated };
+}
+
+/** "P3–P7" (or "P3" for one line). */
+export const rangeLabel = (s: SectionLines, from: number, to: number) =>
+  from === to ? `${s.prefix}${from}` : `${s.prefix}${from}–${s.prefix}${to}`;
+
+/** The block of lines `from`..`to` (1-based, inclusive; the caller checks the range). */
+export function blockFor(
+  s: SectionLines,
+  from: number,
+  to: number,
+  now: Date = new Date(),
+): Block {
+  const text = s.lines.slice(from - 1, to).join("\n");
+  const range = findRanges(text, now)[0] ?? null;
+  return {
+    id: rangeLabel(s, from, to),
+    text,
+    range,
+    year: s.kind === "projects" ? projectYear(text, range, now) : null,
+    links: s.kind === "projects" ? projectLinks(text) : [],
+  };
+}
+
+/**
+ * The fallback for an entry whose range can't be used: checked against the whole section,
+ * with no dates, year or links (the section's first ones belong to some other entry).
+ */
+export function wholeSection(s: SectionLines): Block {
+  return {
+    id: s.kind,
+    text: s.lines.join("\n"),
+    range: null,
+    year: null,
+    links: [],
+  };
+}
+
+/** The model's answer for an entry: its first and last line number (1-based, inclusive). */
+export type LineRange = { from: number; to: number };
+
+/** How code reads one entry's range. */
+export type ResolvedRange =
+  /** `from` is null for the whole-section fallback. */
+  | { ok: true; block: Block; from: number | null; notes: string[] }
+  | { ok: false; reason: string };
+
+/**
+ * Checks the model's ranges for one list, in the model's order:
+ * - not whole numbers, starting outside the section, or ending before they start: the entry
+ *   is checked against the whole section instead (looser, no dates, year or links), noted;
+ * - ending past the section: cut at its last line, noted;
+ * - entries are put in line order; when one starts inside the one before, the earlier one
+ *   ends just above it (the later entry's first line is its title, which the model is more
+ *   sure of than where the earlier entry ends), noted;
+ * - two entries starting on the same line: the later one in the model's list is dropped.
+ */
+export function resolveRanges(
+  ranges: LineRange[],
+  s: SectionLines,
+  now: Date = new Date(),
+): ResolvedRange[] {
+  const n = s.lines.length;
+  const label = (r: LineRange) =>
+    Number.isInteger(r.from) && Number.isInteger(r.to)
+      ? rangeLabel(s, r.from, r.to)
+      : `${s.prefix}${r.from}–${s.prefix}${r.to}`;
+  const out: ResolvedRange[] = new Array(ranges.length);
+  const notes: string[][] = ranges.map(() => []);
+  const valid: { i: number; from: number; to: number }[] = [];
+  ranges.forEach((r, i) => {
+    const whole = (why: string) => {
+      out[i] = {
+        ok: true,
+        block: wholeSection(s),
+        from: null,
+        notes: [`${label(r)} ${why}; checked against the whole section`],
+      };
+    };
+    if (!Number.isInteger(r.from) || !Number.isInteger(r.to))
+      return whole("isn't whole line numbers");
+    if (r.from < 1 || r.from > n) return whole("starts outside the section");
+    if (r.to < r.from) return whole("ends before it starts");
+    let to = r.to;
+    if (to > n) {
+      notes[i]!.push(`${label(r)} ends past the section; cut at line ${n}`);
+      to = n;
+    }
+    valid.push({ i, from: r.from, to });
+  });
+  valid.sort((a, b) => a.from - b.from || a.i - b.i);
+  const kept: typeof valid = [];
+  for (const v of valid) {
+    const prev = kept.at(-1);
+    if (prev && v.from === prev.from) {
+      out[v.i] = {
+        ok: false,
+        reason: `starts on the same line as another entry (${s.prefix}${v.from})`,
+      };
+      continue;
+    }
+    if (prev && prev.to >= v.from) {
+      notes[prev.i]!.push(
+        `${rangeLabel(s, prev.from, prev.to)} overlaps the next entry; ends at line ${v.from - 1}`,
+      );
+      prev.to = v.from - 1;
+    }
+    kept.push(v);
+  }
+  for (const v of kept)
+    out[v.i] = {
+      ok: true,
+      block: blockFor(s, v.from, v.to, now),
+      from: v.from,
+      notes: notes[v.i]!,
+    };
+  return out;
+}
 
 /** A plain year: not part of a word, a number, a version, a price or a count ("2000+ users"). */
 const PLAIN_YEAR =
   /(?<![\p{L}\p{N}_.\-$€£₹#])(\d{4})(?![\p{L}\p{N}+%]|[.\-/]\d)/gu;
-
-type LineKind = "blank" | "bullet" | "long" | "head";
-
-function kindOf(line: string): LineKind {
-  const t = line.trim();
-  if (!t) return "blank";
-  if (BULLET_RE.test(t)) return "bullet";
-  if (t.length > MAX_HEAD_CHARS) return "long";
-  return "head";
-}
-
-export function splitEntries(
-  section: string,
-  kind: EntryKind,
-  opts: { headed?: boolean; now?: Date } = {},
-): Block[] {
-  const headed = opts.headed ?? true;
-  const now = opts.now ?? new Date();
-  // Without a Projects heading, projects can't be told apart from jobs.
-  if (!headed && kind === "projects") return [];
-
-  const lines = section.split("\n");
-  const kinds = lines.map(kindOf);
-  const trimmed = lines.map((l) => l.trim());
-  const dated = lines.map(
-    (l, i) => kinds[i] !== "blank" && findRanges(l, now).length > 0,
-  );
-  const firstLine = kinds.findIndex((k) => k !== "blank");
-  if (firstLine < 0) return [];
-
-  // DOCX text (mammoth) has a blank line after every paragraph. When nearly
-  // every line is followed by one, a single blank line is just a line break
-  // and it takes two to separate entries.
-  let gaps = 0;
-  let spaced = 0;
-  for (let i = firstLine, blanks = 0; i < lines.length; i++) {
-    if (kinds[i] === "blank") blanks++;
-    else {
-      if (i > firstLine) {
-        gaps++;
-        if (blanks > 0) spaced++;
-      }
-      blanks = 0;
-    }
-  }
-  const separator = gaps >= 3 && spaced / gaps >= 0.75 ? 2 : 1;
-
-  const titleLike = (i: number) =>
-    kinds[i] === "head" &&
-    !dated[i] &&
-    trimmed[i]!.length <= MAX_TITLE_CHARS &&
-    !trimmed[i]!.includes("@") &&
-    !/[.!?;:,]$/.test(trimmed[i]!);
-
-  /**
-   * Walks back from `start` over up to `max` title-like lines (blank lines
-   * shorter than a separator are skipped), never reaching `floor`.
-   */
-  const pullBack = (start: number, floor: number, max: number) => {
-    let s = start;
-    let count = 0;
-    while (count < max) {
-      let k = s - 1;
-      let blanks = 0;
-      while (k > floor && kinds[k] === "blank") {
-        k--;
-        blanks++;
-      }
-      if (blanks >= separator || k <= floor || !titleLike(k)) break;
-      s = k;
-      count++;
-    }
-    return { start: s, count };
-  };
-
-  // The first entry shows whether titles sit above the date line; later
-  // entries are assumed to follow the same format.
-  const firstDated = dated.indexOf(true);
-  const lead =
-    firstDated < 0 ? 0 : pullBack(firstDated, -1, MAX_LEAD_LINES).count;
-
-  /** A short line after a bullet that finishes the bullet's sentence, not a new entry. */
-  const continues = (i: number, prev: number) =>
-    !dated[i] &&
-    !/[.!?]$/.test(trimmed[prev]!) &&
-    (/^\p{Ll}/u.test(trimmed[i]!) || /[.!?]$/.test(trimmed[i]!));
-
-  const mainStarts = (): number[] => {
-    const starts = [firstLine];
-    let hasRange = dated[firstLine]!;
-    let content = kinds[firstLine] !== "head"; // the last line was a bullet or body text
-    let prev = firstLine;
-    let blanks = 0;
-    for (let i = firstLine + 1; i < lines.length; i++) {
-      if (kinds[i] === "blank") {
-        blanks++;
-        continue;
-      }
-      const afterSeparator = blanks >= separator;
-      blanks = 0;
-      let begin = false;
-      let isContinuation = false;
-      if (kinds[i] === "head") {
-        if (afterSeparator) begin = true;
-        else if (content) {
-          isContinuation = continues(i, prev);
-          begin = !isContinuation;
-        } else if (kind === "experience" && dated[i] && hasRange) {
-          // A second dated header line: take the title lines above it too.
-          starts.push(pullBack(i, starts.at(-1)!, lead).start);
-          hasRange = true;
-          content = false;
-          prev = i;
-          continue;
-        }
-      }
-      if (begin) {
-        starts.push(i);
-        hasRange = dated[i]!;
-      } else hasRange ||= dated[i]!;
-      content = kinds[i] !== "head" || isContinuation;
-      prev = i;
-    }
-    return starts;
-  };
-
-  /** Fallback: a block starts at every line holding a date range (plus its title lines). */
-  const dateStarts = (keepPreamble: boolean): number[] | null => {
-    if (firstDated < 0) return null;
-    const starts = [
-      keepPreamble ? firstLine : pullBack(firstDated, -1, lead).start,
-    ];
-    for (let i = firstDated + 1; i < lines.length; i++)
-      if (dated[i]) starts.push(pullBack(i, starts.at(-1)!, lead).start);
-    return starts;
-  };
-
-  let starts: number[];
-  if (!headed) starts = dateStarts(false) ?? [firstLine];
-  else {
-    starts = mainStarts();
-    if (kind === "experience" && starts.length <= 1) {
-      const byDate = dateStarts(true);
-      if (byDate && byDate.length > 1) starts = byDate;
-    }
-  }
-
-  // Past the cap, the remaining entries stay in the last block.
-  starts = starts.slice(0, MAX_BLOCKS);
-  const prefix = kind === "experience" ? "E" : "P";
-  return starts.map((start, n) => {
-    const raw = lines
-      .slice(start, starts[n + 1] ?? lines.length)
-      .join("\n")
-      .trim();
-    const chars = Array.from(raw);
-    const text =
-      chars.length > MAX_BLOCK_CHARS
-        ? chars.slice(0, MAX_BLOCK_CHARS).join("")
-        : raw;
-    const range = findRanges(text, now)[0] ?? null;
-    return {
-      id: `${prefix}${n + 1}`,
-      text,
-      range,
-      year: kind === "projects" ? projectYear(text, range, now) : null,
-      links: kind === "projects" ? projectLinks(text) : [],
-    };
-  });
-}
 
 /**
  * A project's year: the end year of its first range (this year if current), else the latest

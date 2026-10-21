@@ -141,6 +141,20 @@
       "when": 1792563221031,
       "tag": "0019_insights_collection_start",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792601141897,
+      "tag": "0020_drop_custom_skills",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792650000000,
+      "tag": "0021_delete_resume_text",
+      "breakpoints": true
     }
   ]
 }

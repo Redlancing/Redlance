@@ -82,7 +82,6 @@ export function mapGithubToSuggestions(profile: {
       ...(categories.length ? { categories } : {}),
     },
     skills,
-    customSkills: [],
     githubUsername: profile.login,
     // Projects come only from the resume, never from repos.
     projects: [],

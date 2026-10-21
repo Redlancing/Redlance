@@ -13,7 +13,6 @@ export const VALID = {
       { id: "video-editing", level: "core" },
       { id: "premiere-pro", level: "secondary" },
     ],
-    customSkills: [{ name: "Descript", level: "secondary" }],
   },
   work: {
     projects: [

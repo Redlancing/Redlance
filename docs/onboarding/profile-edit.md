@@ -4,12 +4,12 @@
 
 ## How it works
 
-After Finish, the profile lives in `profiles`, `profile_skills`, `custom_skills`, `profile_projects` and `profile_experience` (the `onboarding_steps` rows stay as the Finish-time snapshot and are never edited). `/profile` shows five sections, each with a read view and an **Edit** button:
+After Finish, the profile lives in `profiles`, `profile_skills`, `profile_projects` and `profile_experience` (the `onboarding_steps` rows stay as the Finish-time snapshot and are never edited). `/profile` shows five sections, each with a read view and an **Edit** button:
 
 | Section | Checked with (core `STEP_SCHEMAS`, complete) | Writes |
 |---|---|---|
 | Basics | `basics` | `profiles`: name, headline, job types, experience, country, time zone |
-| Skills | `skills` | replaces the user's `profile_skills` and `custom_skills` |
+| Skills | `skills` | replaces the user's `profile_skills` (taxonomy skills only; custom skills were removed on 2026-10-21) |
 | Projects & experience | `work` | `profile_projects`, `profile_experience`, `profiles.mention_employers` |
 | Rates & filters | `rates` | `profiles`: min rate (minor units), currency, rate type, remote only |
 | GitHub | `import` | `profiles.github_username` |

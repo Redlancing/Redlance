@@ -17,7 +17,6 @@ const expected: Expected = {
 
 function sugg(over: {
   skills?: string[];
-  custom?: string[];
   categories?: string[];
   level?: string;
 }): Suggested {
@@ -27,10 +26,6 @@ function sugg(over: {
       experienceLevel: over.level,
     },
     skills: (over.skills ?? []).map((id) => ({ id, level: "core" })),
-    customSkills: (over.custom ?? []).map((name) => ({
-      name,
-      level: "secondary",
-    })),
   };
 }
 
@@ -76,10 +71,10 @@ describe("score", () => {
     expect(r.skillRecall).toBe(0);
   });
 
-  it("reports must-not violations from ids and custom skills", () => {
+  it("reports must-not violations", () => {
     const r = score(
       { ...expected, mustNotSkills: ["unity", "Kubernetes"] },
-      sugg({ skills: ["unity", "react"], custom: ["kubernetes"] }),
+      sugg({ skills: ["unity", "react", "kubernetes"] }),
     );
     expect(r.mustNotViolations.sort()).toEqual(["Kubernetes", "unity"]);
   });

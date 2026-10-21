@@ -25,7 +25,11 @@ import {
 import { parseWorkerEnv } from "../../src/env";
 import { createLlmFromEnv } from "../../src/llm";
 import { cleanResumeText } from "../../src/resume/clean";
-import { PIPELINE_VERSION, runResumePipeline } from "../../src/resume/pipeline";
+import {
+  CALLS,
+  PIPELINE_VERSION,
+  runResumePipeline,
+} from "../../src/resume/pipeline";
 import {
   aggregate,
   percentile,
@@ -101,10 +105,10 @@ function baselinePrompt(text: string): string {
   return `<resume>\n${text.replace(/<\/?resume>/gi, "")}\n</resume>\n\nTasks:\n1. categories: up to 3 job types from: ${CATEGORY_IDS.join(", ")}.\n2. experienceLevel: one of ${EXPERIENCE_LEVELS.join(", ")}.\n3. skills: only ids from this list that the resume gives evidence for (at most 30, at most 8 core): ${skills}.\nReturn JSON with categories, experienceLevel, skills.`;
 }
 
-// Fair comparison: the strongest model the pipeline uses, the Skills step's
-// thinking setting, the sum of the three steps' output budgets (300 + 400 + 1500),
-// the whole-analysis deadline, and one retry.
-const BASELINE_MAX_OUTPUT = 300 + 400 + 1500;
+// Fair comparison: the model the pipeline uses (every call is on Flash-Lite since
+// resume@3), its thinking setting (off), the output budgets of the calls that cover these
+// fields (profile 700 + skills 1500), the whole-analysis deadline, and one retry.
+const BASELINE_MAX_OUTPUT = 700 + 1500;
 const BASELINE_DEADLINE_MS = 20_000;
 
 async function runBaseline(
@@ -140,7 +144,6 @@ async function runBaseline(
       experienceLevel: res.data.experienceLevel,
     },
     skills: res.data.skills.filter((s) => SKILL_BY_ID.has(s.id)),
-    customSkills: [],
   };
 }
 
@@ -230,8 +233,10 @@ async function main() {
     ...loadDir(join(here, "private"), true),
   ];
   const tracing = process.env.LANGSMITH_TRACING === "true";
+  const models = { fast: env.VERTEX_MODEL_FAST, smart: env.VERTEX_MODEL_SMART };
+  const calls = CALLS.map((c) => `${c.version}=${models[c.model]}`).join(", ");
   console.log(
-    `Pipeline ${PIPELINE_VERSION}, fast=${env.VERTEX_MODEL_FAST}, smart=${env.VERTEX_MODEL_SMART}, ${fixtures.length} resumes` +
+    `Pipeline ${PIPELINE_VERSION} (${calls}), ${fixtures.length} resumes` +
       (tracing ? ", LangSmith tracing on" : ""),
   );
   if (tracing) {
@@ -241,8 +246,8 @@ async function main() {
   }
   if (withBaseline) {
     console.log(
-      `Baseline settings: one call, model ${env.VERTEX_MODEL_SMART} (smart), thinking off (as the Skills step), ` +
-        `max output ${BASELINE_MAX_OUTPUT} tokens (300+400+1500), timeout/deadline ${BASELINE_DEADLINE_MS}ms, 1 retry.`,
+      `Baseline settings: one call, model ${env.VERTEX_MODEL_FAST} (fast, as every pipeline call), thinking off, ` +
+        `max output ${BASELINE_MAX_OUTPUT} tokens (700+1500), timeout/deadline ${BASELINE_DEADLINE_MS}ms, 1 retry.`,
     );
   }
 
@@ -258,7 +263,7 @@ async function main() {
     try {
       const res = await runResumePipeline(text, {
         llm,
-        models: { fast: env.VERTEX_MODEL_FAST, smart: env.VERTEX_MODEL_SMART },
+        models,
         onAttempt: (_step, _v, a) => addAttempt(own, a),
       });
       pipeRows.push({
@@ -283,7 +288,7 @@ async function main() {
       const b: Cost = { micros: 0 };
       const b0 = performance.now();
       try {
-        const s = await runBaseline(llm, env.VERTEX_MODEL_SMART, text, b);
+        const s = await runBaseline(llm, env.VERTEX_MODEL_FAST, text, b);
         baseRows.push({
           name: f.name,
           score: score(f.expected, s),
@@ -306,7 +311,7 @@ async function main() {
 
   printTable("Pipeline", pipeRows);
   if (withBaseline)
-    printTable(`Baseline (one call, ${env.VERTEX_MODEL_SMART})`, baseRows);
+    printTable(`Baseline (one call, ${env.VERTEX_MODEL_FAST})`, baseRows);
 }
 
 main().catch((e) => {

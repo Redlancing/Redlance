@@ -13,7 +13,7 @@ Per resume and in total:
 - **Must-not violations**: skills from `mustNotSkills` that appeared (including the prompt-injection resume).
 - **Cost** (from the `onAttempt` usage) and **latency** (p50 and max).
 
-`--baseline` also runs one single-call prompt (all three tasks together) on the smart model with the same thinking setting, the summed output budget (2 200 tokens), the same 20 s deadline and one retry, so you can see whether the three-step pipeline earns its cost.
+`--baseline` also runs one single-call prompt (job types, level and skills together) on the fast model (Flash-Lite, which every pipeline call uses since `resume@3`) with thinking off, the summed output budget of the profile and skills calls (2 200 tokens), a 20 s deadline and one retry, so you can see whether the three-call pipeline (profile, skills, work) earns its cost.
 
 ## Fixtures
 

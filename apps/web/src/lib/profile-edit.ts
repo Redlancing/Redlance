@@ -1,8 +1,4 @@
-import {
-  normalizeSkillName,
-  type StepDraft,
-  type StepId,
-} from "@redlance/core";
+import type { StepDraft, StepId } from "@redlance/core";
 
 // Profile edit (`/profile`): the sections a finished profile can change, the weekly limit, and
 // the comparison that decides whether a save changed anything. Pure: used by the server and the
@@ -140,10 +136,7 @@ export function withoutNamesRemoved<T extends object>(
   return copy as Omit<T, "namesRemoved">;
 }
 
-type SkillsLike = {
-  skills: readonly { id: string }[];
-  customSkills: readonly { name: string }[];
-};
+type SkillsLike = { skills: readonly { id: string }[] };
 type WorkLike = {
   projects: readonly object[];
   experience: readonly object[];
@@ -159,9 +152,6 @@ export function sectionKey(section: ProfileSection, data: unknown): string {
     return stableJson({
       ...v,
       skills: [...v.skills].sort((a, b) => (a.id < b.id ? -1 : 1)),
-      customSkills: [...v.customSkills].sort((a, b) =>
-        normalizeSkillName(a.name) < normalizeSkillName(b.name) ? -1 : 1,
-      ),
     });
   }
   if (section === "work") {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { isCountryCode } from "./countries";
-import { CATEGORY_IDS, SKILL_BY_ID, normalizeSkillName } from "./taxonomy";
+import { CATEGORY_IDS, SKILL_BY_ID } from "./taxonomy";
 import { WORK_LIMITS, workSchemas } from "./work";
 
 export const STEP_IDS = [
@@ -41,7 +41,6 @@ export const LIMITS = {
   categories: 3,
   coreSkills: 8,
   totalSkills: 30,
-  customSkillName: 40,
   maxRate: 100_000,
   ...WORK_LIMITS,
 } as const;
@@ -287,56 +286,41 @@ const skillEntry = z.strictObject({
   level: z.enum(SKILL_LEVELS),
   source,
 });
-/** A custom skill name must show something: at least one letter or digit (no "\u200b" or "--"). */
-export const isUsableSkillName = (name: string) => /[\p{L}\p{N}]/u.test(name);
-
-const customSkillEntry = z.strictObject({
-  name: text(LIMITS.customSkillName)
-    .min(1, "Name the skill.")
-    .refine(isUsableSkillName, "Use letters or numbers."),
-  level: z.enum(SKILL_LEVELS),
-  source,
-});
+// Custom skills were removed (2026-10-21): only taxonomy skills exist. Rows saved
+// before then may still carry a `customSkills` key, so drop it before the strict check.
+export const withoutCustomSkills = (v: unknown) => {
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return v;
+  const { customSkills: _dropped, ...rest } = v as Record<string, unknown>;
+  return rest;
+};
 
 function skillsSchema(requireCore: boolean) {
-  return z
-    .strictObject({
-      skills: z.array(skillEntry).max(LIMITS.totalSkills).default([]),
-      customSkills: z
-        .array(customSkillEntry)
-        .max(LIMITS.totalSkills)
-        .default([]),
-    })
-    .superRefine((v, ctx) => {
-      noDuplicates(v.skills, (s) => s.id, ctx, ["skills"], "Already added.");
-      noDuplicates(
-        v.customSkills,
-        (s) => normalizeSkillName(s.name),
-        ctx,
-        ["customSkills"],
-        "Already added.",
-      );
-      const all = [...v.skills, ...v.customSkills];
-      const core = all.filter((s) => s.level === "core").length;
-      if (all.length > LIMITS.totalSkills)
-        ctx.addIssue({
-          code: "custom",
-          path: ["skills"],
-          message: `Keep it to ${LIMITS.totalSkills} skills.`,
-        });
-      if (core > LIMITS.coreSkills)
-        ctx.addIssue({
-          code: "custom",
-          path: ["skills"],
-          message: `Mark up to ${LIMITS.coreSkills} skills as core.`,
-        });
-      if (requireCore && core === 0)
-        ctx.addIssue({
-          code: "custom",
-          path: ["skills"],
-          message: "Mark at least one skill as core.",
-        });
-    });
+  return z.preprocess(
+    withoutCustomSkills,
+    z
+      .strictObject({
+        skills: z
+          .array(skillEntry)
+          .max(LIMITS.totalSkills, `Keep it to ${LIMITS.totalSkills} skills.`)
+          .default([]),
+      })
+      .superRefine((v, ctx) => {
+        noDuplicates(v.skills, (s) => s.id, ctx, ["skills"], "Already added.");
+        const core = v.skills.filter((s) => s.level === "core").length;
+        if (core > LIMITS.coreSkills)
+          ctx.addIssue({
+            code: "custom",
+            path: ["skills"],
+            message: `Mark up to ${LIMITS.coreSkills} skills as core.`,
+          });
+        if (requireCore && core === 0)
+          ctx.addIssue({
+            code: "custom",
+            path: ["skills"],
+            message: "Mark at least one skill as core.",
+          });
+      }),
+  );
 }
 
 // Blocked words were removed from onboarding (2026-09-29). Rows saved before

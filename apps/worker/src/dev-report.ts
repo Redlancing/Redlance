@@ -1,7 +1,6 @@
 import type { Suggestions } from "@redlance/core";
 import { repoSkillIds, type GithubRepo } from "./github/map";
-import type { DateRange } from "./resume/dates";
-import type { Block } from "./resume/entries";
+import type { SectionLines } from "./resume/entries";
 import type { MergeReport, StepResult } from "./resume/pipeline";
 import type { PipelineInput } from "./resume/steps/shared";
 
@@ -49,35 +48,29 @@ const indent = (s: string, n = 4) =>
     .join("\n");
 const json = (v: unknown) => indent(JSON.stringify(v, null, 2));
 const dollars = (micros: number) => `$${(micros / 1e6).toFixed(6)}`;
-const monthYear = (m: { year: number; month: number | null }) =>
-  m.month ? `${m.year}-${String(m.month).padStart(2, "0")}` : `${m.year}`;
-const rangeText = (r: DateRange | null) =>
-  r
-    ? `${monthYear(r.start)} – ${r.end ? monthYear(r.end) : "present"}`
-    : "no date range";
 const snippet = (t: string) => {
   const one = t.replace(/\s+/g, " ").trim();
   return one.length > 60 ? `${one.slice(0, 60)}…` : one;
 };
-const blockLines = (label: string, blocks: Block[]): string[] =>
-  blocks.length === 0
-    ? [`  ${label}: none`]
-    : [
-        `  ${label} (${blocks.length}):`,
-        ...blocks.map(
-          (b) =>
-            `    ${b.id}  ${rangeText(b.range)} · year ${b.year ?? "–"} · links ${b.links.length} · "${snippet(b.text)}"`,
-        ),
-      ];
-/** Output count for the two work steps; other steps print nothing extra. */
-function outputCount(step: string, output: unknown): string | null {
-  if (step !== "projects" && step !== "experience") return null;
-  const items = (output as Record<string, unknown> | undefined)?.[step];
-  if (!Array.isArray(items)) return "  output: none";
-  const n = items.length;
-  if (step === "projects")
-    return `  output: ${n} ${n === 1 ? "project" : "projects"}`;
-  return `  output: ${n} ${n === 1 ? "role" : "roles"}`;
+/** A section's numbered lines: how many, whether it was cut, and its first line. */
+const sectionLine = (label: string, s: SectionLines | null): string =>
+  s
+    ? `  ${label}: ${s.lines.length} (${s.prefix}1–${s.prefix}${s.lines.length})${s.truncated ? " · cut" : ""} · "${snippet(s.lines[0]!)}"`
+    : `  ${label}: none`;
+/** Output counts for the work call's lists; other calls print nothing extra. */
+function outputCount(r: StepResult): string | null {
+  if (r.call !== "work") return null;
+  const out = r.output as Record<string, unknown> | undefined;
+  const count = (key: string, one: string, many: string) => {
+    const items = out?.[key];
+    if (!Array.isArray(items)) return null;
+    return `${items.length} ${items.length === 1 ? one : many}`;
+  };
+  const counts = [
+    count("projects", "project", "projects"),
+    count("experience", "role", "roles"),
+  ].filter(Boolean);
+  return `  output: ${counts.join(", ") || "none"}`;
 }
 
 export function createDevReport(opts: {
@@ -133,8 +126,8 @@ export function createDevReport(opts: {
           `  years of exp.: ${input.yearsExperience ?? "unknown"}`,
           `  shortlist:     ${input.shortlist.length} skill ids — ${input.shortlist.join(", ") || "(none)"}`,
           `  GitHub user:   ${githubUsername ?? "(none found)"}`,
-          ...blockLines("project blocks", input.projectBlocks),
-          ...blockLines("experience blocks", input.experienceBlocks),
+          sectionLine("project lines", input.projectLines),
+          sectionLine("experience lines", input.experienceLines),
         ].join("\n"),
       );
     },
@@ -149,10 +142,10 @@ export function createDevReport(opts: {
       }
       costMicros += tokens.cost;
       const outcomes = r.attempts.map((a) => a.outcome).join(", ") || "none";
-      const count = outputCount(r.step, r.output);
+      const count = outputCount(r);
       print(
         [
-          `Gemini step "${r.step}" — ${r.model}`,
+          `Gemini call "${r.call}" (${r.parts.join(" + ")}) — ${r.model}`,
           `  latency ${r.ms} ms · attempts ${r.attempts.length} (${outcomes})`,
           `  tokens: input ${tokens.input} · output ${tokens.output} (thought ${tokens.thought}) · cost ${dollars(tokens.cost)}`,
           ...(count ? [count] : []),

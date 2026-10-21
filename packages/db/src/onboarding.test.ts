@@ -24,7 +24,6 @@ import {
   SKILL_LEVEL_VALUES,
   SKILL_SOURCE_VALUES,
   createDb,
-  customSkills,
   onboardingSteps,
   pgErrorCode,
   profileExperience,
@@ -216,28 +215,11 @@ describe("skills reference data", () => {
     ).rejects.toSatisfy(code("23503"));
   });
 
-  it("gives new rows UUIDv7 ids and refuses a duplicate custom skill per user", async () => {
-    const userId = await newUser();
-    const [row] = await db
-      .insert(customSkills)
-      .values({
-        userId,
-        name: "Three.js",
-        nameNormalized: "three.js",
-        level: "secondary",
-        source: "manual",
-      })
-      .returning();
-    expect(row!.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7/);
-    await expect(
-      db.insert(customSkills).values({
-        userId,
-        name: "three.js",
-        nameNormalized: "three.js",
-        level: "core",
-        source: "manual",
-      }),
-    ).rejects.toSatisfy(code("23505"));
+  it("has no custom_skills table (only taxonomy skills, 2026-10-21)", async () => {
+    const res = await db.execute<{ t: string | null }>(
+      sql`select to_regclass('public.custom_skills')::text as t`,
+    );
+    expect(res.rows[0]!.t).toBeNull();
   });
 });
 
