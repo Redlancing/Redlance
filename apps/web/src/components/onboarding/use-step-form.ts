@@ -65,6 +65,10 @@ export function useStepForm<S extends StepId>(
   });
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [pending, setPending] = useState<"draft" | "complete" | null>(null);
+  // A ref, not state: a second click can arrive before React re-renders with `pending` set.
+  const busyRef = useRef(false);
+  // After Next succeeds the buttons stay disabled until the next page replaces this one.
+  const [leaving, setLeaving] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [restoreHandled, setRestoreHandled] = useState(false);
   // After a version conflict, the local copy is written against the server's newer version so a
@@ -104,7 +108,11 @@ export function useStepForm<S extends StepId>(
     }
     void check();
     const onShow = (event: PageTransitionEvent) => {
-      if (event.persisted) void check();
+      if (!event.persisted) return;
+      // Restored from the bfcache after Next: the buttons must work again.
+      busyRef.current = false;
+      setLeaving(false);
+      void check();
     };
     window.addEventListener("pageshow", onShow);
     return () => {
@@ -167,7 +175,7 @@ export function useStepForm<S extends StepId>(
   }
 
   async function save(mode: "draft" | "complete"): Promise<SaveResult | null> {
-    if (pending) return null;
+    if (busyRef.current) return null;
     const prepared = options.prepare ? options.prepare(value) : value;
     const checked = STEP_SCHEMAS[init.step][mode].safeParse(prepared);
     setNotice(null);
@@ -176,6 +184,7 @@ export function useStepForm<S extends StepId>(
       return null;
     }
     setErrors([]);
+    busyRef.current = true;
     setPending(mode);
     try {
       const res = await fetch(`/api/v1/onboarding/steps/${init.step}`, {
@@ -207,6 +216,7 @@ export function useStepForm<S extends StepId>(
       });
       return null;
     } finally {
+      busyRef.current = false;
       setPending(null);
     }
   }
@@ -226,7 +236,7 @@ export function useStepForm<S extends StepId>(
     update: (patch: Partial<StepDraft<S>>) =>
       edit((v) => ({ ...v, ...patch }) as StepDraft<S>),
     errorFor: (path: string) => errorMessageFor(errors, path),
-    pending,
+    pending: pending ?? (leaving ? "complete" : null),
     notice,
     dirty,
     completed,
@@ -245,7 +255,10 @@ export function useStepForm<S extends StepId>(
     },
     async next() {
       const result = await save("complete");
-      if (result) router.push(`/onboarding/${result.next}`);
+      if (!result) return;
+      busyRef.current = true; // no second save while the next page loads
+      setLeaving(true);
+      router.push(`/onboarding/${result.next}`);
     },
     /** "Save draft", or "Save changes" on a completed step (full validation, stays completed). */
     async saveDraft(): Promise<boolean> {
