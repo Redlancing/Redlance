@@ -1,0 +1,32 @@
+{
+  "id": "dev-01-toyota-photo-scraper",
+  "tags": ["dm_only", "no_budget", "send_rate"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "[Hiring] Looking for a Developer to Scrape Toyota Vehicle Photos and Automate Image Generation",
+    "body": "Hey everyone,\n\nWe're looking for a developer who can help us build a system to scrape high-quality interior and exterior photos of new Toyota vehicles and automate exterior image generation.\n\nHere's an example of what we're trying to accomplish:\n\n[link]\n\nWhat we need:\n\n1. Image Scraping\n\nWe need to collect the highest-resolution photos available for every new Toyota model, trim, and paint color.\n\nThis includes:\n\n* Exterior photos from multiple angles\n* Interior photos (dashboard, seats, center console, etc.)\n* Photos that accurately match the specific trim and paint color\n\nWe don't need vehicle specs or descriptions. We're mainly interested in getting the best-quality photos possible, organizing them properly, and using images we have the rights to use.\n\n2. Image Generation\n\nThis is the main part of the project.\n\nWe want to take the scraped exterior photos and automatically generate 5 exterior shots for each vehicle using the same background and image style.\n\nThe biggest thing is accuracy. The paint color, wheels, trim, and body styling all need to match the actual vehicle.\n\nWe're open to different approaches, whether that's AI image generation, background replacement, or a combination of both. Whatever produces the most consistent and realistic results.\n\n3. Automation\n\nIdeally, once everything is built, we should be able to run the system for new model years without having to manually scrape and generate everything again.\n\nWe'd like the images organized by model, trim, and color.\n\nWhat we're looking for:\n\nSomeone who has experience with web scraping, image processing, and AI image generation.\n\nWhen reaching out, please include:\n\n* Your estimated cost to build this\n* How long you think it would take\n* What tools or approach you'd use\n* Approximate cost per generated image\n* Any similar work you've done\n\nWe're happy to start with a paid test on one Toyota model to make sure the image quality and accuracy are where we need them before moving forward with the entire lineup.\n\nIf this is something you've worked on before or feel confident building, send me a DM with your estimated quote and approach.\n\nThanks!",
+    "subreddit": "developers_hire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["development", "data"],
+    "skillIds": ["web-scraping", "automation"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for a developer to scrape Toyota vehicle photos and build an automated image generation and processing system.",
+    "applyInstructions": "send me a DM with your estimated quote and approach"
+  },
+  "expect": [
+    "follows DM only: the comment is empty or just a short note that a DM was sent",
+    "addresses the two asks, scraping vehicle photos and automating image generation, without claiming experience with AI image generation or Toyota data that the profile does not show",
+    "does not invent a quote, timeline or cost per image; at most offers to send an estimate after a paid test or a short call"
+  ]
+}

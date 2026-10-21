@@ -1,0 +1,32 @@
+{
+  "id": "wri-05-content-tasks-inr",
+  "tags": ["below_min", "dm_only"],
+  "profileId": "senior-writer",
+  "post": {
+    "title": "[HIRING] Flexible Online Content Gig — ₹5,000 per 100 Small Writing Tasks + Bonuses",
+    "body": "We run content campaigns for brands and are looking for people to help with research and content creation.\n\nThe work:\n\n* Find interesting and relevant information online\n* Research and summarize useful material\n* Help create written online content\n* Work with content related to different brands and projects\n* Stay active and consistent\n\nWhat we're looking for:\n\n* Good English\n* Discord account\n* Basic writing skills\n* Comfortable browsing the internet\n* Reliable and consistent\n* No professional experience required\n\nPay:\n\n($50) ₹5,000 per 100 small writing tasks\n\nAdditional tasks are also paid, so you can continue earning if you complete more than 100 tasks.\n\nAdditional bonuses are available depending on the campaign.\n\nSome campaigns may also pay separately for memes and other creative content.\n\nYou can use ChatGPT for research, ideas, and drafting, as long as you know how to write good prompts and produce natural, human-like content.\n\nFlexible\n\n* No fixed working hours\n* Work whenever it suits you\n* Minimal workload\n* Suitable as a side gig\n* Full guidelines and instructions provided\n\nIf interested, DM me.",
+    "subreddit": "workonlineindia"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["writing", "admin"],
+    "skillIds": ["research", "llm-apps"],
+    "budgetMin": 5000,
+    "budgetMax": 5000,
+    "currency": "INR",
+    "budgetUnit": "per_item",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Hiring remote freelancers for online research and small writing tasks with flexible hours.",
+    "applyInstructions": "If interested, DM me."
+  },
+  "expect": [
+    "treats the work as small research and writing tasks, matching the post, and does not oversell",
+    "does not mistake the INR 5,000 pay for USD and does not give a Discord handle or other contact detail",
+    "follows the DM instruction: the comment is empty or a one-line note"
+  ]
+}

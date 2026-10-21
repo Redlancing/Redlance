@@ -1,0 +1,32 @@
+{
+  "id": "des-01-wedding-merch-logo",
+  "tags": [],
+  "profileId": "junior-designer",
+  "post": {
+    "title": "[HIRING] Wedding Logo/merch design",
+    "body": "I am getting married March 2027 and would like some designs to use to be printed on various favors/merch. Cups, coozies, matchbooks, etc. Potentially designs for tote bags and t-shirts as well.\n\nMy fiancé and I like nerdy things and we are thinking a romantic fantasy medieval vibe (happy to share inspo pics). He is also very into metal music so we’re also thinking of doing a metal band style logo to use for some items.\n\nThe main goal is that the designs are easily printable on the various items. Ideally singular color.\n\nBudget for this is $200.",
+    "subreddit": "graphicdesignjobs"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["design"],
+    "skillIds": ["logo-design", "merch-design"],
+    "budgetMin": 200,
+    "budgetMax": 200,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for a designer to create a romantic fantasy medieval wedding logo and merch designs for various items.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "mentions the one-colour, easy-to-print designs for favours and merch and the fantasy or metal-band logo idea",
+    "is honest that the cited work is a student project and does not claim print or merch experience",
+    "does not argue about the $200 budget and stays short"
+  ]
+}

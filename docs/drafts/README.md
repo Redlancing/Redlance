@@ -1,6 +1,6 @@
 # Drafts + reply tracker
 
-Status: **backend built 2026-10-20** (branch `feat/drafts`); the UI comes later. This file is the **design**. The build changed some details: extra error codes, `reply_sends`, failed versions freeing their number, stuck-draft expiry, rebuilt evidence on rewrites, bare-domain link checks, hand-written eval cases. **Where this file and `conclusion.md` differ, `conclusion.md` is right.**
+Status: **backend built 2026-10-20** (branch `feat/drafts`); the UI comes later. This file is the **design**. The build changed some details: extra error codes, `reply_sends`, failed versions freeing their number, stuck-draft expiry, rebuilt evidence on rewrites, bare-domain link checks, real-post eval cases. **Where this file and `conclusion.md` differ, `conclusion.md` is right.**
 
 The user clicks "Draft" on a match. Redlance writes a Reddit **comment** and a **first DM** in one AI call. The user edits the text, copies it, opens the post and sends it themselves (rule 1: never auto-post). They then mark it as sent. The tracker records what they sent and what happened afterwards. Every edit and outcome feeds back into the next draft.
 

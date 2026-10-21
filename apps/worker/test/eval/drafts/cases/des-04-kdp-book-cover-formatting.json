@@ -1,0 +1,32 @@
+{
+  "id": "des-04-kdp-book-cover-formatting",
+  "tags": ["below_min"],
+  "profileId": "junior-designer",
+  "post": {
+    "title": "[Paid - $25] Need Amazon KDP Book Cover Formatted & Assembled (Template Provided)",
+    "body": "Hi everyone,\n\nI’m looking for an experienced Photoshop editor to help put together a full Amazon KDP book cover (front, spine, and back) that adheres strictly to KDP’s template, bleed, and dimension guidelines.\n\nWhat I have ready for you:\n\nFront Cover: Sample/final design image ready.\nBack Cover: Text description, design layout preferences, and the author's photo (to be placed on the back).\nKDP Template: Official template generated specifically for this book's exact page count and trim size (includes bleed lines, barcode safety zones, and spine dimensions).\n\nAll of these items are included in the Google Drive link I have included in this post.\n\nTechnical Requirements:\nMust be delivered in PDF format and meet Amazon KDP's standards.\nMinimum resolution of 300 DPI is required for print quality, though a higher resolution is preferred. You can check the official guidelines here [link].\n\nWhat I need:\nHigh-resolution, print-ready PDF (and source PSD file) aligned perfectly to the provided KDP template so it passes Amazon KDP's upload verification without errors.\nWe know exactly how we want it to look so it matches our existing book series; we just lack the Photoshop skills to scale, align, and format it accurately to the template specifications.\n\nBudget: $25 (via PayPal or preferred method)\nPlease comment below with a link to your portfolio or examples of previous book cover/print formatting work if interested. Please keep all communications in the comments/DMs per sub rules.",
+    "subreddit": "photoshoprequest"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["design", "photo"],
+    "skillIds": ["book-cover-design", "photoshop"],
+    "budgetMin": 25,
+    "budgetMax": 25,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for an experienced Photoshop editor to assemble and format an Amazon KDP book cover using a provided template.",
+    "applyInstructions": "Please comment below with a link to your portfolio or examples of previous book cover/print formatting work if interested."
+  },
+  "expect": [
+    "mentions assembling the front, spine and back to the KDP template, with print-ready PDF and PSD",
+    "the comment contains the allowed portfolio link, as the post asks, and does not claim book-cover or print-formatting experience the profile lacks",
+    "does not negotiate the $25 budget"
+  ]
+}

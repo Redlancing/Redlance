@@ -1,0 +1,32 @@
+{
+  "id": "dev-09-angular-graphql-fulltime",
+  "tags": ["dm_only", "below_min"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "[HIRING] Remote Full Stack Developer | Angular + GraphQL | Full Time",
+    "body": "We're looking for a Full Stack Developer to join our remote engineering team and work with us on long-term product development.\n\nThis is a full-time, long-term role focused on building and maintaining real production applications. This is not agency work or short-term client projects.\n\nRole\n\n* Remote\n* Full-time\n* Minimum 6 hours/day\n* Long-term collaboration\n* Initial evaluation period\n* After successful evaluation: $15 to $25/hour, based on experience and performance\n\nWhat You'll Work On\n\nYou'll be building modern business applications such as:\n\n* Admin consoles\n* Analytics dashboards\n* Reporting systems\n* User management platforms\n* Data visualization and statistics\n* Internal business tools\n* Financial and calculation modules\n* Production features used by real users\n\nThe focus is on scalable, reliable and maintainable applications, not marketing websites.\n\nTech Stack\n\n* Angular\n* TypeScript\n* GraphQL\n\nResponsibilities\n\n* Build and maintain Angular applications\n* Develop features from planning through production\n* Integrate and work with GraphQL APIs\n* Design scalable frontend architecture\n* Improve performance and user experience\n* Participate in technical and architectural discussions\n* Write clean and maintainable code\n* Work independently and communicate clearly with the team\n\nRequirements\n\n* Strong experience with Angular and TypeScript\n* Experience building production web applications\n* Good understanding of GraphQL\n* Strong problem-solving skills\n* Good written and spoken English\n* Comfortable working independently in a remote environment\n\nWhat We Offer\n\n* Long-term product development\n* Fully remote work\n* Modern tech stack\n* Interesting technical challenges\n* Opportunity to work on real production systems\n* Small and collaborative engineering team\n* Potential for long-term growth within the team\n\nNot a Fit If You Are\n\n* A student looking for an internship\n* Looking for part-time work\n* An agency\n* Looking for commission-only work\n\nHow to Apply\n\nPlease send:\n\n1. Resume / CV\n2. GitHub or portfolio\n3. A short introduction about yourself\n4. Examples of Angular projects you've worked on\n5. Your expected hourly rate\n\nPlease DM me with the above information.\n\nWe will review applications and reach out to candidates who match what we're looking for.",
+    "subreddit": "developers_hire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "full_time",
+    "payType": "paid",
+    "categories": ["development"],
+    "skillIds": ["angular", "typescript", "graphql"],
+    "budgetMin": 15,
+    "budgetMax": 25,
+    "currency": "USD",
+    "budgetUnit": "hour",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for a remote Full Stack Developer to build and maintain production applications using Angular, TypeScript, and GraphQL.",
+    "applyInstructions": "Please send: 1. Resume / CV 2. GitHub or portfolio 3. A short introduction about yourself 4. Examples of Angular projects you've worked on 5. Your expected hourly rate. Please DM me with the above information."
+  },
+  "expect": [
+    "follows the DM instruction: the comment is empty or a one-line note, the application is in the DM",
+    "is honest that Angular is not in the profile: it does not claim Angular or GraphQL experience (React and TypeScript may be named as the closest skills)",
+    "does not agree to a full-time, 6-hours-a-day commitment or to the $15-25/hour range"
+  ]
+}

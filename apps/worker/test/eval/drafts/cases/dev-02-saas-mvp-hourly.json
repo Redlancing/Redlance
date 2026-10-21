@@ -1,0 +1,32 @@
+{
+  "id": "dev-02-saas-mvp-hourly",
+  "tags": ["below_min"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "Looking for a freelancer or agency to build a SaaS MVP",
+    "body": "I'm looking for a skilled freelancer or software development agency to build a SaaS web application from scratch.\n\nProject requirements:\n\n* Modern, responsive UI/UX\n* User authentication and subscription payments\n* Admin dashboard and backend APIs\n* Scalable architecture and clean code\n\nBudget: $20–$35/hour, depending on experience and expertise.\n\nTo apply, please share:\n\n* Your portfolio and relevant projects\n* Recommended tech stack\n* Estimated timeline\n* Hourly rate\n\nI'm looking for someone reliable who can deliver quality work and potentially collaborate on future projects.\n\nComment below or DM me if you're interested!",
+    "subreddit": "forhirefreelance"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["development", "design"],
+    "skillIds": ["ux-design", "rest-api"],
+    "budgetMin": 20,
+    "budgetMax": 35,
+    "currency": "USD",
+    "budgetUnit": "hour",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for a freelancer or agency to build a SaaS web application from scratch with UI/UX, backend APIs, and authentication.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "mentions the MVP needs from the post: authentication, subscription payments, an admin dashboard",
+    "cites the subscription billing project (or the GitHub link) as the relevant work, with only one link",
+    "does not agree to the $20-35/hour budget in public (it is below the profile's minimum rate) and does not claim to be an agency"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "rw-03-shorter-b2b-copy",
+  "baseCaseId": "wri-02-b2b-ad-copywriter",
+  "option": "shorter",
+  "expect": [
+    "clearly shorter",
+    "still says the form is being completed",
+    "does not name the employers"
+  ]
+}

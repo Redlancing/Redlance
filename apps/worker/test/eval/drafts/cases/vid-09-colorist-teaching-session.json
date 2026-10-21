@@ -1,0 +1,32 @@
+{
+  "id": "vid-09-colorist-teaching-session",
+  "tags": ["send_rate", "dm_only"],
+  "profileId": "video-editor",
+  "post": {
+    "title": "Hiring] Looking for a Colorist to teach me how to recreate this look in DaVinci Resolve",
+    "body": "Hi, I’m looking to pay an experienced colorist for a paid 1-on-1 session (screen share) to teach me how to build and recreate a specific look in DaVinci Resolve.\nThe Goal:\nRecreate a filmic aesthetic based on reference images/videos (soft highlight rolloff, muted earth tones, clean darks, natural skin tones).\nBuild a clean, reusable node tree / powergrade for my footage.\nMy Setup:\nFootage: Sony FX3 & A7V (S-Log3, 10-bit)\nSoftware: DaVinci Resolve Studio (macOS)\nFormat: Paid 1-on-1 coaching / consulting via Zoom or Google Meet. Budget: Open for hourly rates ($50–$100+/hr depending on experience).\nPlease DM me with your portfolio/showreel and your hourly rate if you can teach this!\nDamit ist völlig egal, von wem die Beispielfotos stammen. Wenn du den Post veröffentlichst, kannst du die Screenshots einfach direkt als Bildanhang an den Reddit-Post anhängen oder per Imgur-Link verlinken, damit der Colorist sieht, welchen Look er dir beibringen soll.\n\nPicture 1-3 are photos and 4&5 screenshots from a video",
+    "subreddit": "davinciresolve"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["video"],
+    "skillIds": ["davinci-resolve"],
+    "budgetMin": 50,
+    "budgetMax": 100,
+    "currency": "USD",
+    "budgetUnit": "hour",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Seeking an experienced colorist for a paid 1-on-1 teaching session via Zoom or Google Meet to recreate a specific filmic look in DaVinci Resolve.",
+    "applyInstructions": "Please DM me with your portfolio/showreel and your hourly rate if you can teach this!"
+  },
+  "expect": [
+    "does not claim to be a professional colorist or teacher, or DaVinci Resolve experience, that the profile does not show (color grading is a secondary skill)",
+    "any hourly rate is in the DM, not the comment, and is not below the profile's $25/hour",
+    "mentions the filmic look or the reusable node tree the post asks for, with the allowed work link"
+  ]
+}

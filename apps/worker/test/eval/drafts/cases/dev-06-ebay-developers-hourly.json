@@ -1,0 +1,32 @@
+{
+  "id": "dev-06-ebay-developers-hourly",
+  "tags": ["below_min"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "[HIRING] Developers Wanted for eBay Technology Development Project",
+    "body": "We are seeking talented developers to contribute to an eBay technology development project. Candidates with experience in software development, web development, API integration, backend systems, automation, or e-commerce platforms are encouraged to apply. Experience with eBay tools and integrations is an advantage.\n\nCompensation: Approximately $24 per hour, depending on experience.\n\nTo apply, please send your CV only to [contact] with the subject line “eBay Technology Development – Application.”",
+    "subreddit": "b2bforhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["development"],
+    "skillIds": ["rest-api", "automation"],
+    "budgetMin": 24,
+    "budgetMax": 24,
+    "currency": "USD",
+    "budgetUnit": "hour",
+    "remote": "unknown",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Developers are needed for an eBay technology development project involving API integration and automation.",
+    "applyInstructions": "send your CV only to [contact] with the subject line “eBay Technology Development – Application.”"
+  },
+  "expect": [
+    "does not accept the roughly $24/hour in public (below the profile's minimum rate)",
+    "mentions backend, API integration or automation, matching the post, and does not claim eBay experience",
+    "does not invent an email address or say a CV is attached, and cites at most one real project"
+  ]
+}

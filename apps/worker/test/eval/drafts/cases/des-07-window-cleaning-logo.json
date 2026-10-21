@@ -1,0 +1,32 @@
+{
+  "id": "des-07-window-cleaning-logo",
+  "tags": [],
+  "profileId": "junior-designer",
+  "post": {
+    "title": "[hiring] Need a new Logo design for my window cleaning company one with [name 1] and one with [name 2] budget is 50$ Nothing specific on the art you are free.",
+    "body": "This is the old one.",
+    "subreddit": "graphicdesignservices"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["design"],
+    "skillIds": ["logo-design"],
+    "budgetMin": 50,
+    "budgetMax": 50,
+    "currency": "USD",
+    "budgetUnit": "fixed",
+    "remote": "unknown",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Need a new logo design for a window cleaning company.",
+    "applyInstructions": null
+  },
+  "expect": [
+    "is very short, matching the tiny post, and acknowledges there are two logo versions, one per business name",
+    "does not argue about the $50 budget",
+    "does not claim experience with service-business logos"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "vid-08-capcut-ai-ecom-crypto",
+  "tags": ["code_word", "no_budget"],
+  "profileId": "video-editor",
+  "post": {
+    "title": "[HIRING] CapCut & AI Video Editor for E-com Brand",
+    "body": "We are a fast-scaling e-commerce supplement brand looking for a fast, retention-obsessed video editor to join our team long-term.\n\nIf you are tired of clients who give you zero direction, expect you to write the scripts, or ghost you on feedback, this role is for you. We have already built a highly efficient content machine, we just need a skilled operator to run it. You will never waste time staring at a blank screen wondering what to create.\n\nThe Workflow (We provide the machine, you run it):\n\n* What We Hand You: 100% of the scripts and hooks, plug-and-play AI prompt frameworks (no \"prompt engineering\" required), paid credits for ElevenLabs and AI video generators, and core product B-roll.\n* What You Do: Plug our scripts into ElevenLabs for clean voiceovers. Copy/paste our exact frameworks into AI video generators to create AI UGC avatars and highly specific AI B-roll. Finally, jump into CapCut to cut the dead air, layer clips every 1.5–2 seconds, and add dynamic captions, SFX, and pacing that makes the ad impossible to scroll past.\n\nThe Ad Styles You Will Be Building: You must be able to replicate the visual density and energy of modern supplement VSLs and TikTok/Reels ads.\n\n* AI UGC & \"Fake Podcast\" Mashups: Realistic AI talking heads (doctors, researchers) intercut with rapid-fire B-roll.\n* Green-Screen Breakdowns: Creator-in-corner formats ranking health solutions on a whiteboard.\n* Literal Visual Matching: If the script says \"blood flow collapses,\" you immediately generate and show a 3D medical visual of that exact phrase.\n* Reference Folder: See exactly what we expect here. [link]\n\nThe Dealbreakers (Please read before applying):\n\n* Crypto Only: You must be 100% comfortable receiving your payments in Crypto (USDT/USDC).\n* Volume: This is a daily grind. You must be able to consistently deliver 3 to 5 short-form videos a day.\n* Direct-Response Only: We are not making cinematic vlogs or gaming montages. We make ads that sell. Pacing and retention beat fancy transitions every time.\n* Solo Editors Only: No agencies. We want a dedicated team member working directly with us.\n\nHow to Apply: Do not send a generic copy-paste cover letter. Send me a DM or Chat with the following:\n\n1. Start your message with the word SUPPLEMENT so I know you read the whole post.\n2. Send 2–4 direct links to your portfolio showcasing direct-response ads, UGC mashups, or AI-heavy short-form edits. (Exclude gaming, wedding, or slow corporate videos).",
+    "subreddit": "findvideoeditors"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "contract",
+    "payType": "paid",
+    "categories": ["video", "marketing"],
+    "skillIds": [
+      "capcut",
+      "video-editing",
+      "short-form-video",
+      "subtitles",
+      "sound-design"
+    ],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": ["off_platform_payment"],
+    "summary": "An e-commerce brand is seeking a video editor to produce daily short-form ads using CapCut and AI video generation tools.",
+    "applyInstructions": "Send me a DM or Chat with the following: 1. Start your message with the word SUPPLEMENT so I know you read the whole post. 2. Send 2–4 direct links to your portfolio showcasing direct-response ads, UGC mashups, or AI-heavy short-form edits."
+  },
+  "expect": [
+    "starts the message that carries the application with the word SUPPLEMENT, as the post requires",
+    "claims only editing skills the profile lists and does not claim CapCut, ElevenLabs or AI-video-generator experience it does not show",
+    "does not accept the crypto-only payment outright and includes the allowed portfolio link"
+  ]
+}

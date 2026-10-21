@@ -1,6 +1,6 @@
 {
   "id": "rw-10-custom-no-greeting",
-  "baseCaseId": "vid-01-youtube-longform",
-  "instruction": "Drop the greeting and open straight with the problem. Keep it under 70 words.",
-  "expect": ["no greeting", "under 70 words (DM)", "keeps the link"]
+  "baseCaseId": "des-03-book-spotter-app-icons",
+  "instruction": "Drop the greeting and open straight with the icon work. Keep it under 70 words.",
+  "expect": ["no greeting", "under 70 words", "keeps the link"]
 }

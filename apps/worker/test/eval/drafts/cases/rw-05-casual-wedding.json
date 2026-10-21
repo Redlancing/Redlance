@@ -1,0 +1,9 @@
+{
+  "id": "rw-05-casual-wedding",
+  "baseCaseId": "des-01-wedding-merch-logo",
+  "option": "casual",
+  "expect": [
+    "noticeably more casual",
+    "still honest that the cited work is a student project"
+  ]
+}

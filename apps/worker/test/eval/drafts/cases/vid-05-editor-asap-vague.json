@@ -1,0 +1,32 @@
+{
+  "id": "vid-05-editor-asap-vague",
+  "tags": ["urgent", "vague", "no_budget"],
+  "profileId": "video-editor",
+  "post": {
+    "title": "LF VIDEO EDITOR ASAP",
+    "body": "Hi looking for video editor asap like this -[link]\n\nMESSAGE ME ASAP",
+    "subreddit": "videoeditingjobs"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "unknown",
+    "categories": ["video"],
+    "skillIds": ["video-editing"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "unknown",
+    "location": null,
+    "deadline": null,
+    "redFlags": ["vague_pay"],
+    "summary": "Looking for a video editor to edit videos in a specific style.",
+    "applyInstructions": "MESSAGE ME ASAP"
+  },
+  "expect": [
+    "is very short and asks one or two clarifying questions (length, style, rate) because the post gives almost no detail",
+    "does not claim to have watched the linked video and does not promise immediate availability or a turnaround",
+    "mentions YouTube-style editing in general terms only"
+  ]
+}

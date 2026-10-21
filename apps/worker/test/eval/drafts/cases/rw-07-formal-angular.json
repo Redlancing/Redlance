@@ -1,0 +1,10 @@
+{
+  "id": "rw-07-formal-angular",
+  "baseCaseId": "dev-09-angular-graphql-fulltime",
+  "option": "formal",
+  "expect": [
+    "more formal",
+    "still does not claim Angular or GraphQL experience",
+    "keeps the one link"
+  ]
+}

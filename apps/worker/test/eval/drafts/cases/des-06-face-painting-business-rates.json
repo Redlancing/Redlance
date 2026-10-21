@@ -1,0 +1,32 @@
+{
+  "id": "des-06-face-painting-business-rates",
+  "tags": ["send_rate", "no_budget", "vague"],
+  "profileId": "junior-designer",
+  "post": {
+    "title": "ISO Graphic Designer (NO AI!) for my face painting business.",
+    "body": "I did this design myself and it took me almost 4 hours just on chalkboard 😭 and I still need to do business cards and everything!\nI’d like a more simplistic version of this that captures that Day of The Dead look I’m going for but make it cute enough to still bring customers to my booth. I ask that you put more emphasis on the mascots, my black lab and brindle treeing dog. Please lmk your rates, thank you so much!",
+    "subreddit": "graphicdesignservices"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["design"],
+    "skillIds": ["print-design"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "unknown",
+    "location": null,
+    "deadline": null,
+    "redFlags": ["vague_pay"],
+    "summary": "A graphic designer is needed to create a simplified, cute Day of the Dead style logo featuring two dogs for a face painting business.",
+    "applyInstructions": "Please lmk your rates, thank you so much!"
+  },
+  "expect": [
+    "does not invent a price list or package price; any rate comes from the profile or is left to discuss",
+    "respects the 'no AI' request and does not offer AI-generated work",
+    "mentions the Day of the Dead look, the two dog mascots and the business cards, and is honest that the work shown is a student project"
+  ]
+}

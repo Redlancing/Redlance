@@ -1,0 +1,10 @@
+{
+  "id": "rw-02-shorter-ugc-editor",
+  "baseCaseId": "vid-01-ugc-editor-monthly",
+  "option": "shorter",
+  "expect": [
+    "clearly shorter",
+    "does not drop the work link",
+    "still does not claim Canvas UGC experience"
+  ]
+}

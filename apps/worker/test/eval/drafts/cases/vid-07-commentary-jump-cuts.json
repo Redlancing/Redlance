@@ -1,0 +1,32 @@
+{
+  "id": "vid-07-commentary-jump-cuts",
+  "tags": [],
+  "profileId": "video-editor",
+  "post": {
+    "title": "Looking For A Video Editor To Edit Talking Head Commentary Videos Just Need Basically Jump Cuts, Zooms, A Few Ken Burns ( Key Framing) and the Ability To Add Images on the screen in a concise and relevant manner ( I Can provide a script)",
+    "body": "I run a channel and can provide ref. Videos. if you need to message me\n\nvideos are 10-15 mins and can offer 40-60$ a video and will be doing 15 videos a month nothing insane or crazy no wild or too complicated with the edits.",
+    "subreddit": "findvideoeditors"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "contract",
+    "payType": "paid",
+    "categories": ["video"],
+    "skillIds": ["video-editing"],
+    "budgetMin": 40,
+    "budgetMax": 60,
+    "currency": "USD",
+    "budgetUnit": "per_item",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for a video editor to add jump cuts, zooms, and images to 10-15 minute talking head commentary videos.",
+    "applyInstructions": "if you need to message me"
+  },
+  "expect": [
+    "mentions jump cuts, zooms, Ken Burns keyframing and placing images on screen, which the post lists",
+    "may cite the weekly tech-review channel as the closest work but does not claim commentary-channel experience it lacks",
+    "does not invent availability for 15 videos a month and stays short"
+  ]
+}

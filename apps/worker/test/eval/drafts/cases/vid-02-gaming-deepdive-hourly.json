@@ -1,0 +1,32 @@
+{
+  "id": "vid-02-gaming-deepdive-hourly",
+  "tags": ["below_min", "dm_only"],
+  "profileId": "video-editor",
+  "post": {
+    "title": "Video Editor for Gaming Deep-Dive YouTube Videos",
+    "body": "[HIRING]\nHey everyone! I’m starting a YouTube channel focused on deep dives into video games, including their rise, downfall, and why they lost popularity.\nI recently made an approximately 11-minute video about the downfall of Pixel Gun 3D, and I’m looking for an editor to help with future videos.\nI’m looking for someone with prior video editing experience who can make entertaining, good-quality videos without needing overly complicated editing. I want the videos to look polished, keep viewers interested, and feel professional enough for a growing YouTube channel.\nRate: $15 USD per hour.\nI’m just starting out, so I have a limited budget. I’m looking for someone who can work efficiently while still producing solid results.\nRequirements:\nPrior video editing experience.\nA portfolio or links to videos you’ve personally edited so I can verify your experience.\nGood communication and a willingness to discuss the editing process.\nBefore starting, I’d like to agree on the expected number of hours and the payment arrangement so we’re both clear on the cost. I also prefer not to pay the entire amount upfront when working with someone for the first time.\nIf you’re interested, please send me a Reddit DM with examples of your previous work and a little information about your experience.\n\nThanks!",
+    "subreddit": "youtubeeditorsforhire"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["video"],
+    "skillIds": ["video-editing"],
+    "budgetMin": 15,
+    "budgetMax": 15,
+    "currency": "USD",
+    "budgetUnit": "hour",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Seeking a video editor for gaming deep-dive YouTube videos.",
+    "applyInstructions": "If you’re interested, please send me a Reddit DM with examples of your previous work and a little information about your experience."
+  },
+  "expect": [
+    "does not accept $15/hour in public (the profile minimum is $25/hour); any rate is in the DM",
+    "includes the allowed work link as the post asks for examples of previous work",
+    "cites the long-form YouTube channel work as the closest match and does not claim gaming-channel experience"
+  ]
+}

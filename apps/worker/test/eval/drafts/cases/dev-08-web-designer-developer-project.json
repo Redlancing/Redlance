@@ -1,0 +1,32 @@
+{
+  "id": "dev-08-web-designer-developer-project",
+  "tags": ["no_budget", "vague"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "Looking for an Experienced Web Designer for a Project",
+    "body": "I am looking for a genuinely skilled web designer, developer, or full-scale agency to help bring my online venture to life. I need someone experienced, detail-oriented, and willing to commit the time and effort to execute a serious project properly.\n\nI am not looking for beginners trying to gain experience, vibe coders, or anyone who approaches projects without sufficient attention to detail. I am willing to pay for quality work, so finding the right person and getting things done properly is more important to me than simply finding the cheapest option.\n\nRole and project description\n\nThe first priority is website design and development, with marketing coming later. If you specialize exclusively in design, I am open to working with you, as that is where I need help first. However, I'd prefer someone who can competently handle both website development and marketing, as I would rather build a long-term relationship with one reliable partner than find separate people.\n\nI already have the core idea, framework, and a clear vision for the project. I also have specific references for how I want the website to look and feel, along with guidance on the content, messaging, and what needs to be communicated. I welcome thoughtful suggestions and creative input, but I need someone who can understand the vision, bring their own expertise, and execute everything to a high standard.\n\nBudget and payment terms\n\nI am willing to pay for the right person and quality of work. My proposed payment structure is to pay an agreed-upon amount upfront before work begins, with the remaining payment due upon completion, provided the final work meets the agreed requirements and expectations. We can discuss and agree on the exact amount and payment terms before starting.\n\nTimeline\n\nI am looking for someone who has the time and availability to give this project the attention it deserves. We can discuss the timeline based on the scope of work, but I value quality, consistency, and commitment over rushing through the project.\n\nHow to apply\n\nIf you are genuinely good at what you do and interested in a serious project, please send me a direct message on Reddit. Include a brief introduction about yourself or your agency, links to your portfolio and relevant previous work, the services you offer, and your general availability.\n\nI am particularly interested in seeing work that demonstrates strong design sensibilities, technical competence, and attention to detail. If you offer both website development and marketing, please mention that as well.\n\nI am looking for the right person for this, so if you take your work seriously and think you would be a good fit, feel free to reach out and let us discuss the details.",
+    "subreddit": "freelanceindia"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["development", "design", "marketing"],
+    "skillIds": [],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "unknown",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for an experienced web designer and developer to build a new website and handle marketing.",
+    "applyInstructions": "Please send me a direct message on Reddit. Include a brief introduction about yourself or your agency, links to your portfolio and relevant previous work, the services you offer, and your general availability."
+  },
+  "expect": [
+    "follows the direct-message instruction: the comment is empty or a short note, the pitch is in the DM",
+    "gives what the post asks for in the DM (a short introduction, work link, services, availability) with only one link and no invented availability",
+    "does not offer marketing services the profile does not list and does not state a price (no budget is given)"
+  ]
+}

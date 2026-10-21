@@ -1,0 +1,32 @@
+{
+  "id": "wri-02-b2b-ad-copywriter",
+  "tags": ["below_min"],
+  "profileId": "senior-writer",
+  "post": {
+    "title": "[Hiring] Part-time Landing Page and Ad Copywriter",
+    "body": "Hi!\n\nWe're a rapidly growing ad agency that specializes in B2B SaaS advertising, and we’re looking to hire a part-time copywriter who can help us write ad and landing page copy for our clients.\n\nWe’re looking for somebody with at least some degree of experience writing on the platforms we manage most, which are Google, Reddit, LinkedIn and Meta in addition to landing pages, a secondary service of ours.\n\nWe’re opening to hiring separate candidates for different ad platforms and landing pages, however our preference would be that. If you can do more than one platform/discipline we would have more work for you.\n\nThe position is fully remote and the work would be as needed to start with the potential for long-term partnership and even full-time work. We have an expectation of a 1 day turnaround on ad copy.\n\nWe do a lot of Reddit Ads, so I thought this might be a good place to post this! (Or maybe the worst place 🤔😅)\n\nRequirements:\n\n* At least 1 year of experience writing ads for Reddit, LinkedIn, Google or Meta ad campaigns.\n* At least 1 year of experience copywriting for B2B SaaS companies.\n* Experience writing copy for high-converting landing page copy.\n* Must provide examples of copy done in the past (this is required).\n* Must be available on Slack between 9:00-5:00 EST.\n* Fluent English speaker.\n\nSkills/Scope of Work:\n\n* Write ad copy for our clients on platforms like Reddit, LinkedIn, Google or Meta ad campaigns.\n* Write landing page copy for our clients.\n\nBonus Skills:\n\n* Being an active Reddit User.\n* Experience writing Reddit Free-Form ads.\n* Experience writing ad copy for Google, Facebook, and LinkedIn Ad campaigns.\n* Experience writing copy for high-converting landing page copy.\n* Experience keyword-optimized landing page copy.\n* Ability to write copy for ad creatives and PDF lead magnets.\n* Experience testing ad copy and landing page copy.\n\nIntangible Traits:\n\n* Works hard\n* Attention to detail\n* Professional\n* Passion for providing value\n* Learner\n* Executer\n* Problem solver\n* Good at Googling things\n* Asks questions\n* Takes notes\n\nCompensation & Perks:\n\n* Rate: $25–50/hr depending on experience, location and ability. Also open to higher rates, but must be extremely strong with numbers to back it up and multi-platform experience.\n* The more types of copy and ad platforms you can handle the more hours we'll have for you.\n* Opportunity for a pay increase after a 3-month probation period. If you work hard and show us growth, then you'll be rewarded.\n\nIf you're interested in the position, please apply via the form linked below.\n\nPlease upvote the post and comment after submitting the form so we know you've completed it.\n\nGood luck and thank you all for your time!\n\n[link]\n\nP.s. If you use AI to complete this form or any other tasks during the interview process, we will know, and you will be permanently banned from consideration for any openings at InterTeam.",
+    "subreddit": "forhirefreelance"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "part_time",
+    "payType": "paid",
+    "categories": ["writing", "marketing"],
+    "skillIds": ["copywriting"],
+    "budgetMin": 25,
+    "budgetMax": 50,
+    "currency": "USD",
+    "budgetUnit": "hour",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "An ad agency is hiring a part-time remote copywriter to write ad and landing page copy for B2B SaaS clients.",
+    "applyInstructions": "If you're interested in the position, please apply via the form linked below. Please upvote the post and comment after submitting the form so we know you've completed it. [link]"
+  },
+  "expect": [
+    "follows the apply instructions: it says the form is being completed, rather than pasting a long pitch",
+    "ties B2B writing experience to the post and does not claim Google, LinkedIn or Reddit ad-copy experience the evidence does not show",
+    "does not name employers and does not state a rate in the comment"
+  ]
+}

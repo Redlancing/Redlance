@@ -1,0 +1,32 @@
+{
+  "id": "wri-01-novel-grammar-chapters",
+  "tags": ["below_min"],
+  "profileId": "senior-writer",
+  "post": {
+    "title": "Looking for an editor to help fix my grammar",
+    "body": "Hello, I'm writing a novel and am feeling pretty burnt out and a bit embarrassed by the whole process. The embarrassment mostly comes from my own lack of skill.\n\nThis is just a hobby, but I really want to try finishing something, so I thought hiring some help would take the load off my shoulders a bit.\n\nThe chapters are around 3000 characters long, and I'm willing to pay 20$ Cad per chapter. I would love to chat in dm's, but I can't accept all requests. I would appreciate being shown a link to your portfolio if you have one.",
+    "subreddit": "hireawriter"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "paid",
+    "categories": ["writing"],
+    "skillIds": [],
+    "budgetMin": 20,
+    "budgetMax": 20,
+    "currency": "CAD",
+    "budgetUnit": "per_item",
+    "remote": "remote",
+    "location": null,
+    "deadline": null,
+    "redFlags": [],
+    "summary": "Looking for an editor to fix grammar and help finish a novel chapter by chapter.",
+    "applyInstructions": "I would love to chat in dm's, but I can't accept all requests. I would appreciate being shown a link to your portfolio if you have one."
+  },
+  "expect": [
+    "addresses fixing grammar for a novel with chapters of about 3,000 characters, in a warm tone for a self-conscious hobbyist",
+    "does not claim fiction-editing experience the profile lacks and does not name employers",
+    "offers or links a writing sample only from the profile (the one allowed link) and does not push a rate above the post's offer in public"
+  ]
+}

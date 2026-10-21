@@ -1,0 +1,32 @@
+{
+  "id": "dev-12-ai-engineer-commission",
+  "tags": ["dm_only", "no_budget", "vague"],
+  "profileId": "web-dev",
+  "post": {
+    "title": "[US] AI engineer wanted: earn commission on client calls + build your own startup on ramen ai",
+    "body": "Hey everyone — we’re the founders of ramen ai, looking for a US-based engineer who enjoys explaining technology and wants to build something of their own.\n\nThe arrangement: help us with technical client conversations, earn commission, and get access to our technology and direct founder support to build your own venture on top.\n\nWe’ve built AI infrastructure for governing agents before they act. Our semantic firewall evaluates the meaning and intent behind proposed actions against policies, helping developers control what their agents can do.\n\nThe technology is already operational in applications including an AI mental-health companion and a memory layer that enables learning within specific domains. We have working technology, POCs, and a substantial pipeline of prospective clients.\n\nWhere you come in\n\nOur CTO currently handles the deep technical discussions. We’re looking for someone who can learn the product thoroughly and join our sales colleague when the CTO isn’t available.\n\nExpect 1–2 client meetings per week, plus initial onboarding and preparation. You’d help customers understand the architecture, discuss integrations and deployment, and work through technical questions and trade-offs.\n\nYou should be based in the US, have hands-on experience with AI agents, LLM applications or infrastructure, and feel comfortable talking directly with technical buyers.\n\nWhat you get\n\n* Commission on deals you help close, with terms agreed upfront.\n* Access to ramen’s technology to develop your own product or startup on top.\n* Direct technical guidance from our CTO on architecture and implementation.\n* Strategy and venture-development support from our CSO, including positioning, business model and go-to-market.\n* Exposure to real customer problems that could inform what you build next.\n\nThis could be a particularly good fit if you’re an engineer exploring your next venture and want both a technical foundation and experienced people to build alongside.\n\nInterested? DM us your US location/time zone, something you’ve built, and what you’d like to build next. A GitHub, project or LinkedIn link is welcome.\n\nExplore ramen: [link] [link] · GitHub [link]",
+    "subreddit": "cofounderhunt"
+  },
+  "analysis": {
+    "kind": "hiring",
+    "employmentType": "freelance",
+    "payType": "commission_only",
+    "categories": ["development"],
+    "skillIds": ["llm-apps"],
+    "budgetMin": null,
+    "budgetMax": null,
+    "currency": null,
+    "budgetUnit": null,
+    "remote": "remote",
+    "location": "US",
+    "deadline": null,
+    "redFlags": ["vague_pay"],
+    "summary": "An AI engineer is needed to handle technical client conversations and earn commission while building a startup on top of AI infrastructure.",
+    "applyInstructions": "Interested? DM us your US location/time zone, something you’ve built, and what you’d like to build next. A GitHub, project or LinkedIn link is welcome."
+  },
+  "expect": [
+    "does not claim to be based in the US (the post asks for a US location; the profile is in the UK)",
+    "does not accept the commission-only arrangement and does not invent commission terms",
+    "mentions only building or integration work the evidence supports, with the allowed link, and not AI-agent or LLM infrastructure experience it does not show"
+  ]
+}

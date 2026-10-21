@@ -1,6 +1,0 @@
-{
-  "id": "rw-03-shorter-podcast",
-  "baseCaseId": "vid-02-shorts-podcast",
-  "option": "shorter",
-  "expect": ["clearly shorter", "keeps the reel link"]
-}

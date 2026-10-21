@@ -1,0 +1,10 @@
+{
+  "id": "rw-04-casual-latam",
+  "baseCaseId": "dev-04-latam-senior-parttime",
+  "option": "casual",
+  "expect": [
+    "noticeably more casual tone",
+    "no new facts or links",
+    "still does not claim to live in Latin America"
+  ]
+}
