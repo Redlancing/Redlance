@@ -149,11 +149,22 @@ describe("ruleScore", () => {
   });
   it("8: two red flags cost 30", () => {
     const r = ruleScore(
-      mk({ ...postA, redFlags: ["upfront_fee", "vague_pay"] }),
+      mk({ ...postA, redFlags: ["upfront_fee", "asks_for_free_work"] }),
       priya,
     );
     expect(r.score).toBe(50);
     expect(r.reason).toContain("red flag");
+  });
+  it("8b: vague_pay (no budget stated) costs nothing", () => {
+    const base = ruleScore(mk(postA), priya);
+    const r = ruleScore(mk({ ...postA, redFlags: ["vague_pay"] }), priya);
+    expect(r.score).toBe(base.score);
+    expect(r.features.some((f) => f.signal === "red_flag")).toBe(false);
+    const both = ruleScore(
+      mk({ ...postA, redFlags: ["vague_pay", "upfront_fee"] }),
+      priya,
+    );
+    expect(both.score).toBe(base.score - 15);
   });
   it("9: broad with a red flag is 5", () => {
     const c = mk({

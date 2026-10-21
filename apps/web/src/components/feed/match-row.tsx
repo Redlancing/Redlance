@@ -29,7 +29,8 @@ export function metaParts(item: FeedItemResponse, now?: Date): string[] {
   return [
     `r/${item.post.community}`,
     timeAgo(item.post.postedAt, now),
-    budgetText(item.post.budget),
+    budgetText(item.post.budget) ??
+      (item.post.noBudgetStated ? "No budget stated" : null),
     REMOTE_LABEL[item.post.remote] ?? null,
     PAY_LABEL[item.post.payType] ?? null,
   ].filter((p): p is string => Boolean(p));

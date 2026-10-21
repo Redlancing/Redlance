@@ -3,6 +3,7 @@ import {
   INSIGHT_SUBREDDITS_DAYS,
   INSIGHT_WINDOW_DAYS,
   REPEAT_LOOKBACK_DAYS,
+  WARNING_FLAGS,
 } from "@redlance/core";
 import { asc, inArray, sql } from "drizzle-orm";
 import type { Database } from "./client";
@@ -58,6 +59,10 @@ async function recompute(
   now: Date,
 ): Promise<{ upserted: number; deleted: number }> {
   const win = INSIGHT_WINDOW_DAYS;
+  const warn = sql`array[${sql.join(
+    WARNING_FLAGS.map((f) => sql`${f}`),
+    sql`, `,
+  )}]`;
   const res = await db.execute<{ upserted: number; deleted: number }>(sql`
     with bounds as (
       select ${now.toISOString()}::timestamptz as at,
@@ -83,7 +88,7 @@ async function recompute(
              count(*) filter (where kind = 'hiring' and not in_win)::int as hiring_posts_prev,
              count(*) filter (where in_win and coalesce(kind, pre_kind) = 'for_hire')::int as for_hire_posts,
              count(*) filter (where kind = 'hiring' and in_win and budget is not null)::int as budget_stated,
-             count(*) filter (where kind = 'hiring' and in_win and cardinality(red_flags) > 0)::int as red_flag_posts,
+             count(*) filter (where kind = 'hiring' and in_win and red_flags && ${warn}::text[])::int as red_flag_posts,
              count(*) filter (where kind = 'hiring' and in_win
                               and author is not null and lower(author) <> '[deleted]')::int as known_author_posts
       from posts group by community),
@@ -98,7 +103,7 @@ async function recompute(
     flags as (
       select community, jsonb_object_agg(flag, n) as j from (
         select community, flag, count(*)::int as n
-        from hiring, unnest(red_flags) as flag group by 1, 2) x
+        from hiring, unnest(red_flags) as flag where flag = any(${warn}::text[]) group by 1, 2) x
       group by community),
     skills as (
       select community, jsonb_agg(jsonb_build_object('skillId', skill, 'n', n) order by n desc, skill) as j

@@ -170,7 +170,7 @@ The same rules also exist as plain code in core (`isCandidate`, `passesFilters`)
 | Budget below their minimum | -25 |
 | Post skill also appears in the user's visible projects or roles | +10 |
 | Post is remote and the user is remote-only | +5 |
-| Red flag on the post | -15 each |
+| Red flag on the post | -15 each (not `vague_pay`: "no budget stated" is a neutral note since 2026-10-21; see `WARNING_FLAGS` in `packages/core/src/job-post.ts`) |
 
 Budget fit converts currencies with rough fixed rates (`fx.ts`: USD 1, GBP 1.3, EUR 1.1, INR 0.012; they are for "above the minimum or not", not for money). Amounts are rounded to cents first (33 USD at 1.1 is 29.999... EUR otherwise), and a reversed range (min above max) uses the higher figure. Hourly budgets are compared with the minimum rate, daily ones with 8 times it, fixed ones with the minimum if the user takes fixed-price work; anything else is "unknown" and scores nothing.
 

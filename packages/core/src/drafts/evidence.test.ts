@@ -524,5 +524,9 @@ describe("buildEvidence: hidden-role employers and pay-type flags", () => {
         redFlags: ["commission_only", "y"],
       }),
     ).toEqual(["commission_only", "y"]);
+    // "No budget stated" is a note, not a red flag.
+    expect(
+      draftRedFlags({ payType: "paid", redFlags: ["vague_pay", "y"] }),
+    ).toEqual(["y"]);
   });
 });

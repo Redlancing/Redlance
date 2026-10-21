@@ -1,6 +1,8 @@
 import {
   BEST_MIN_SCORE,
+  hasNoBudgetFlag,
   scrubOrganisations,
+  warningFlags,
   type AiStatus,
   type BudgetUnit,
   type EmploymentType,
@@ -1146,7 +1148,10 @@ export type FeedItem = {
     remote: RemoteType;
     /** YYYY-MM-DD */
     deadline: string | null;
+    /** Warning flags only; "vague_pay" is `noBudgetStated` instead. */
     redFlags: string[];
+    /** The analysis flagged no pay information at all (a neutral note, not a red flag). */
+    noBudgetStated: boolean;
     /** How the post says to apply; null when it doesn't say (or an older analysis). */
     applyInstructions: string | null;
     /** Other communities the same gig was cross-posted to (its duplicates), sorted. */
@@ -1258,7 +1263,8 @@ function toFeedItem(r: FeedRow): FeedItem {
       payType: r.pay_type,
       remote: r.remote,
       deadline: toDay(r.deadline),
-      redFlags: r.red_flags,
+      redFlags: warningFlags(r.red_flags),
+      noBudgetStated: hasNoBudgetFlag(r.red_flags),
       applyInstructions: r.apply_instructions,
       alsoPostedIn: r.also_posted_in,
     },

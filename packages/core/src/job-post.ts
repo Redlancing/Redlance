@@ -81,3 +81,22 @@ export const RED_FLAGS = [
   "academic_dishonesty",
 ] as const;
 export type RedFlag = (typeof RED_FLAGS)[number];
+
+/**
+ * Decided 2026-10-21: "vague_pay" (no pay information at all, on ~44% of hiring posts) is not
+ * a red flag. The analyser still stores it; readers show a neutral "No budget stated" note and
+ * count only the warning flags below.
+ */
+export const NO_BUDGET_FLAG = "vague_pay";
+export const WARNING_FLAGS: readonly RedFlag[] = RED_FLAGS.filter(
+  (f) => f !== NO_BUDGET_FLAG,
+);
+
+/** The stored flags that are real warnings (everything but the no-budget note). */
+export function warningFlags(flags: readonly string[]): string[] {
+  return flags.filter((f) => f !== NO_BUDGET_FLAG);
+}
+
+export function hasNoBudgetFlag(flags: readonly string[]): boolean {
+  return flags.includes(NO_BUDGET_FLAG);
+}

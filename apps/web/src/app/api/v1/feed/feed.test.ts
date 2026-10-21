@@ -212,6 +212,7 @@ describe("GET /api/v1/feed", () => {
         "community",
         "deadline",
         "id",
+        "noBudgetStated",
         "payType",
         "postedAt",
         "redFlags",
@@ -230,6 +231,17 @@ describe("GET /api/v1/feed", () => {
     expect(new Date(item.post.postedAt).toISOString()).toBe(item.post.postedAt);
     // An analysis without instructions (all old rows) gives null.
     expect(item.post.applyInstructions).toBeNull();
+  });
+
+  it("vague_pay becomes noBudgetStated, not a red flag", async () => {
+    const { cookie, userId } = await setup();
+    await seedMatch(
+      userId,
+      await seedPost({ redFlags: ["vague_pay", "upfront_fee"] }),
+    );
+    const body = await (await get(cookie)).json();
+    expect(body.items[0].post.redFlags).toEqual(["upfront_fee"]);
+    expect(body.items[0].post.noBudgetStated).toBe(true);
   });
 
   it("applyInstructions are passed through", async () => {

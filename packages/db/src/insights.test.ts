@@ -192,11 +192,9 @@ describe("refreshSubredditInsights: counts and windows", () => {
     const r = await rowOf("forhire");
     expect(r?.payCounts).toEqual({ paid: 1, unpaid: 1 });
     expect(r?.remoteCounts).toEqual({ remote: 1, onsite: 1 });
-    expect(r?.redFlagPosts).toBe(2);
-    expect(r?.redFlagCounts).toEqual({
-      vague_pay: 2,
-      asks_for_free_work: 1,
-    });
+    // vague_pay (no budget stated) is not a red flag: the second post has none.
+    expect(r?.redFlagPosts).toBe(1);
+    expect(r?.redFlagCounts).toEqual({ asks_for_free_work: 1 });
     expect(r?.skillCounts).toEqual([
       { skillId: "react", n: 2 }, // a repeated id in one post counts once per post
       { skillId: "node", n: 1 },

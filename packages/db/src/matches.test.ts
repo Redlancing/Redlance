@@ -2522,6 +2522,7 @@ describe("feedPage", () => {
         remote: "remote",
         deadline: "2026-12-01",
         redFlags: ["upfront_fee"],
+        noBudgetStated: false,
         applyInstructions: null,
         alsoPostedIn: [],
       },

@@ -200,11 +200,11 @@ One fresh review of the branch: **0 high, 3 medium, 7 low**.
 | L7 | Remote share hid the posts that don't say | Fixed: shows "don't say" |
 | L8 | Match page waited on the insight line | Fixed: loads in parallel |
 | L9 | `displayNames` built its filter by hand | Fixed: uses `inArray` |
-| L10 | Red-flag rate is dominated by `vague_pay` | **Open**, waiting on the user (see gaps) |
+| L10 | Red-flag rate is dominated by `vague_pay` | **Fixed 2026-10-21** (user decision) |
 
 ## Known gaps
 
-- **L10, waiting on the user:** `vague_pay` ("no pay mentioned") is on about 44 % of hiring posts, so the red-flag rate is dominated by it. The danger colour (`RED_FLAG_WARN_PERCENT = 20` in `insights-view.ts`) fires on most subreddits. Decision needed: should `vague_pay` stop counting as a red flag (a neutral "No budget stated" tag, with the red-flag rate counting the other 7)?
+- **L10, fixed 2026-10-21:** `vague_pay` ("no pay mentioned", on about 44 % of hiring posts) no longer counts as a red flag, here or anywhere (`WARNING_FLAGS` in `packages/core/src/job-post.ts`). The refresh counts `red_flag_posts` and the top flags from the other 7 flags only; the analyser still stores `vague_pay`. Rows computed before the change keep the old count until the next hourly refresh, and the reader hides `vague_pay` from the top flags meanwhile.
 - **L5:** an author who reposts the same unfilled gig after the dedupe window counts as a repeat client. Fixing it needs title matching.
 - **"Browse all" leaves out** active subreddits that have no insight row (no post in 56 days).
 - **DST drift** in the hours chart (the trade-off above).

@@ -93,6 +93,7 @@ function toFeedItemResponse(i: FeedItem): FeedItemResponse {
       remote: i.post.remote,
       deadline: i.post.deadline,
       redFlags: i.post.redFlags,
+      noBudgetStated: i.post.noBudgetStated,
       applyInstructions: i.post.applyInstructions,
       alsoPostedIn: i.post.alsoPostedIn,
     },

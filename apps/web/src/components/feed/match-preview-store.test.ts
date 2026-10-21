@@ -31,6 +31,7 @@ function item(matchId: string, title = `Gig ${matchId}`): FeedItemResponse {
       remote: "remote",
       deadline: null,
       redFlags: [],
+      noBudgetStated: false,
       applyInstructions: null,
       alsoPostedIn: [],
     },

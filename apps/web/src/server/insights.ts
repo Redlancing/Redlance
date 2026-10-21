@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  NO_BUDGET_FLAG,
   INSIGHT_MIN_POINTS,
   INSIGHT_WINDOW_DAYS,
   SKILL_BY_ID,
@@ -160,7 +161,6 @@ const FLAG_LABELS: Record<string, string> = {
   asks_for_free_work: "free work",
   off_platform_payment: "payment off-platform",
   upfront_fee: "upfront fees",
-  vague_pay: "vague pay",
   unrealistic_pay: "unrealistic pay",
   personal_info_request: "personal info requests",
   adult_content: "adult content",
@@ -170,7 +170,8 @@ const FLAG_LABELS: Record<string, string> = {
 function redFlags(row: SubredditInsightsRow) {
   return gated(row.hiringPosts, () => {
     const top = Object.entries(row.redFlagCounts)
-      .filter(([, n]) => n > 0)
+      // Rows computed before 2026-10-21 may still count the no-budget note.
+      .filter(([flag, n]) => n > 0 && flag !== NO_BUDGET_FLAG)
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .slice(0, 3)
       .map(([flag, count]) => ({ flag: FLAG_LABELS[flag] ?? flag, count }));

@@ -1,4 +1,5 @@
 import { scrubOrganisations } from "../client-names";
+import { warningFlags } from "../job-post";
 import type { Feature, MatchPost, MatchProfile } from "../matching/score";
 import { budgetFit } from "../matching/score";
 import { SKILL_BY_ID } from "../taxonomy";
@@ -286,7 +287,7 @@ export function draftRedFlags(a: {
   payType: string;
   redFlags: readonly string[];
 }): string[] {
-  const flags = [...a.redFlags];
+  const flags = warningFlags(a.redFlags);
   // The spec also names "portfolio_only", but PAY_TYPES has no such value.
   for (const f of payTypeRedFlags(a.payType))
     if (!flags.includes(f)) flags.push(f);

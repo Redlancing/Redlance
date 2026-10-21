@@ -201,7 +201,7 @@ describe("GET /api/v1/insights/:subreddit", () => {
     expect(body.redFlags).toMatchObject({
       status: "ok",
       percent: 13,
-      text: "1 in 8 has a red flag, mostly vague pay",
+      text: "1 in 8 has a red flag, mostly upfront fees", // the old vague_pay count is not a red flag
     });
     expect(body.crowded).toEqual({ status: "ok", perHiringPost: "1.5" });
     expect(body.budgetStated).toEqual({ status: "ok", percent: 50 });
