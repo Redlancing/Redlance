@@ -117,6 +117,7 @@ const mean = (xs: number[]) =>
 export function computeTotals(cases: CaseResult[]): Totals {
   const ran = cases.filter((c) => !c.skipped);
   const scored = ran.filter((c) => c.scores);
+  const drafted = ran.filter((c) => !c.error);
   const nums = (pick: (s: JudgeScores) => number | null) =>
     scored.flatMap((c) => {
       const v = pick(c.scores!);
@@ -128,9 +129,11 @@ export function computeTotals(cases: CaseResult[]): Totals {
     scored: scored.length,
     errors: ran.filter((c) => c.error).length,
     skipped: cases.length - ran.length,
-    validatorPassRate: ran.length
+    // Only cases that produced a draft: an errored case has nothing to validate.
+    validatorPassRate: drafted.length
       ? Math.round(
-          (ran.filter((c) => c.validator.pass).length / ran.length) * 1000,
+          (drafted.filter((c) => c.validator.pass).length / drafted.length) *
+            1000,
         ) / 1000
       : 0,
     means: {

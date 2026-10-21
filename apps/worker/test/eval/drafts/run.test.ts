@@ -99,6 +99,8 @@ describe("run.ts with the stub LLM (case 6)", () => {
     expect(report.cases[0]!.error).toBeDefined();
     expect(report.cases[1]!.scores).not.toBeNull();
     expect(report.totals.errors).toBe(1);
+    // The errored case is left out of the validator rate, not counted as a fail.
+    expect(report.totals.validatorPassRate).toBe(1);
   });
 
   it("waits and re-runs a case that Vertex throttled", async () => {
