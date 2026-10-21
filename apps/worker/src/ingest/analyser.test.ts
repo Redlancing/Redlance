@@ -219,7 +219,7 @@ describe("analysePost", () => {
       budgetMin: 600,
       currency: "USD",
       deadline: "2026-10-14",
-      pipelineVersion: "post@4",
+      pipelineVersion: "post@3",
     });
   });
 
@@ -292,7 +292,7 @@ describe("analysePost", () => {
     });
 
     it("16: PIPELINE_VERSION and PROMPT_VERSION are bumped", () => {
-      expect(PIPELINE_VERSION).toBe("post@4");
+      expect(PIPELINE_VERSION).toBe("post@3");
       expect(PROMPT_VERSION).toBe("post-extract@4");
     });
   });

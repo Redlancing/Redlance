@@ -21,7 +21,9 @@ import { z } from "zod";
 // from a shortlist found in the post's own text, and a budget is kept only when its quote is
 // really in the post: the model can't invent either.
 
-export const PIPELINE_VERSION = "post@4";
+// Not bumped for the 2026-10-21 red-flag trim: a bump re-analyses every stored post (LLM cost),
+// and old rows' removed flags are already ignored by warningFlags().
+export const PIPELINE_VERSION = "post@3";
 export const PROMPT_VERSION = "post-extract@4";
 export const MAX_SHORTLIST = 40;
 const MAX_PROMPT_BODY = 6_000;
