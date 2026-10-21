@@ -29,7 +29,7 @@ if (!/preview|_test_/.test(TARGET))
   throw new Error("PREVIEW_DATABASE_URL must name a preview or test database");
 
 const EMAIL = "preview@example.com";
-const POSTS = Number(process.env.PREVIEW_POSTS ?? 400);
+const POSTS = Number(process.env.PREVIEW_POSTS ?? 2000);
 
 async function main() {
   await runMigrations(TARGET!);
@@ -40,10 +40,11 @@ async function main() {
     await dst.db.execute(sql`truncate table users cascade`);
     await dst.db.execute(sql`truncate table job_posts cascade`);
 
-    // Recent originals with their analysis; duplicates come along so "also posted in" shows.
+    // Recent originals of every kind (insights count for-hire posts too); duplicates come along
+    // so "also posted in" shows. Only hiring posts get matched.
     const posts = await src.db.execute<{ id: string }>(sql`
-      select j.id from job_posts j join job_post_analyses a on a.job_post_id = j.id
-      where j.duplicate_of is null and a.kind = 'hiring'
+      select j.id from job_posts j
+      where j.duplicate_of is null
       order by j.posted_at desc limit ${POSTS}`);
     const ids = posts.rows.map((r) => r.id);
     const idArray = `{${ids.join(",")}}`;
@@ -62,7 +63,10 @@ async function main() {
         ...p,
         // Feeds aren't copied.
         firstSeenFeedId: null,
-        matchStatus: p.duplicateOf ? p.matchStatus : "pending",
+        matchStatus:
+          !p.duplicateOf && p.analysisStatus === "done"
+            ? "pending"
+            : p.matchStatus,
       });
     const analyses = await src.db
       .select()
