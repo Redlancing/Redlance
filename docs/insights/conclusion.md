@@ -193,7 +193,7 @@ One fresh review of the branch: **0 high, 3 medium, 7 low**.
 |---|---|---|
 | M1 | History start came from the oldest `posted_at`, so a new install showed fake history | Fixed: `min(first_seen_at)` with an index (`0019`); posts a week scaled by days covered; "Building history" under 7 days |
 | M2 | Strong fits ran one query per row on the Yours list | Fixed: grouped query `userFitCountsMany` |
-| M3 | Commission-only pay was lumped in with other types | Fixed: shown separately |
+| M3 | Commission-only posts were counted as "don't say" in the paid share | Fixed: `commission` sent and shown separately; "don't say" is unknown pay only |
 | L4 | The refresher forgot its last run when the lock moved | Fixed: it remembers `lastRunAt` |
 | L5 | Repeat clients counts an author who reposts the same unfilled gig after the dedupe window as a repeat client | **Open** (see gaps) |
 | L6 | CLI and worker refresh could run together | Fixed: advisory lock, they skip each other |
