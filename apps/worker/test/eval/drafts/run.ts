@@ -320,7 +320,15 @@ export type RunOptions = {
   now?: Date;
   /** Called after each case (the CLI prints a line). */
   onCase?: (r: CaseResult) => void;
+  /** Waits before re-running a case that Vertex throttled or timed out; one retry per entry. */
+  retryWaitsMs?: number[];
+  sleep?: (ms: number) => Promise<void>;
 };
+
+/** Vertex's shared Flash-Lite capacity throttles in bursts (2026-10-21 runs lost 36 and 40 of 50). */
+const DEFAULT_RETRY_WAITS_MS = [30_000, 60_000, 120_000];
+const isTransient = (r: CaseResult) =>
+  r.error !== undefined && /rate limited|timed out/i.test(r.error);
 
 const usd = (micros: number) => micros / 1e6;
 
@@ -479,7 +487,20 @@ export async function runEval(opts: RunOptions): Promise<EvalReport> {
       throw new CostLimitError(usd(micros), limit, results.length, total);
   };
 
-  for (const c of drafts) finish(await one(c));
+  const sleep =
+    opts.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+  const waits = opts.retryWaitsMs ?? (opts.stub ? [] : DEFAULT_RETRY_WAITS_MS);
+  async function withRetry(run: () => Promise<CaseResult>) {
+    let r = await run();
+    for (const ms of waits) {
+      if (!isTransient(r)) break;
+      await sleep(ms);
+      r = await run();
+    }
+    return r;
+  }
+
+  for (const c of drafts) finish(await withRetry(() => one(c)));
   const byId = new Map(drafts.map((c) => [c.id, c]));
   for (const rc of rewrites) {
     const base = kept.get(rc.baseCaseId);
@@ -501,7 +522,7 @@ export async function runEval(opts: RunOptions): Promise<EvalReport> {
       });
       continue;
     }
-    finish(await one(baseCase, { rc, base }));
+    finish(await withRetry(() => one(baseCase, { rc, base })));
   }
 
   return {
