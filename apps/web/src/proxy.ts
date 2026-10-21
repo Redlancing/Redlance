@@ -30,5 +30,6 @@ export const config = {
     "/tracker/:path*",
     "/settings/:path*",
     "/profile/:path*",
+    "/insights/:path*",
   ],
 };

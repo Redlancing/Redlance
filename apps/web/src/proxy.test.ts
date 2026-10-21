@@ -44,4 +44,12 @@ describe("proxy", () => {
       "/feed?view=all",
     );
   });
+
+  it("protects the insights pages", () => {
+    const res = proxy(request("/insights/forhire"));
+    const location = new URL(res.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("next")).toBe("/insights/forhire");
+    expect(config.matcher).toContain("/insights/:path*");
+  });
 });

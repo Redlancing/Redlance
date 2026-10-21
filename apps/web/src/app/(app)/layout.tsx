@@ -1,3 +1,4 @@
+import { Settings } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -41,7 +42,21 @@ export default async function AppLayout({
           >
             <Logo />
           </Link>
-          <SignOutButton />
+          {/* Settings left the phone tab bar (five items: Overview … Profile) for this spot. */}
+          <div className="flex items-center gap-1">
+            <Link
+              href="/settings"
+              aria-label="Settings"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-stone transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            >
+              <Settings
+                className="size-4"
+                strokeWidth={1.75}
+                aria-hidden="true"
+              />
+            </Link>
+            <SignOutButton />
+          </div>
         </header>
         <main
           id="main"
