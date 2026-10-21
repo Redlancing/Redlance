@@ -189,6 +189,7 @@ npm run eval:posts -w @redlance/worker        # 32 labelled posts against the re
 - **On by default everywhere.** `INGEST_ENABLED` and `ANALYSIS_ENABLED` default to true in every environment.
 - **Missing database guards:**
   - no index on `llm_usage.job_post_id`;
+  - Decided 2026-10-21: the analyser extracts only `asks_for_free_work`, `off_platform_payment`, `upfront_fee`, `vague_pay` and `personal_info_request` (`adult_content`, `academic_dishonesty`, `unrealistic_pay` removed; prompt `post-extract@4`, pipeline `post@4`). Older rows may still hold the removed values; readers ignore them.
   - `skill_ids` and `red_flags` aren't checked by the database, only by app code.
 - **Deployment:** the worker container also needs outbound HTTPS to `www.reddit.com`. `CLAUDE.md`'s container note lists only Postgres, Vertex and GitHub.
 

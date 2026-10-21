@@ -301,7 +301,7 @@ describe("GET /drafts/:id", () => {
     const { cookie, userId } = await setup();
     const matchId = await seedMatch(
       userId,
-      await seedPost({ payType: "unpaid", redFlags: ["Vague budget"] }),
+      await seedPost({ payType: "unpaid", redFlags: ["upfront_fee"] }),
     );
     const { draftId } = await (await start(cookie, matchId)).json();
     const pending = await (await getDraft(cookie, draftId)).json();
@@ -309,7 +309,7 @@ describe("GET /drafts/:id", () => {
       evidence: { summary: null, redFlags: ["something else"] },
     });
     const done = await (await getDraft(cookie, draftId)).json();
-    expect(pending.redFlags).toEqual(["Vague budget", "unpaid"]);
+    expect(pending.redFlags).toEqual(["upfront_fee", "unpaid"]);
     expect(done.redFlags).toEqual(pending.redFlags);
   });
 

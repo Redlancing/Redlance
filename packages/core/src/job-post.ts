@@ -75,10 +75,7 @@ export const RED_FLAGS = [
   "off_platform_payment",
   "upfront_fee",
   "vague_pay",
-  "unrealistic_pay",
   "personal_info_request",
-  "adult_content",
-  "academic_dishonesty",
 ] as const;
 export type RedFlag = (typeof RED_FLAGS)[number];
 
@@ -92,9 +89,13 @@ export const WARNING_FLAGS: readonly RedFlag[] = RED_FLAGS.filter(
   (f) => f !== NO_BUDGET_FLAG,
 );
 
-/** The stored flags that are real warnings (everything but the no-budget note). */
+/**
+ * The stored flags that are real warnings. Filters by inclusion: analyses stored before
+ * 2026-10-21 may still hold adult_content, academic_dishonesty and unrealistic_pay, which were
+ * dropped as red flags that day and must never show, cost score points or count in insights.
+ */
 export function warningFlags(flags: readonly string[]): string[] {
-  return flags.filter((f) => f !== NO_BUDGET_FLAG);
+  return flags.filter((f) => (WARNING_FLAGS as readonly string[]).includes(f));
 }
 
 export function hasNoBudgetFlag(flags: readonly string[]): boolean {

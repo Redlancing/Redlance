@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { warningFlags } from "../job-post";
 import { BROAD_CAP } from "./constants";
 import {
   budgetFit,
@@ -165,6 +166,14 @@ describe("ruleScore", () => {
       priya,
     );
     expect(both.score).toBe(base.score - 15);
+  });
+  it("8c: old stored adult_content/unrealistic_pay/academic_dishonesty cost nothing", () => {
+    const base = ruleScore(mk(postA), priya);
+    const old = ["adult_content", "unrealistic_pay", "academic_dishonesty"];
+    expect(warningFlags(old)).toEqual([]);
+    const r = ruleScore(mk({ ...postA, redFlags: old }), priya);
+    expect(r.score).toBe(base.score);
+    expect(r.features.some((f) => f.signal === "red_flag")).toBe(false);
   });
   it("9: broad with a red flag is 5", () => {
     const c = mk({

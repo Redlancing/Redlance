@@ -9,10 +9,7 @@ export const RED_FLAG_TEXT: Record<string, string> = {
   off_platform_payment: "off-platform payment",
   upfront_fee: "upfront fee",
   vague_pay: "vague pay",
-  unrealistic_pay: "unrealistic pay",
   personal_info_request: "asks for personal info",
-  adult_content: "adult content",
-  academic_dishonesty: "academic dishonesty",
 };
 
 export function skillDisplayName(id: string): string {

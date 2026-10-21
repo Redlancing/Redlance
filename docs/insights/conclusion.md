@@ -204,7 +204,7 @@ One fresh review of the branch: **0 high, 3 medium, 7 low**.
 
 ## Known gaps
 
-- **L10, fixed 2026-10-21:** `vague_pay` ("no pay mentioned", on about 44 % of hiring posts) no longer counts as a red flag, here or anywhere (`WARNING_FLAGS` in `packages/core/src/job-post.ts`). The refresh counts `red_flag_posts` and the top flags from the other 7 flags only; the analyser still stores `vague_pay`. Rows computed before the change keep the old count until the next hourly refresh, and the reader hides `vague_pay` from the top flags meanwhile.
+- **L10, fixed 2026-10-21:** `vague_pay` ("no pay mentioned", on about 44 % of hiring posts) no longer counts as a red flag, here or anywhere (`WARNING_FLAGS` in `packages/core/src/job-post.ts`). The refresh counts `red_flag_posts` and the top flags from the 4 warning flags only (`adult_content`, `academic_dishonesty` and `unrealistic_pay` were dropped as red flags the same day, 2026-10-21: no longer extracted, old stored values ignored); the analyser still stores `vague_pay`. Rows computed before the change keep the old count until the next hourly refresh, and the reader hides `vague_pay` and the dropped flags from the top flags meanwhile.
 - **L5:** an author who reposts the same unfilled gig after the dedupe window counts as a repeat client. Fixing it needs title matching.
 - **"Browse all" leaves out** active subreddits that have no insight row (no post in 56 days).
 - **DST drift** in the hours chart (the trade-off above).
