@@ -7,7 +7,7 @@ Start here. `PROJECT.md` is the product spec (the "why"). Each feature has a fol
 | 1 | **Foundation**: local Postgres and Redis, API conventions, rate limits, dev login, dashboard shell | `foundation/` | ✅ Built, merged to `main` |
 | 2 | **Homepage**: marketing site | `homepage/` | ✅ Built, merged to `main`. Copy is out of date in places (plans, subreddits) |
 | 3 | **Onboarding**: profile steps, resume and GitHub import, the worker, the model client | `onboarding/` | ✅ Built on `feat/onboarding` (not merged). Browser click-through and a live resume eval are still to do. Projects & experience extraction is designed (`projects-experience-design.md`) |
-| 4 | **Ingestion**: collect Reddit hiring posts by RSS, analyse each with Gemini | `ingestion/` | ✅ Built on `feat/ingestion` (stacked on onboarding, not merged). 24 h soak run and Phase 0.1/0.4 checks still open |
+| 4 | **Ingestion**: collect Reddit hiring posts by RSS, analyse each with Gemini | `ingestion/` | ✅ Built, merged to `main`; 24 h soak passed 2026-10-21 (0 429s). Phase 0.1/0.4 checks still open. `conclusion.md` rewritten in depth 2026-10-23 |
 | 5 | **Matching**: score each post 0–100 for each user, with a reason, plus the feed API | `matching/` | ✅ Backend built and verified 2026-10-18 (`matching/conclusion.md`); not run live end to end yet. Feed UI later |
 | 6 | **Alerts**: Telegram (email deferred) | `alerts/` | Built 2026-10-20 on feat/alerts, reviewed and fixed; not run live yet: `alerts/conclusion.md`, design in `alerts/README.md`, build plan in `alerts/plan/`, build notes in `alerts/build-notes.md` |
 | 7 | **Drafts**: comment and first DM in the user's voice | `docs/drafts/` | Backend built (2026-10-20), `conclusion.md`; UI built on `feat/ui` (`ui/conclusion.md`) |

@@ -97,6 +97,16 @@ Handover for the next chat. Update this section as things change.
 - Tests on `main` (2026-10-19): **1,124 pass** (web 299, worker 436, core 173, db 190, llm 26); typecheck, lint and `npm run build` clean.
 - `main`: on 2026-10-20 merge commit `62e3835` ("Merge drafts and reply tracker backend") brought in `feat/drafts` (6 commits). Not pushed yet; the user pushes. Tests: **1,538 pass** (web 377, worker 562, core 282, db 291, llm 26); typecheck, lint and build clean.
 
+### Pick up here (2026-10-21, ~12:00 IST)
+
+- **`feat/ui`** (committed, not pushed): app UI, profile edit (`0017_profile_changes`), per-IP limit, feed speed (`c5ed853`), preview seed (`dfbbfa1`). Checked in a production build against the preview db `redlance_ui_preview` (seed: `apps/worker/scripts/ui-preview-seed.ts`).
+- **`feat/insights`** (worktree `.claude/worktrees/agent-af21cb658e70c8405`, based on `feat/ui` `dfbbfa1`; committed, not pushed): subreddit insights, done. Browser-checked on the preview db, one fresh review (0 high, 3 medium, 7 low; all fixed except L5 repeat-client reposts and L10 the red-flag rate), tests core 338, db 372, worker 636, web 691. Read `docs/insights/conclusion.md`; delete `docs/insights/plan/` once the user has read it. Merge order: `feat/alerts`, then `feat/ui`, then `feat/insights` (the user pushes).
+- **Soak run finished** 2026-10-21 11:55 IST (24 h): 936 polls, 0 Reddit 429s; the only gaps were the laptop's own network (NETWORK/TIMEOUT errors, retries up to ~31 min apart). 6,293 posts; analysed hiring 1,347, other 1,232, for_hire 658; 3,369 Vertex calls ≈ $0.97 at placeholder prices; dev db 20 MB.
+- **Dev db `redlance`:** migrations 0017–0019 applied and insights refreshed (1,333 rows) on 2026-10-21. It has **no onboarded profile**, so matching on real posts needs one (onboard in a browser first).
+- **Waiting on the user:** should `vague_pay` ("no pay mentioned", ~44 % of hiring posts) stop counting as a red flag (neutral "No budget stated" tag, red-flag rate counts the other 7)? Onboarding copy approval; a dev Telegram bot; check the real Vertex bill in the Google Cloud console and set a ~$10 budget alert; OK to spend ~$1 on the first live draft eval.
+- **Deployment notes from 2026-10-21:** create the production Upstash database in us-east-1 next to the server (every request checks the rate limit in Redis). One region + CloudFront is enough for India for now; a Mumbai read replica is the step when India revenue justifies it.
+- Test db gotcha: `packages/db` tests read `TEST_DATABASE_URL`, not `DATABASE_URL`.
+
 ### In progress (2026-10-20)
 
 - **Drafts + reply tracker backend** (merged into `main`): built in 11 phases, reviewed (1 high, 5 medium, 9 low, all fixed except L6) — read `docs/drafts/conclusion.md`. Credits: 1 credit ≈ $0.0007; draft 7, different project 7, style rewrite 1; trial 210, Standard $10 = 2,100/month, Max $20 = 5,600/month; daily caps 105/210/560 credits and $0.20/$0.40/$1.00. Not run live yet: `report.json` is a stub, so do the first live eval (`npm run eval:drafts -w @redlance/worker`, ~$1, with Flash and then Flash-Lite) and commit its report. Eval cases are all hand-written (the dev db had no posts); swap in real ones after the ingestion soak run. Delete `docs/drafts/plan/` once the user has read the conclusion.
